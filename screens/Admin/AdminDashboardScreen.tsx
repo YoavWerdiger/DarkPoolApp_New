@@ -38,6 +38,7 @@ import {
 } from '../../services/admin';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 
 const CHART_H = 176;
 const CHART_DAYS = 30;
@@ -62,6 +63,7 @@ function labelIndexes(n: number, maxLabels: number): number[] {
 }
 
 export default function AdminDashboardScreen({ navigation }: any) {
+  const refreshRing = useRefreshRing();
   const tokens = useDesignTokens();
   const { isAdmin, isLoading: adminLoading } = useIsAdmin();
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -125,11 +127,11 @@ export default function AdminDashboardScreen({ navigation }: any) {
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       {header}
-      <ScrollView
+      <ScrollView onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={adminScreenPad}
         refreshControl={
-          <RefreshControl
+          <RefreshControl hideNative
             refreshing={refreshing}
             onRefresh={() => {
               setRefreshing(true);
@@ -246,6 +248,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
           />
         </AdminSurface>
       </ScrollView>
+<RefreshRing ring={refreshRing} />
     </SafeAreaView>
   );
 }

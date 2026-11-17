@@ -71,6 +71,7 @@ import {
 } from './utils/feedRecentKind';
 import { useDrawerSwipeGuard } from '../../hooks/useDrawerSwipeGuard';
 import { RtlHorizontalScroll } from '../../components/ui/RtlHorizontalScroll';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 
 const FEED_INITIAL_RENDER = 8;
 const FEED_MAX_BATCH = 6;
@@ -81,6 +82,7 @@ type FeedRow =
   | { kind: 'insider'; key: string; sortAt: number; item: InsiderTradeFeedItem };
 
 export default function DarkPoolHomeScreen() {
+  const refreshRing = useRefreshRing();
   const drawerGuard = useDrawerSwipeGuard();
   const tokens = useDesignTokens();
   const navigation = useDarkPoolStackNav();
@@ -334,7 +336,7 @@ export default function DarkPoolHomeScreen() {
         />
 
         {/* תמיד אותה רשימה: הכותרת והצ'יפים אמיתיים מהרגע הראשון; בטעינה — כרטיסי שלד במקום הכרטיסים */}
-        <FlatList
+        <FlatList onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
           data={visibleRows}
           extraData={feedQuotes}
           keyExtractor={keyExtractor}
@@ -350,13 +352,14 @@ export default function DarkPoolHomeScreen() {
           updateCellsBatchingPeriod={40}
           removeClippedSubviews={false}
           refreshControl={
-            <RefreshControl
+            <RefreshControl hideNative
               refreshing={refreshing}
               onRefresh={handleRefresh}
               tintColor={tokens.colors.primary.main}
             />
           }
         />
+<RefreshRing ring={refreshRing} />
       </SafeAreaView>
     </ScreenChrome>
   );

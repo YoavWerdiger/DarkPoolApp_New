@@ -54,6 +54,7 @@ import { SUBSCRIPTION_PLANS } from '../../services/paymentService';
 import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 
 type TabKey = 'history' | 'active' | 'upcoming';
 
@@ -138,6 +139,9 @@ function statusColor(status: string, tokens: ReturnType<typeof useDesignTokens>)
 }
 
 export default function AdminPaymentsScreen({ navigation, route }: any) {
+  const refreshRing = useRefreshRing();
+  const refreshRing2 = useRefreshRing();
+  const refreshRing3 = useRefreshRing();
   const tokens = useDesignTokens();
   const { isAdmin, isLoading: adminLoading } = useIsAdmin();
 
@@ -527,13 +531,13 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
       ) : null}
 
       {tab === 'history' ? (
-        <FlatList
+        <><FlatList onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
           data={txRows}
           keyExtractor={(item) => item.id}
           ListHeaderComponent={listHeader}
           contentContainerStyle={listPad}
           refreshControl={
-            <RefreshControl
+            <RefreshControl hideNative
               refreshing={refreshing}
               onRefresh={() => {
                 setRefreshing(true);
@@ -584,15 +588,15 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
               </TouchableOpacity>
             ) : null
           }
-        />
+        /><RefreshRing ring={refreshRing} /></>
       ) : tab === 'active' ? (
-        <FlatList
+        <><FlatList onScroll={refreshRing2.onScroll} onLayout={refreshRing2.onLayout} scrollEventThrottle={16}
           data={subRows}
           keyExtractor={(item) => item.id}
           ListHeaderComponent={listHeader}
           contentContainerStyle={listPad}
           refreshControl={
-            <RefreshControl
+            <RefreshControl hideNative
               refreshing={refreshing}
               onRefresh={() => {
                 setRefreshing(true);
@@ -644,15 +648,15 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
               </TouchableOpacity>
             ) : null
           }
-        />
+        /><RefreshRing ring={refreshRing2} /></>
       ) : (
-        <FlatList
+        <><FlatList onScroll={refreshRing3.onScroll} onLayout={refreshRing3.onLayout} scrollEventThrottle={16}
           data={filteredUpcoming}
           keyExtractor={(item) => item.id}
           ListHeaderComponent={listHeader}
           contentContainerStyle={listPad}
           refreshControl={
-            <RefreshControl
+            <RefreshControl hideNative
               refreshing={refreshing}
               onRefresh={() => {
                 setRefreshing(true);
@@ -682,7 +686,7 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
               />
             );
           }}
-        />
+        /><RefreshRing ring={refreshRing3} /></>
       )}
 
       <Modal

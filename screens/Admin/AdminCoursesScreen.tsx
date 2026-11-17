@@ -20,8 +20,10 @@ import { adminService, type AdminCourse } from '../../services/admin';
 import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { dirIcon } from '../../lib/i18n/direction';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 
 export default function AdminCoursesScreen({ navigation }: any) {
+  const refreshRing = useRefreshRing();
   const tokens = useDesignTokens();
   const [courses, setCourses] = useState<AdminCourse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,10 +88,10 @@ export default function AdminCoursesScreen({ navigation }: any) {
           <ActivityIndicator color={tokens.colors.text.secondary} />
         </View>
       ) : (
-        <ScrollView
+        <><ScrollView onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
           contentContainerStyle={styles.scroll}
           refreshControl={
-            <RefreshControl
+            <RefreshControl hideNative
               refreshing={refreshing}
               onRefresh={() => {
                 setRefreshing(true);
@@ -137,7 +139,7 @@ export default function AdminCoursesScreen({ navigation }: any) {
               ))}
             </AdminSurface>
           )}
-        </ScrollView>
+        </ScrollView><RefreshRing ring={refreshRing} /></>
       )}
     </SafeAreaView>
   );

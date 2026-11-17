@@ -50,6 +50,7 @@ import UserAvatarButton from '../../components/profile/UserAvatarButton';
 import UserNameButton from '../../components/profile/UserNameButton';
 import CommunityPostImage from './CommunityPostImage';
 import { UserBadges, badgeSizeForLineHeight } from '../../components/ui/badges/UserBadges';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 
 const PAGE_SIZE = 30;
 
@@ -413,6 +414,7 @@ function FeedTabToggle({
 }
 
 export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
+  const refreshRing = useRefreshRing();
   const tokens = useDesignTokens();
   const { user } = useAuth();
   const { isAdmin } = useIsAdmin();
@@ -768,7 +770,7 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
     <>
       <View style={{ flex: 1 }}>
         <FeedTabToggle value={feedMode} onChange={handleFeedModeChange} />
-        <FlatList
+        <FlatList onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
           ref={listRef}
           data={posts}
           keyExtractor={(item) => item.id}
@@ -816,7 +818,7 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
             )
           }
           refreshControl={
-            <RefreshControl
+            <RefreshControl hideNative
               refreshing={refreshing}
               onRefresh={onRefresh}
               tintColor={tokens.colors.primary.main}
@@ -829,6 +831,7 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
           }
           style={{ flex: 1 }}
         />
+<RefreshRing ring={refreshRing} />
       </View>
       <PostRepliesSheet
         visible={!!replyPost}

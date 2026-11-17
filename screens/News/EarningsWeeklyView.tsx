@@ -28,6 +28,7 @@ import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import { TickerLogo, prefetchTickerLogos } from '../../components/ui/TickerLogo';
 import { SkeletonBox, SkeletonLine } from '../../components/ui/SkeletonLoader';
 import EarningsService, { EarningsReport } from '../../services/earningsService';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 
 // ניקוי סימבול לתצוגה — מסיר סיומת ".US" ומינוס מתחילת הקוד. משותף עם התצוגה היומית.
 export function getSymbolDisplay(code: string | null | undefined): string {
@@ -455,6 +456,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
   onGoToCurrentWeek,
   bottomPad,
 }) => {
+  const refreshRing = useRefreshRing();
   const DesignTokens = useDesignTokens();
   const screenPad = APP_LAYOUT.screenPaddingHorizontal;
   const listRef = useRef<FlatList<WeekDay>>(null);
@@ -848,7 +850,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
           )}
         </ScrollView>
       ) : (
-        <FlatList
+        <><FlatList onLayout={refreshRing.onLayout}
           ref={listRef}
           data={weekDays}
           keyExtractor={(item) => item.dateKey}
@@ -856,7 +858,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
           CellRendererComponent={CellRenderer}
           style={{ flex: 1 }}
           refreshControl={
-            <RefreshControl
+            <RefreshControl hideNative
               refreshing={refreshing}
               onRefresh={onRefresh}
               tintColor={DesignTokens.colors.success.main}
@@ -865,7 +867,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
           }
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: bottomPad }}
-          onScroll={handleScroll}
+          onScroll={chainRing(refreshRing.onScroll, handleScroll)}
           onScrollToIndexFailed={handleScrollToIndexFailed}
           scrollEventThrottle={16}
           initialNumToRender={5}
@@ -874,7 +876,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
           removeClippedSubviews={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
-        />
+        /><RefreshRing ring={refreshRing} /></>
       )}
 
       {showCurrentWeekFab && (

@@ -40,6 +40,7 @@ import {
   journalRtlContent,
   journalSectionTitleStyle,
 } from '../Journal/journalLayout';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 
 type SortMode = 'default' | 'value_desc' | 'return_desc' | 'name_asc';
 
@@ -98,6 +99,7 @@ async function loadPortfolioSparkline(portfolio: Portfolio): Promise<number[] | 
  * תיקים אישיים ביומן מסחר — חיפוש/מיון זכוכית מעל, רשימת כרטיסים.
  */
 export default function PortfoliosTab() {
+  const refreshRing = useRefreshRing();
   const tokens = useDesignTokens();
   const navigation = useNavigation<Nav>();
   // ההאב חותך את התוכן מעל ה-safe area — כאן רק מרווח קטן (+ מקום לכפתורים)
@@ -489,7 +491,7 @@ export default function PortfoliosTab() {
   return (
     <View style={styles.root}>
       {renderSearchHeader()}
-      <FlatList
+      <FlatList onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
         data={filteredItems}
         keyExtractor={(item) => item.portfolio.id}
         renderItem={({ item }) => (
@@ -503,7 +505,7 @@ export default function PortfoliosTab() {
         )}
         contentContainerStyle={styles.list}
         refreshControl={
-          <RefreshControl
+          <RefreshControl hideNative
             refreshing={refreshing}
             onRefresh={onRefresh}
             tintColor={tokens.colors.primary.main}
@@ -524,6 +526,7 @@ export default function PortfoliosTab() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       />
+<RefreshRing ring={refreshRing} />
 
       <BottomSheet
         isOpen={sortSheetOpen}

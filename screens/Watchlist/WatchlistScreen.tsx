@@ -17,7 +17,7 @@ import ReorderableList, {
   useReorderableDrag,
   type ReorderableListReorderEvent,
 } from 'react-native-reorderable-list';
-import { runOnJS } from 'react-native-reanimated';
+import { runOnJS, useAnimatedScrollHandler } from 'react-native-reanimated';
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
@@ -42,6 +42,7 @@ import { WatchlistSymbolSheet } from './components/WatchlistSymbolSheet';
 import { MarketsErrorBoundary } from '../Markets/MarketsErrorBoundary';
 import { PortfolioSwitcher } from '../Portfolios/components/PortfolioSwitcher';
 import UIButton from '../../components/ui/UIButton';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 
 function hapticDragStart() {
   void HapticFeedback.medium();
@@ -113,6 +114,14 @@ function RowDivider() {
 }
 
 export default function WatchlistScreen() {
+  const refreshRing = useRefreshRing();
+  // ReorderableList מקבל רק onScroll של reanimated
+  const setRingPull = refreshRing.setPull;
+  const ringScrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      runOnJS(setRingPull)(e.contentOffset.y + (e.contentInset?.top ?? 0));
+    },
+  });
   const navigation = useNavigation();
   const tokens = useDesignTokens();
   const mainTabsHeight = useMainTabsHeight();
@@ -648,7 +657,7 @@ export default function WatchlistScreen() {
                   ) : null}
 
                   <View style={styles.listWrap}>
-                    <ReorderableList
+                    <ReorderableList onScroll={ringScrollHandler} onLayout={refreshRing.onLayout}
                       data={listData}
                       onReorder={handleReorder}
                       onDragStart={handleDragStart}
@@ -671,7 +680,7 @@ export default function WatchlistScreen() {
                       onMomentumScrollEnd={handleMomentumEnd}
                       ItemSeparatorComponent={RowDivider}
                       refreshControl={
-                        <RefreshControl
+                        <RefreshControl hideNative
                           refreshing={isRefreshing}
                           onRefresh={() => {
                             void refreshAll();
@@ -705,6 +714,7 @@ export default function WatchlistScreen() {
                         ) : undefined
                       }
                     />
+<RefreshRing ring={refreshRing} />
                   </View>
                 </View>
                 {/* אישור ההוספה המהירה — צף בתחתית כל עוד יש בחירה */}

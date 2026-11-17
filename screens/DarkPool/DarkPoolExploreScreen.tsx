@@ -94,6 +94,7 @@ import {
   prefetchCuratedPersonPortfolios,
   prefetchPersonPortfolio,
 } from '../../services/darkpool/prefetchPersonPortfolio';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 
 // v2: כולל חברי קונגרס פעילים — מפתח חדש כדי שלא יוגש מטמון ישן של המאוצרים בלבד
 const EXPLORE_GRID_KEY = appQueryKeys.exploreGridProfiles;
@@ -151,6 +152,7 @@ function usePersistQuery(
 }
 
 export default function DarkPoolExploreScreen() {
+  const refreshRing = useRefreshRing();
   const tokens = useDesignTokens();
   const stackNav = useDarkPoolStackNav();
   const bottomPad = useDarkPoolTabBarHeight();
@@ -545,12 +547,12 @@ export default function DarkPoolExploreScreen() {
           }
         />
 
-        <ScrollView
+        <ScrollView onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
           style={darkPoolTransparentFill}
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl
+            <RefreshControl hideNative
               refreshing={refreshing}
               onRefresh={onRefresh}
               tintColor={tokens.colors.primary.main}
@@ -583,6 +585,7 @@ export default function DarkPoolExploreScreen() {
             onPersonPress={onPersonPress}
           />
         </ScrollView>
+<RefreshRing ring={refreshRing} />
       </SafeAreaView>
 
       {/* חיפוש לפי שם — שיט: שדה חיפוש (מקלדת נפתחת) ורשת תוצאות */}

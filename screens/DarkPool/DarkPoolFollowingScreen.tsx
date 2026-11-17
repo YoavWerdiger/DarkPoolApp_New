@@ -45,8 +45,10 @@ import {
   followingActivityToTradeDetail,
   hasTradeDetailPayload,
 } from './utils/tradeDetailParams';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 
 export default function DarkPoolFollowingScreen() {
+  const refreshRing = useRefreshRing();
   const tokens = useDesignTokens();
   const drawerNav = useNavigation();
   const tabNav = useNavigation<BottomTabNavigationProp<DarkPoolTabParamList>>();
@@ -229,11 +231,11 @@ export default function DarkPoolFollowingScreen() {
           subtitleLoading={initialLoading}
           onMenuPress={openDrawer}
         />
-        <ScrollView
+        <ScrollView onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
           style={darkPoolTransparentFill}
           contentContainerStyle={styles.scroll}
           refreshControl={
-            <RefreshControl
+            <RefreshControl hideNative
               // בטעינה הראשונה השלד במקום — בלי ספינר נוסף
               refreshing={(!initialLoading && loading) || activityFeed.refreshing}
               onRefresh={() => {
@@ -298,6 +300,7 @@ export default function DarkPoolFollowingScreen() {
             </View>
           )}
         </ScrollView>
+<RefreshRing ring={refreshRing} />
       </SafeAreaView>
     </ScreenChrome>
   );

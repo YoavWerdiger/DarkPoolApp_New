@@ -35,6 +35,7 @@ import {
   resolveEconomicEventImportance,
   type EconomicImportance,
 } from '../../utils/economicEventImportance';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 
 /** חלון קצר אחרי זמן האירוע — מציגים "עכשיו" לפני מעבר לקאונטדאון הבא. */
 const COUNTDOWN_GRACE_MS = 45_000;
@@ -352,6 +353,7 @@ export default function EconomicCalendarTab({
   monthOpen: monthOpenProp,
   onMonthOpenChange,
 }: EconomicCalendarTabProps = {}) {
+  const refreshRing = useRefreshRing();
   const DesignTokens = useDesignTokens();
   const isFocused = useIsFocused();
   const screenPad = APP_LAYOUT.screenPaddingHorizontal;
@@ -1015,7 +1017,7 @@ export default function EconomicCalendarTab({
       {/* המנווט (חצים + תאריך) נעול מעל הרשימה — גלילה אוטומטית לאירוע הקרוב לא מזיזה אותו */}
       {renderDateNavigator()}
       <View style={{ flex: 1, minHeight: 0 }}>
-        <FlatList
+        <FlatList onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
           ref={dailyEventsListRef}
           data={dailyEvents}
           extraData={countdownTarget}
@@ -1034,7 +1036,7 @@ export default function EconomicCalendarTab({
         windowSize={10}
         removeClippedSubviews={false}
         refreshControl={
-          <RefreshControl
+          <RefreshControl hideNative
             refreshing={refreshing}
             onRefresh={handleRefresh}
             tintColor={DesignTokens.colors.primary.main}
@@ -1062,6 +1064,7 @@ export default function EconomicCalendarTab({
           }, 120);
         }}
         />
+<RefreshRing ring={refreshRing} />
       </View>
 
       {!isSelectedToday ? (

@@ -86,6 +86,7 @@ import { CHAT_LAYOUT, chatSectionTitleStyle } from '../../components/chat/chatLa
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import { APP_TYPE, appPhysicalRightText } from '../../components/ui/appType';
 import { SkeletonBox, SkeletonLine } from '../../components/ui/SkeletonLoader';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 
 // RTL is configured once inside the component via useEffect (not at module level)
 
@@ -180,6 +181,7 @@ const formatRelativeTime = (dateStr: string): string => {
 };
 
 export default function ChatGroupsListScreen() {
+  const refreshRing = useRefreshRing();
   const tokens = useDesignTokens();
   const { isDarkMode } = useTheme();
   const navigation = useNavigation();
@@ -1797,14 +1799,14 @@ export default function ChatGroupsListScreen() {
 
           {/* Chat List */}
           <View style={{ flex: 1, minHeight: 0 }}>
-            <FlatList
+            <FlatList onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
               data={listData}
               renderItem={renderRow}
               keyExtractor={(item) => item.id}
               ListHeaderComponent={null}
               ListEmptyComponent={renderEmpty}
               refreshControl={
-                <RefreshControl
+                <RefreshControl hideNative
                   // בטעינה הראשונה מוצג שלד הרשימה — בלי ספינר נוסף מעליו
                   refreshing={false}
                   onRefresh={async () => {
@@ -1831,6 +1833,7 @@ export default function ChatGroupsListScreen() {
               viewabilityConfig={viewabilityConfig}
               onViewableItemsChanged={onViewableItemsChanged}
             />
+<RefreshRing ring={refreshRing} />
           </View>
           </View>
         </View>

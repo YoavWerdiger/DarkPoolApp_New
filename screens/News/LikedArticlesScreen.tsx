@@ -21,6 +21,7 @@ import { formatNewsDate } from '../../services/newsService';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { NewsScreenShell } from './NewsScreenShell';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 
 interface LikedArticleCardProps {
   article: LikedArticle;
@@ -227,6 +228,7 @@ const LikedArticleCardSkeleton: React.FC = () => {
 };
 
 export default function LikedArticlesScreen() {
+  const refreshRing = useRefreshRing();
   const DesignTokens = useDesignTokens();
   const navigation = useNavigation();
   // מסך משני — חזרה אחורה (לא כפתור התפריט)
@@ -415,13 +417,13 @@ export default function LikedArticlesScreen() {
 
   return (
     <NewsScreenShell title={i18n.t('auto.screens__News__LikedArticlesScreen.s15')} headerRight={headerRight} onBack={goBack}>
-      <FlatList
+      <FlatList onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
         data={likedArticles}
         keyExtractor={(item) => item.id}
         renderItem={renderArticle}
         ListHeaderComponent={listHeaderMeta}
         refreshControl={
-          <RefreshControl
+          <RefreshControl hideNative
             refreshing={refreshing}
             onRefresh={handleRefresh}
             tintColor={DesignTokens.colors.primary.main}
@@ -437,6 +439,7 @@ export default function LikedArticlesScreen() {
           ...(likedArticles.length === 0 && { flex: 1 }),
         }}
       />
+<RefreshRing ring={refreshRing} />
     </NewsScreenShell>
   );
 }

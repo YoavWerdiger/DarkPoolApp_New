@@ -203,6 +203,7 @@ import {
   hasTradeDetailPayload,
   profileRecentToTradeDetail,
 } from './utils/tradeDetailParams';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 
 const HERO_HEIGHT_RATIO = 0.42;
 
@@ -357,6 +358,7 @@ export function PersonPortfolioProfileScreen({
   imageHint,
   onBack,
 }: Props) {
+  const refreshRing = useRefreshRing();
   const tokens = useDesignTokens();
   const stackNav = useDarkPoolStackNav();
   const insets = useSafeAreaInsets();
@@ -1610,16 +1612,16 @@ export function PersonPortfolioProfileScreen({
   return (
     <ScreenChrome rtl>
       <View style={[styles.flex, darkPoolTransparentFill]}>
-        <Animated.ScrollView
+        <Animated.ScrollView onLayout={refreshRing.onLayout}
           style={[styles.flex, darkPoolTransparentFill]}
           showsVerticalScrollIndicator={false}
           bounces
           alwaysBounceVertical
           overScrollMode="always"
           scrollEventThrottle={16}
-          onScroll={onHeroScroll}
+          onScroll={chainRing(refreshRing.onScroll, onHeroScroll)}
           refreshControl={
-            <RefreshControl
+            <RefreshControl hideNative
               refreshing={refreshing}
               onRefresh={() => void refetch()}
               tintColor={tokens.colors.primary.main}
@@ -1964,6 +1966,7 @@ export function PersonPortfolioProfileScreen({
           </View>
           </Animated.View>
         </Animated.ScrollView>
+<RefreshRing ring={refreshRing} />
         {heroBackdrop}
         {chromeOverlay}
         {followDock}

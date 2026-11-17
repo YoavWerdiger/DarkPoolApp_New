@@ -59,8 +59,10 @@ import {
   type NextBillingInfo,
 } from '../../utils/billingDisplay';
 import { appQueryKeys } from '../../lib/appQueryKeys';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 
 export default function BillingScreen({ navigation }: any) {
+  const refreshRing = useRefreshRing();
   const tokens = useDesignTokens();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -283,11 +285,11 @@ export default function BillingScreen({ navigation }: any) {
           navigation.goBack();
         }}
       />
-      <ScrollView
+      <ScrollView onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
         refreshControl={
-          <RefreshControl
+          <RefreshControl hideNative
             refreshing={refreshing}
             onRefresh={() => void onRefresh()}
             tintColor={tokens.colors.primary.main}
@@ -405,6 +407,7 @@ export default function BillingScreen({ navigation }: any) {
           )}
         </SettingsGlassCard>
       </ScrollView>
+<RefreshRing ring={refreshRing} />
     </SafeAreaView>
   );
 }

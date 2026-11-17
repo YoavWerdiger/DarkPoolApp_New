@@ -64,6 +64,7 @@ import { CourseCompletionOverlay } from '../../components/learning/CourseComplet
 import { BlurTargetView } from 'expo-blur';
 import * as NavigationBar from 'expo-navigation-bar';
 import { StatusBar as RNStatusBar } from 'react-native';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 
 /** מסך מלא בנגן (QA 8.4): באנדרואיד מסתירים סרגל ניווט + סטטוס (immersive), ומחזירים ביציאה */
 function setAndroidImmersive(on: boolean) {
@@ -216,6 +217,7 @@ function groupLessonsBySection(lessons: any[]) {
 }
 
 function LearningScreen() {
+  const refreshRing = useRefreshRing();
   const route = useRoute();
   const navigation = useNavigation();
   const mainTabsHeight = useMainTabsHeight();
@@ -2214,19 +2216,19 @@ function LearningScreen() {
             showsVerticalScrollIndicator={false}
             style={{ flex: 1 }}
             refreshControl={
-              <RefreshControl
+              <RefreshControl hideNative
                 refreshing={refreshingLessons}
                 onRefresh={handleRefreshLessons}
                 tintColor={DesignTokens.colors.primary.main}
               />
             }
-            onScroll={handleCourseListScroll}
+            onScroll={chainRing(refreshRing.onScroll, handleCourseListScroll)}
             scrollEventThrottle={16}
-            onLayout={(e) => {
+            onLayout={chainRing(refreshRing.onLayout, (e) => {
               courseViewportHRef.current = e.nativeEvent.layout.height;
               setCourseViewportH(e.nativeEvent.layout.height);
               updateCourseJumpButton();
-            }}
+            })}
             onContentSizeChange={(_w, h) => {
               setCourseContentH(h);
               measureProgressTarget();
@@ -2258,6 +2260,7 @@ function LearningScreen() {
               )}
             </View>
           </ScrollView>
+<RefreshRing ring={refreshRing} />
 
           {/* פס גלילה בצד שמאל */}
           {courseViewportH > 0 && courseContentH > courseViewportH ? (() => {

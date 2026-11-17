@@ -45,10 +45,12 @@ import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import { ACADEMY_TYPE } from '../../components/learning/academyLayout';
 import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
 import { triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 
 type Nav = { navigate: (n: string, p?: object) => void };
 
 export const CoursesScreen: React.FC = () => {
+  const refreshRing = useRefreshRing();
   const navigation = useNavigation();
   const DesignTokens = useDesignTokens();
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
@@ -230,12 +232,12 @@ export const CoursesScreen: React.FC = () => {
   return (
     <ScreenChrome>
       <RNSafeAreaView style={styles.flex} edges={['top']}>
-        <ScrollView
+        <ScrollView onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
           style={styles.flex}
           contentContainerStyle={{ paddingBottom: listBottomPadding }}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl
+            <RefreshControl hideNative
               refreshing={refreshing}
               onRefresh={handleRefresh}
               tintColor={DesignTokens.colors.primary.main}
@@ -289,6 +291,7 @@ export const CoursesScreen: React.FC = () => {
             renderCourseList(orderedCourses)
           )}
         </ScrollView>
+<RefreshRing ring={refreshRing} />
       </RNSafeAreaView>
       <CourseInfoSheet
         course={infoCourse}

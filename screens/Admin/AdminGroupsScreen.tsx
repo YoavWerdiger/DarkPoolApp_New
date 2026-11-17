@@ -36,6 +36,7 @@ import { chatGroupDisplayName, groupAvatarSource } from '../../assets/chatGroups
 import { ANNOUNCEMENTS_GROUP_ID } from '../../utils/isAnnouncementGroup';
 import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 
 type Tier = 'free' | 'premium';
 const TIER_LABEL: Record<Tier, string> = { free: i18n.t('auto.screens__Admin__AdminGroupsScreen.s1'), premium: i18n.t('auto.screens__Admin__AdminGroupsScreen.s2') };
@@ -53,6 +54,7 @@ function groupAdminsOnly(g: AdminChatGroup): boolean {
  * חברים (אדמין / חבר / הסרה), שינוי שם ומחיקה.
  */
 export default function AdminGroupsScreen({ navigation }: any) {
+  const refreshRing = useRefreshRing();
   const tokens = useDesignTokens();
   const { isDarkMode } = useTheme();
   const [groups, setGroups] = useState<AdminChatGroup[]>([]);
@@ -84,10 +86,10 @@ export default function AdminGroupsScreen({ navigation }: any) {
           <ActivityIndicator color={tokens.colors.text.secondary} />
         </View>
       ) : (
-        <ScrollView
+        <><ScrollView onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
           contentContainerStyle={styles.scroll}
           refreshControl={
-            <RefreshControl
+            <RefreshControl hideNative
               refreshing={refreshing}
               onRefresh={() => {
                 setRefreshing(true);
@@ -138,7 +140,7 @@ export default function AdminGroupsScreen({ navigation }: any) {
               })}
             </AdminSurface>
           )}
-        </ScrollView>
+        </ScrollView><RefreshRing ring={refreshRing} /></>
       )}
 
       <GroupEditSheet

@@ -32,8 +32,10 @@ import { CourseWithProgress } from '../../types/learning';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
 import { HapticFeedback, triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 
 export const MyLearningScreen: React.FC = () => {
+  const refreshRing = useRefreshRing();
   const navigation = useNavigation() as {
     navigate: (name: string, params?: object) => void;
   };
@@ -208,13 +210,13 @@ export const MyLearningScreen: React.FC = () => {
 
         {/* Courses List */}
         <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
-          <FlatList
+          <FlatList onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
             data={catalogEnrollments}
             renderItem={renderCourse}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContainer}
           refreshControl={
-            <RefreshControl
+            <RefreshControl hideNative
               refreshing={refreshing}
               onRefresh={handleRefresh}
               tintColor={DesignTokens.colors.primary.main}
@@ -223,6 +225,7 @@ export const MyLearningScreen: React.FC = () => {
           ListEmptyComponent={!isLoading && allowHeavy ? renderEmptyState : null}
           showsVerticalScrollIndicator={false}
           />
+<RefreshRing ring={refreshRing} />
         </View>
       </RNSafeAreaView>
     </ScreenChrome>

@@ -60,6 +60,7 @@ import {
   journalPhysicalRightText,
   journalRtlRoot,
 } from '../Journal/journalLayout';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'PortfolioDetail'>;
 type Route = RouteProp<PortfoliosStackParamList, 'PortfolioDetail'>;
@@ -82,6 +83,7 @@ export const JOURNAL_HEADER_SECTION_STYLE = {
 };
 
 export default function PortfolioDetailScreen({ embedded }: { embedded?: PortfolioDetailEmbedded } = {}) {
+  const refreshRing = useRefreshRing();
   const tokens = useDesignTokens();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
@@ -430,11 +432,11 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
           />
         )}
 
-        <ScrollView
+        <ScrollView onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
           // התוכן נחתך מעל ה-safe area התחתון ולא נגלל מתחתיו
           style={{ flex: 1, marginBottom: insets.bottom }}
           refreshControl={
-            <RefreshControl
+            <RefreshControl hideNative
               refreshing={refreshing}
               onRefresh={onRefresh}
               tintColor={tokens.colors.primary.main}
@@ -502,6 +504,7 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
             )}
           </View>
         </ScrollView>
+<RefreshRing ring={refreshRing} />
       </SafeAreaView>
 
       {canAddTransaction && !embedded ? (

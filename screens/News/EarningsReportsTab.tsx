@@ -27,6 +27,7 @@ import ShareDestinationSheet from '../../components/share/ShareDestinationSheet'
 import EarningsDetailSheet from './EarningsDetailSheet';
 import { buildEarningsAttachment } from '../../types/shareableEntity';
 import EarningsWeeklyView, { WeekDay, getSymbolDisplay as getWeeklySymbolDisplay } from './EarningsWeeklyView';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 
 export type EarningsViewMode = 'daily' | 'weekly';
 
@@ -509,6 +510,7 @@ export default function EarningsReportsTab({
   openReportDate = null,
   onOpenReportConsumed,
 }: EarningsReportsTabProps) {
+  const refreshRing = useRefreshRing();
   const DesignTokens = useDesignTokens();
   const screenPad = APP_LAYOUT.screenPaddingHorizontal;
   // Map of date string → reports for that day. נטען הדרגתית.
@@ -1358,14 +1360,14 @@ export default function EarningsReportsTab({
         <>
           <View style={{ flex: 1, minHeight: 0 }}>
             {renderDateNavigator()}
-            <FlatList
+            <FlatList onLayout={refreshRing.onLayout}
               ref={flatListRef}
               data={filteredReports}
               keyExtractor={(item, index) => `${item.id}-${index}`}
               renderItem={({ item, index }) => renderReport({ item, index })}
               style={{ flex: 1 }}
             refreshControl={
-              <RefreshControl
+              <RefreshControl hideNative
                 refreshing={refreshing}
                 onRefresh={handleRefresh}
                 tintColor={DesignTokens.colors.success.main}
@@ -1375,7 +1377,7 @@ export default function EarningsReportsTab({
             ListEmptyComponent={renderEmptyState}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ flexGrow: 1, paddingTop: LIST_CONTENT_PADDING_TOP, paddingBottom: listBottomPad }}
-            onScroll={handleScroll}
+            onScroll={chainRing(refreshRing.onScroll, handleScroll)}
             onScrollToIndexFailed={handleScrollToIndexFailed}
             scrollEventThrottle={16}
             // אופטימיזציות ביצועים
@@ -1384,6 +1386,7 @@ export default function EarningsReportsTab({
             windowSize={10}
             removeClippedSubviews={false}
             />
+<RefreshRing ring={refreshRing} />
           </View>
 
           {!isSelectedToday ? (

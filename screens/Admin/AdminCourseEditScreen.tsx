@@ -38,6 +38,7 @@ import { AdminBadge, AdminEmptyState, AdminSurface } from '../../components/admi
 import { adminService, type AdminCourse, type AdminLesson } from '../../services/admin';
 import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 
 type Tokens = ReturnType<typeof useDesignTokens>;
 
@@ -91,6 +92,7 @@ const num = (v: string): number | null => {
 };
 
 export default function AdminCourseEditScreen({ navigation, route }: any) {
+  const refreshRing = useRefreshRing();
   const courseId: string = route.params?.courseId;
   const tokens = useDesignTokens();
   const [course, setCourse] = useState<AdminCourse | null>(null);
@@ -202,12 +204,12 @@ export default function AdminCourseEditScreen({ navigation, route }: any) {
           <ActivityIndicator color={tokens.colors.text.secondary} />
         </View>
       ) : (
-        <KeyboardAwareScrollView
+        <><KeyboardAwareScrollView onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           bottomOffset={24}
           refreshControl={
-            <RefreshControl
+            <RefreshControl hideNative
               refreshing={refreshing}
               onRefresh={() => {
                 setRefreshing(true);
@@ -287,7 +289,7 @@ export default function AdminCourseEditScreen({ navigation, route }: any) {
               ))}
             </AdminSurface>
           )}
-        </KeyboardAwareScrollView>
+        </KeyboardAwareScrollView><RefreshRing ring={refreshRing} /></>
       )}
 
       <LessonEditSheet

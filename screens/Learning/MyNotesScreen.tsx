@@ -33,6 +33,7 @@ import {
   academyCardTitleStyle,
 } from '../../components/learning/academyLayout';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 
 interface NoteWithDetails {
   id?: string;
@@ -48,6 +49,7 @@ interface NoteWithDetails {
 }
 
 export const MyNotesScreen: React.FC = () => {
+  const refreshRing = useRefreshRing();
   const navigation = useNavigation();
   const { user } = useAuth();
   const DesignTokens = useDesignTokens();
@@ -224,14 +226,14 @@ export const MyNotesScreen: React.FC = () => {
           </View>
         ) : (
           <View style={[styles.listShell, { marginBottom: Math.max(0, mainTabsHeight - 12) }]}>
-            <FlatList
+            <FlatList onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
               data={notes}
               renderItem={renderNote}
               keyExtractor={(item, index) => item.id || `note-${index}`}
               contentContainerStyle={styles.listContainer}
               ListEmptyComponent={renderEmptyState}
               refreshControl={
-                <RefreshControl
+                <RefreshControl hideNative
                   refreshing={refreshing}
                   onRefresh={handleRefresh}
                   tintColor={DesignTokens.colors.primary.main}
@@ -239,6 +241,7 @@ export const MyNotesScreen: React.FC = () => {
               }
               showsVerticalScrollIndicator={false}
             />
+<RefreshRing ring={refreshRing} />
           </View>
         )}
       </SafeAreaView>

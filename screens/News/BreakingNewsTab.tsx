@@ -40,6 +40,7 @@ const BREAKING_NEWS_CACHE_LIMIT = 50;
 import { useNavigation } from '@react-navigation/native';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 // Fear & Greed מוצג בטאב "עיקרי מדדים" בלבד
 
 const NEWS_DETAIL_IMAGE_HEIGHT = 240;
@@ -851,6 +852,7 @@ export default function BreakingNewsTab({
   openArticleId?: string | null;
   onOpenArticleConsumed?: () => void;
 } = {}) {
+  const refreshRing = useRefreshRing();
   const DesignTokens = useDesignTokens();
   const listBottomInset = useMainTabsHeight(16);
   // זריעה אופטימית מה-cache (נטען מהדיסק בהפעלה קרה) — רינדור מיידי ללא ספינר
@@ -1514,12 +1516,12 @@ export default function BreakingNewsTab({
       {/* חיפוש + כפתור כתבות שאהבתי — קבועים, מחוץ לרשימה */}
       {renderSearchHeader()}
       <View style={{ flex: 1 }}>
-        <FlatList
+        <FlatList onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
           data={filteredArticles}
           keyExtractor={(item) => item.id}
           renderItem={renderArticle}
           refreshControl={
-            <RefreshControl
+            <RefreshControl hideNative
               refreshing={refreshing}
               onRefresh={handleRefresh}
               tintColor={DesignTokens.colors.primary.main}
@@ -1536,6 +1538,7 @@ export default function BreakingNewsTab({
             flexGrow: 1,
           }}
         />
+<RefreshRing ring={refreshRing} />
       </View>
       
       {/* מודל מפורט לחדשות */}

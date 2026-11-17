@@ -199,6 +199,27 @@ serve(async (req) => {
       mapped.activateSubscription = false;
     }
 
+    // רכישת קורס בודד (plan_id = "course:<id>") — גישה רק אחרי GetLpResult מוצלח + סכום תואם
+    const purchasedCourseId =
+      typeof order.plan_id === 'string' && order.plan_id.startsWith('course:')
+        ? order.plan_id.slice('course:'.length)
+        : null;
+    if (purchasedCourseId) {
+      if (mapped.activateSubscription && mapped.status === 'success' && order.user_id) {
+        const { error: grantErr } = await supabase.from('course_purchases').upsert(
+          {
+            user_id: order.user_id,
+            course_id: purchasedCourseId,
+            transaction_id: order.id,
+            amount: Number(order.amount) || null,
+            granted_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id,course_id', ignoreDuplicates: true },
+        );
+        if (grantErr) console.error('[rapid-responder] HIGH course grant failed', { orderId: order.id, grantErr });
+        else console.log('[rapid-responder] course access granted', { orderId: order.id, course: purchasedCourseId });
+      }
+    } else
     // Activate subscription only after verified success (not pending_charge / failed)
     if (mapped.activateSubscription && mapped.status === 'success' && order.user_id && order.plan_id) {
       const cardDisplay = extractCardDisplayFromLp(lp);

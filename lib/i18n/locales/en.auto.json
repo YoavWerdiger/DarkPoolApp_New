@@ -4337,7 +4337,14 @@
     "s13": "Reading the market through options flow",
     "s14": "What's in the course",
     "s15": "Buy the course",
-    "s16": "Close and return to the Academy"
+    "s16": "Close and return to the Academy",
+    "s17": "The Whales",
+    "s18": "How big money moves the market — reading institutional flow and turning it into trades.",
+    "s19": "~70 video lessons",
+    "s20": "Lifetime access",
+    "s21": "Options flow & dark pool",
+    "s22": "From data to trade entry",
+    "s23": "Buy the course · ₪{{v0}}"
   },
   "components__chat__ChatSearchBottomSheet": {
     "s1": "Yesterday",
@@ -5232,5 +5239,25 @@
     "s20": "Add stocks",
     "s21": "No stocks found",
     "s22": "ETFs"
+  },
+  "screens__Learning__CourseCheckoutScreen": {
+    "s1": "Sign in to buy the course",
+    "s2": "The payment was not completed. You were not charged.",
+    "s3": "Buy course",
+    "s4": "Preparing the payment page…",
+    "s5": "Verifying your payment",
+    "s6": "Getting confirmation from the card company. This takes a few seconds.",
+    "s7": "Course unlocked",
+    "s8": "Your payment was approved and the course is open.",
+    "s9": "Payment under review",
+    "s10": "We have not received final confirmation yet. If you were charged, access opens automatically within a few minutes.",
+    "s11": "Payment not completed",
+    "s12": "Go to the course",
+    "s13": "Check again",
+    "s14": "Try again",
+    "s15": "One-time purchase · access to all lessons",
+    "s16": "Total",
+    "s17": "Secure payment via CardCom. Access opens once the payment is approved.",
+    "s18": "Pay · ₪{{v0}}"
   }
 }

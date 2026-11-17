@@ -60,6 +60,8 @@ import { mediaService } from '../../services/mediaService';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { CourseTeaserLock, isCourseTeaserLocked } from '../../components/learning/CourseTeaserLock';
+import { fetchCourseAccess, isPurchaseCourse } from '../../services/coursePurchaseService';
+import { useQuery } from '@tanstack/react-query';
 import { CourseCompletionOverlay } from '../../components/learning/CourseCompletionOverlay';
 import { BlurTargetView } from 'expo-blur';
 import * as NavigationBar from 'expo-navigation-bar';
@@ -3904,12 +3906,24 @@ function LearningScreenGate() {
   const route = useRoute();
   const navigation = useNavigation();
   const courseId = ((route.params as { courseId?: string } | undefined)?.courseId) ?? null;
-  const locked = isCourseTeaserLocked(courseId);
+  const { user } = useAuth();
+  // קורס ברכישה בודדת (הלוויתנים): נעול עד שהשרת מאשר — has_course_access (רכישה מאומתת / אדמין)
+  const purchaseCourse = isPurchaseCourse(courseId);
+  const accessQuery = useQuery({
+    queryKey: appQueryKeys.courseAccess(user?.id ?? 'anon', courseId ?? ''),
+    queryFn: () => fetchCourseAccess(courseId!),
+    enabled: purchaseCourse && !!user?.id,
+    staleTime: 60_000,
+  });
+  const purchaseLocked = purchaseCourse && accessQuery.data !== true;
+  // overlay רק אחרי תשובה מהשרת (בלי הבהוב של מנעול למי שכבר רכש); בזמן הטעינה — לא ניתן ללחוץ
+  const showPurchaseLock = purchaseCourse && accessQuery.isFetched && accessQuery.data !== true;
+  const locked = isCourseTeaserLocked(courseId) || showPurchaseLock;
   // Android: BlurView מטשטש רק תוכן שעטוף ב-BlurTargetView
   const blurTargetRef = useRef<View>(null);
   return (
     <View style={{ flex: 1 }}>
-      <BlurTargetView ref={blurTargetRef} style={{ flex: 1 }} pointerEvents={locked ? 'none' : 'auto'}>
+      <BlurTargetView ref={blurTargetRef} style={{ flex: 1 }} pointerEvents={locked || purchaseLocked ? 'none' : 'auto'}>
         <LearningScreen />
       </BlurTargetView>
       {locked && courseId ? (

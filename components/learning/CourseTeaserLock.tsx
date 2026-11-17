@@ -50,6 +50,21 @@ const LOCKED_COURSES: Record<string, CourseTeaser> = {
   },
 };
 
+/** קורסים ברכישה בודדת — נעולים עד שהשרת מאשר רכישה (has_course_access). CTA → CourseCheckout */
+const WHALES_TEASER: CourseTeaser = {
+  title: i18n.t('auto.components__learning__CourseTeaserLock.s17'),
+  pitch: i18n.t('auto.components__learning__CourseTeaserLock.s18'),
+  highlights: [
+    { icon: 'play-circle-outline', title: i18n.t('auto.components__learning__CourseTeaserLock.s19'), subtitle: i18n.t('auto.components__learning__CourseTeaserLock.s20') },
+    { icon: 'water-outline', title: i18n.t('auto.components__learning__CourseTeaserLock.s21'), subtitle: '' },
+    { icon: 'trending-up-outline', title: i18n.t('auto.components__learning__CourseTeaserLock.s22'), subtitle: '' },
+  ],
+};
+const PURCHASE_TEASERS: Record<string, CourseTeaser> = {
+  'whales-course-1': WHALES_TEASER,
+  'whales-course': WHALES_TEASER,
+};
+
 export function isCourseTeaserLocked(courseId?: string | null): boolean {
   return !!courseId && courseId in LOCKED_COURSES;
 }
@@ -73,13 +88,19 @@ export function CourseTeaserLock({
   // 16:9 מלא; במסכים נמוכים (SE) מגבילים כדי שהדיאלוג ייכנס במסך
   const bannerHeight = Math.min(Math.round((dialogWidth * 9) / 16), Math.round(windowHeight * 0.24));
   const styles = useMemo(() => createStyles(tokens), [tokens]);
-  const teaser = LOCKED_COURSES[courseId];
+  const purchaseTeaser = PURCHASE_TEASERS[courseId];
+  const teaser = LOCKED_COURSES[courseId] ?? purchaseTeaser;
+  const [price, setPrice] = useState<number | null>(null);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
     void (async () => {
-      const { data } = await supabase.from('courses').select('cover_url').eq('id', courseId).maybeSingle();
-      if (alive) setCoverUrl((data as { cover_url?: string | null } | null)?.cover_url ?? null);
+      const { data } = await supabase.from('courses').select('cover_url, price').eq('id', courseId).maybeSingle();
+      const row = data as { cover_url?: string | null; price?: number | string | null } | null;
+      if (!alive) return;
+      setCoverUrl(row?.cover_url ?? null);
+      const p = Number(row?.price);
+      setPrice(Number.isFinite(p) && p > 0 ? p : null);
     })();
     return () => {
       alive = false;
@@ -103,6 +124,11 @@ export function CourseTeaserLock({
       : 'rgba(0,0,0,0.18)';
   const goPurchase = () => {
     void HapticFeedback.impactLight();
+    if (purchaseTeaser) {
+      // רכישה בודדת — דף תשלום ייעודי (CardCom), הגישה נפתחת רק אחרי אישור שרת
+      navigation.navigate('CourseCheckout', { courseId });
+      return;
+    }
     // SubscriptionPlans יושב ב-ProfileStack (route «Profile» ב-root)
     navigation.navigate('Profile', { screen: 'SubscriptionPlans' });
   };
@@ -175,7 +201,11 @@ export function CourseTeaserLock({
 
           <View style={styles.cta}>
             <UIButton
-              title={i18n.t('auto.components__learning__CourseTeaserLock.s15')}
+              title={
+                purchaseTeaser && price
+                  ? i18n.t('auto.components__learning__CourseTeaserLock.s23', { v0: price.toLocaleString('he-IL') })
+                  : i18n.t('auto.components__learning__CourseTeaserLock.s15')
+              }
               variant="primary"
               fullWidth
               onPress={goPurchase}

@@ -84,11 +84,11 @@ serve(async (req) => {
     const planId = String(body.planId || legacy?.planId || '');
     // הסכום מהלקוח לא קובע — המחיר נלקח מ-subscription_plans בשרת (אחרת אפשר לשלם ₪1 על כל מסלול)
     const clientAmount = Number(body.amount ?? legacy?.amount);
-    const description = String(body.description || legacy?.description || `מנוי ${planId}`);
+    let description = String(body.description || legacy?.description || `מנוי ${planId}`);
     const userEmail = String(body.userEmail || legacy?.userEmail || authData.user.email || '').trim();
     const userName = String(body.userName || legacy?.userName || '').trim() || 'Customer';
     const userPhone = String(body.userPhone || legacy?.userPhone || '').trim();
-    const isRecurring = Boolean(body.isRecurring ?? legacy?.isRecurring ?? true);
+    let isRecurring = Boolean(body.isRecurring ?? legacy?.isRecurring ?? true);
     // Prefer JWT subject; allow explicit userId only if it matches JWT (registration pending user)
     const requestedUserId = String(body.userId || legacy?.userId || authUserId);
     const userId = requestedUserId === authUserId ? authUserId : authUserId;
@@ -101,19 +101,46 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const { data: planRow, error: planErr } = await svc
-      .from('subscription_plans')
-      .select('id, price, period, active')
-      .eq('id', planId)
-      .maybeSingle();
-    if (planErr || !planRow || planRow.active === false || !(Number(planRow.price) > 0)) {
-      console.warn('[create-payment] unknown/inactive/free plan', { planId, planErr: planErr?.message });
-      return json({ success: false, error: 'Invalid planId' }, 400);
+    // רכישת קורס בודד: planId = "course:<courseId>" — המחיר מ-courses (access='purchase'), תשלום חד-פעמי
+    const coursePurchaseId = planId.startsWith('course:') ? planId.slice('course:'.length) : null;
+    let amount: number;
+    let numOfPayments = 1;
+    if (coursePurchaseId) {
+      const { data: courseRow, error: courseErr } = await svc
+        .from('courses')
+        .select('id, title, price, access, is_active')
+        .eq('id', coursePurchaseId)
+        .maybeSingle();
+      if (courseErr || !courseRow || courseRow.access !== 'purchase' || courseRow.is_active === false || !(Number(courseRow.price) > 0)) {
+        console.warn('[create-payment] unknown/unpurchasable course', { coursePurchaseId, courseErr: courseErr?.message });
+        return json({ success: false, error: 'Invalid planId' }, 400);
+      }
+      const { data: owned } = await svc
+        .from('course_purchases')
+        .select('course_id')
+        .eq('user_id', authUserId)
+        .eq('course_id', coursePurchaseId)
+        .maybeSingle();
+      if (owned) {
+        return json({ success: false, error: 'הקורס כבר נרכש', code: 'ALREADY_PURCHASED' }, 409);
+      }
+      amount = Number(courseRow.price);
+      isRecurring = false;
+      description = `קורס ${courseRow.title}`;
+    } else {
+      const { data: planRow, error: planErr } = await svc
+        .from('subscription_plans')
+        .select('id, price, period, active')
+        .eq('id', planId)
+        .maybeSingle();
+      if (planErr || !planRow || planRow.active === false || !(Number(planRow.price) > 0)) {
+        console.warn('[create-payment] unknown/inactive/free plan', { planId, planErr: planErr?.message });
+        return json({ success: false, error: 'Invalid planId' }, 400);
+      }
+      amount = Number(planRow.price);
+      // רבעוני/שנתי — תשלומים חודשיים בכרטיס (התחייבות): 3 / 12 תשלומים קבועים
+      numOfPayments = planRow.period === 'quarterly' ? 3 : planRow.period === 'yearly' ? 12 : 1;
     }
-    const amount = Number(planRow.price);
-    // רבעוני/שנתי — תשלומים חודשיים בכרטיס (התחייבות): 3 / 12 תשלומים קבועים
-    const numOfPayments =
-      planRow.period === 'quarterly' ? 3 : planRow.period === 'yearly' ? 12 : 1;
     if (Number.isFinite(clientAmount) && Math.round(clientAmount) !== Math.round(amount)) {
       console.warn('[create-payment] client amount ignored (server price wins)', {
         planId,

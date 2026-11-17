@@ -94,6 +94,8 @@ export const appQueryKeys = {
 
   // User entitlements (cache בזיכרון בלבד — לא נשמר לדיסק כדי לא להציג הרשאה ישנה)
   userSubscription: (userId: string) => ['user', 'subscription', userId] as const,
+  /** גישה לקורס ברכישה בודדת (has_course_access בשרת) */
+  courseAccess: (userId: string, courseId: string) => ['user', 'courseAccess', userId, courseId] as const,
   userPaymentHistory: (userId: string) => ['user', 'paymentHistory', userId] as const,
   userIsAdmin: (userId: string) => ['user', 'isAdmin', userId] as const,
   /** תגי משתמש (וי כחול + ימי מנוי בתשלום) — נטען באצוות דרך get_user_badges */

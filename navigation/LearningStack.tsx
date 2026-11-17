@@ -10,6 +10,7 @@ import { CoursePreviewScreen } from '../screens/Learning/CoursePreviewScreen';
 import { MyNotesScreen } from '../screens/Learning/MyNotesScreen';
 import { MyLearningScreen } from '../screens/Learning/MyLearningScreen';
 import { LessonPlayerScreen } from '../screens/Learning/LessonPlayerScreen';
+import { CourseCheckoutScreen } from '../screens/Learning/CourseCheckoutScreen';
 import {
   createLearningStackScreenOptions,
   learningStackScreenListeners,
@@ -39,6 +40,7 @@ export type LearningStackParamList = {
   LessonPlayerScreen: { lessonId: string; initialBlockIndex?: number };
   MyNotesScreen: undefined;
   MyLearningScreen: undefined;
+  CourseCheckout: { courseId: string };
 };
 
 const Stack = createNativeStackNavigator<LearningStackParamList>();
@@ -60,6 +62,7 @@ export default function LearningStack() {
         component={CoursesScreenPlain}
         options={{ title: i18n.t('auto.navigation__LearningStack.s1') }}
       />
+      <Stack.Screen name="CourseCheckout" component={CourseCheckoutScreen} options={{ title: '' }} />
       <Stack.Screen
         name="MyLearningScreen"
         component={MyLearningPlain}

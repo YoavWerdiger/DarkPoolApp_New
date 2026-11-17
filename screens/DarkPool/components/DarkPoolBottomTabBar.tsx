@@ -170,7 +170,7 @@ function TabButton({
       <Ionicons
         name={focused ? meta.iconActive : meta.icon}
         size={22}
-        color={focused ? tokens.colors.primary.main : tokens.colors.text.tertiary}
+        color={focused ? tokens.colors.primary.lightCta : tokens.colors.text.tertiary}
       />
       <Animated.Text style={[styles.label, focused && styles.labelFocused, labelStyle]}>{meta.label}</Animated.Text>
     </Pressable>

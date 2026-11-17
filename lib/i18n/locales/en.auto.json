@@ -738,7 +738,8 @@
     "s8": "Continue",
     "s9": "Email address",
     "s10": "Checking availability...",
-    "s11": "Next, we'll send a verification code to your email"
+    "s11": "Next, we'll send a verification code to your email",
+    "s12": "Forgot your password? Reset it"
   },
   "screens__Auth__ForgotPasswordOtpScreen": {
     "s1": "Too many requests. Please wait a few minutes.",

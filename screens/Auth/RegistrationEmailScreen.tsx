@@ -1,7 +1,7 @@
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRegistration } from '../../context/RegistrationContext';
 import { AuthService } from '../../services/authService';
@@ -25,6 +25,20 @@ const RegistrationEmailScreen = ({ navigation }: { navigation: any }) => {
   const tokens = useDesignTokens();
   const [email, setEmail] = useState(data.email || '');
   const [error, setError] = useState('');
+
+  const openPasswordReset = () => {
+    void HapticFeedback.selection();
+    const params = { email: email.trim().toLowerCase() };
+    // ForgotPassword יושב ב-AuthStack (אח של ההרשמה בשורש) — קודם ישיר, אחרת דרך Auth
+    try {
+      const state = navigation.getState?.();
+      if (state?.routeNames?.includes('ForgotPassword')) {
+        navigation.navigate('ForgotPassword', params);
+        return;
+      }
+    } catch {}
+    navigation.navigate('Auth', { screen: 'ForgotPassword', params });
+  };
   const [loading, setLoading] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -192,6 +206,21 @@ const RegistrationEmailScreen = ({ navigation }: { navigation: any }) => {
             {error}
           </Text>
         </View>
+      ) : null}
+
+      {/* המייל כבר רשום — איפוס סיסמה בצעד אחד (מסך «שכחתי סיסמה» עם המייל ממולא) */}
+      {error && error === i18n.t('auto.screens__Auth__RegistrationEmailScreen.s2') ? (
+        <TouchableOpacity
+          onPress={openPasswordReset}
+          activeOpacity={0.7}
+          hitSlop={8}
+          style={{ alignSelf: 'flex-start', marginTop: -tokens.spacing.sm, marginBottom: tokens.spacing.lg }}
+          accessibilityRole="link"
+        >
+          <Text style={{ color: tokens.colors.text.primary, fontSize: 15, fontWeight: '600', textDecorationLine: 'underline', writingDirection: TEXT_DIR }}>
+            {i18n.t('auto.screens__Auth__RegistrationEmailScreen.s12')}
+          </Text>
+        </TouchableOpacity>
       ) : null}
 
       <CashAppInput

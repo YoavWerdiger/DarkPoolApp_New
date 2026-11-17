@@ -27,7 +27,7 @@ const FLAG_GAP = 10;
 const SPRING = { damping: 22, stiffness: 150, mass: 0.8, overshootClamping: true };
 
 /** צבע לכל רמה: 1 — צבע הערכה, 2 — תכלת, 3 — ירוק, 4 — זהב (null = צבע הטקסט של הערכה) */
-const LEVEL_COLORS: (string | null)[] = [null, '#64B5F6', '#34C759', '#E0B030'];
+const LEVEL_COLORS: (string | null)[] = [null, '#64B5F6', '#34C759', '#FFB800']; // מתקדם — זהב חי (היה #E0B030, חרדלי)
 /** טקסט על רמה צבעונית — כהה (קריא על תכלת/ירוק/זהב בשתי הערכות) */
 const ON_LEVEL_TEXT = '#111111';
 

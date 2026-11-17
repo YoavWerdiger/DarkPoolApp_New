@@ -169,7 +169,14 @@ async function listReportedFundBooks(limit: number): Promise<ExplorePerson[]> {
     .filter((p): p is ExplorePerson => p != null);
 }
 
-/** חברות ציבוריות שמגישות 13F — לפי שווי האחזקות המדווחות; אווטאר = לוגו הטיקר */
+/** סדר תצוגה לפי שווי שוק (בערך) — Mag 7 שמגישות 13F קודם, אחריהן ענקיות ה-S&P */
+const COMPANY_SIZE_ORDER = [
+  'NVDA', 'GOOGL', 'AMZN', 'BRK-B', 'JPM', 'WMT', 'JNJ', 'BAC', 'AMD', 'CVX', 'CSCO', 'MRK', 'GE',
+  'WFC', 'MS', 'AXP', 'GS', 'TM', 'BLK', 'C', 'UBER', 'PFE', 'GILD', 'BABA', 'REGN', 'INTC', 'SNY',
+  'AIG', 'MET', 'TRV', 'ALL', 'AFL', 'PRU', 'BP', 'GSK', 'CVS', 'AXON', 'DAL', 'UAL', 'ACGL',
+];
+
+/** חברות ציבוריות שמגישות 13F — לפי גודל החברה (COMPANY_SIZE_ORDER); אווטאר = לוגו הטיקר */
 async function listCompanyBooks(limit: number): Promise<ExplorePerson[]> {
   const { data, error } = await supabase
     .from('dark_pool_fund_managers')
@@ -182,8 +189,20 @@ async function listCompanyBooks(limit: number): Promise<ExplorePerson[]> {
 
   if (error) throw error;
 
+  // סדר לפי גודל החברה (Mag 7 קודם) — לא לפי שווי ה-13F: אצל בנקים/מנהלי נכסים הוא כולל
+  // טריליונים של נכסי לקוחות ודחף אותם מעל אנבידיה. חברות שלא ברשימה — אחריהן, לפי שווי.
+  const rank = (t: string) => {
+    const i = COMPANY_SIZE_ORDER.indexOf(t);
+    return i === -1 ? COMPANY_SIZE_ORDER.length : i;
+  };
+  const rows = [...(data ?? [])].sort((a, b) => {
+    const ta = String(a.ticker ?? '').toUpperCase();
+    const tb = String(b.ticker ?? '').toUpperCase();
+    return rank(ta) - rank(tb) || Number(b.last_value_usd) - Number(a.last_value_usd);
+  });
+
   const out: ExplorePerson[] = [];
-  for (const row of data ?? []) {
+  for (const row of rows) {
     const cik = String(row.cik ?? '').trim();
     const ticker = row.ticker ? String(row.ticker).trim().toUpperCase() : '';
     // חברה: השם הרשמי כפי שמוגדר (Amazon.com, Inc. / NVIDIA Corp) — לא הכינוי הקצר

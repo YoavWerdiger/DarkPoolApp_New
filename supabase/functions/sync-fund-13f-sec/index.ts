@@ -78,7 +78,14 @@ export const SEC_13F_FUNDS: Record<string, Sec13fMeta> = {
   '783412': company('Daily Journal Corp', 'Daily Journal', 'DJCO'),
 
   // ── 2026-11-17: חברות ציבוריות נוספות — 13F-HR ב-Q3/Q4 2026 (אומת מול EDGAR form.idx + company_tickers).
-  //    בכוונה בלי בנקים/מנהלי נכסים (JPM, BLK, GS...) — ה-13F שלהם הוא נכסי לקוחות, לא תיק החברה ──
+  //    + הבנקים הגדולים ב-S&P (ה-13F שלהם כולל נכסי לקוחות — באפליקציה ממוינים לפי גודל החברה, לא לפי השווי) ──
+  '19617': company('JPMorgan Chase & Co.', 'JPMorgan', 'JPM'),
+  '70858': company('Bank of America Corp', 'Bank of America', 'BAC'),
+  '886982': company('The Goldman Sachs Group, Inc.', 'Goldman Sachs', 'GS'),
+  '895421': company('Morgan Stanley', 'Morgan Stanley', 'MS'),
+  '72971': company('Wells Fargo & Company', 'Wells Fargo', 'WFC'),
+  '831001': company('Citigroup Inc.', 'Citigroup', 'C'),
+  '2012383': company('BlackRock, Inc.', 'BlackRock', 'BLK'),
   '1067983': company('Berkshire Hathaway Inc.', 'Berkshire Hathaway', 'BRK-B'),
   '60086': company('Loews Corp', 'Loews', 'L'),
   '4962': company('American Express Co', 'American Express', 'AXP'),

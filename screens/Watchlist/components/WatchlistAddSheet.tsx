@@ -1,5 +1,5 @@
 import i18n from '../../../lib/i18n';
-import { ROOT_DIR, UI_DIR } from '../../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR, dirIcon } from '../../../lib/i18n/direction';
 /**
  * «הוספת מניות» לרשימת מעקב (QA 16.1, 16.3) — לפי הטופו של השיטים (כמו בורר האימוג'י):
  * כותרת עם שברון, שדה חיפוש formField, צ'יפים DayDividerPill, שורות כמו ברשימה.
@@ -42,7 +42,7 @@ import {
 import { RtlHorizontalScroll } from '../../../components/ui/RtlHorizontalScroll';
 
 type Filter = 'popular' | 'all' | StockSector;
-type Row = { symbol: string; name: string };
+type Row = { symbol: string; name: string; /** סוג נכס (Common Stock / ETF / Crypto...) — לבחירה ביומן המסחר */ type?: string };
 type Section = { key: string; title?: string; data: Row[] };
 
 type Props = {
@@ -54,6 +54,8 @@ type Props = {
   title?: string;
   /** אם קיים — לחיצה על מניה שכבר נבחרה מסירה אותה (טוגל) */
   onRemove?: (symbol: string) => Promise<void> | void;
+  /** מצב בחירה בודדת (יומן מסחר): לחיצה בוחרת את המניה וסוגרת את השיט */
+  onSelect?: (row: { symbol: string; name: string; type: string }) => void;
 };
 
 const SECTOR_KEY: Record<StockSector, string> = {
@@ -66,7 +68,7 @@ const LOGO = 28;
 const t = (k: string, o?: Record<string, unknown>) =>
   i18n.t(`auto.screens__Watchlist__components__WatchlistAddSheet.${k}`, o);
 
-export function WatchlistAddSheet({ visible, onClose, existingSymbols, onAdd, title, onRemove }: Props) {
+export function WatchlistAddSheet({ visible, onClose, existingSymbols, onAdd, title, onRemove, onSelect }: Props) {
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
@@ -102,7 +104,7 @@ export function WatchlistAddSheet({ visible, onClose, existingSymbols, onAdd, ti
       try {
         const res = await searchSymbols(q);
         if (id !== reqRef.current) return;
-        setMarket(res.slice(0, 20).map((r) => ({ symbol: r.symbol.toUpperCase(), name: r.description || r.symbol })));
+        setMarket(res.slice(0, 20).map((r) => ({ symbol: r.symbol.toUpperCase(), name: r.description || r.symbol, type: r.type })));
       } catch {
         if (id === reqRef.current) setMarket([]);
       } finally {
@@ -122,14 +124,14 @@ export function WatchlistAddSheet({ visible, onClose, existingSymbols, onAdd, ti
       const seen = new Set(local.map((s) => s.symbol));
       const extra = market.filter((m) => !seen.has(m.symbol));
       const out: Section[] = [];
-      if (local.length) out.push({ key: 'local', data: local });
+      if (local.length) out.push({ key: 'local', data: local.map((x) => ({ symbol: x.symbol, name: x.name, type: x.sector === 'etf' ? 'ETF' : 'Common Stock' })) });
       if (extra.length) out.push({ key: 'market', title: t('s18'), data: extra });
       return out;
     }
     let list = STOCK_UNIVERSE;
     if (filter === 'popular') list = list.filter((s) => s.popular);
     else if (filter !== 'all') list = list.filter((s) => s.sector === filter);
-    return [{ key: filter, data: list.map((x) => ({ symbol: x.symbol, name: x.name })) }];
+    return [{ key: filter, data: list.map((x) => ({ symbol: x.symbol, name: x.name, type: x.sector === 'etf' ? 'ETF' : 'Common Stock' })) }];
   }, [q, filter, market]);
 
   const isIn = useCallback(
@@ -139,6 +141,12 @@ export function WatchlistAddSheet({ visible, onClose, existingSymbols, onAdd, ti
 
   const handleAdd = useCallback(
     async (row: Row) => {
+      if (onSelect) {
+        void HapticFeedback.selection();
+        onSelect({ symbol: row.symbol.toUpperCase(), name: row.name, type: row.type || 'Common Stock' });
+        onClose();
+        return;
+      }
       if (adding) return;
       if (isIn(row.symbol)) {
         if (!onRemove) return;
@@ -161,7 +169,7 @@ export function WatchlistAddSheet({ visible, onClose, existingSymbols, onAdd, ti
         setAdding(null);
       }
     },
-    [adding, isIn, onAdd, onRemove],
+    [adding, isIn, onAdd, onRemove, onSelect, onClose],
   );
 
   const chips: Filter[] = ['popular', 'all', ...STOCK_SECTORS];
@@ -255,7 +263,7 @@ export function WatchlistAddSheet({ visible, onClose, existingSymbols, onAdd, ti
             ) : null
           }
           renderItem={({ item }) => {
-            const inList = isIn(item.symbol);
+            const inList = !onSelect && isIn(item.symbol);
             const busy = adding === item.symbol;
             return (
               <Pressable
@@ -274,7 +282,11 @@ export function WatchlistAddSheet({ visible, onClose, existingSymbols, onAdd, ti
                     {item.name}
                   </Text>
                 </View>
-                {inList ? (
+                {onSelect ? (
+                  <View style={styles.addBtn}>
+                    <Ionicons name={dirIcon('chevron-back')} size={18} color={tokens.colors.text.tertiary} />
+                  </View>
+                ) : inList ? (
                   <View style={styles.addBtn}>
                     <Ionicons name="checkmark" size={20} color={tokens.colors.success.main} />
                   </View>

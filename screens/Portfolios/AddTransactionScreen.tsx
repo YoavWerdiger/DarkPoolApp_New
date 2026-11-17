@@ -44,7 +44,9 @@ import type { PortfoliosStackParamList } from '../../navigation/PortfoliosStack'
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { PortfolioScreenHeader } from './components/PortfolioScreenHeader';
 import { useToast } from '../../components/ui/Toast';
-import { SymbolSearchModal } from './components/SymbolSearchModal';
+import { WatchlistAddSheet } from '../Watchlist/components/WatchlistAddSheet';
+
+const NO_SYMBOLS: ReadonlySet<string> = new Set();
 import { assetTypeFromSearchType } from '../../services/portfolios/symbolSearchFilter';
 import {
   createTransaction,
@@ -1121,9 +1123,13 @@ export default function AddTransactionScreen() {
         </KeyboardAvoidingView>
       </SafeAreaView>
 
-      <SymbolSearchModal
+      {/* אותו שיט חיפוש כמו ברשימת המעקב (קטגוריות + ~730 מניות + חיפוש בכל השוק), במצב בחירה */}
+      <WatchlistAddSheet
         visible={searchOpen}
         onClose={() => setSearchOpen(false)}
+        title={i18n.t('auto.screens__Portfolios__components__SymbolSearchModal.s1')}
+        existingSymbols={NO_SYMBOLS}
+        onAdd={() => undefined}
         onSelect={(r) => {
           // סוג הנכס מזוהה מהחיפוש (ETF/קריפטו/מניה); חוזים/פורקס נשארים בחירה ידנית
           if (r.type) setAssetType(assetTypeFromSearchType(r.type));

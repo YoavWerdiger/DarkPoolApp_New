@@ -52,6 +52,11 @@ create policy "Authenticated users can view media links" on public.lesson_media_
     )
   );
 
+-- ערך גישה חדש: purchase (בנוסף ל-free / paid / members_only)
+alter table public.courses drop constraint if exists courses_access_check;
+alter table public.courses add constraint courses_access_check
+  check (access = any (array['free'::text, 'paid'::text, 'members_only'::text, 'purchase'::text]));
+
 -- קורס הלוויתנים: רכישה בודדת, ₪531
 update public.courses
    set access = 'purchase', price = 531

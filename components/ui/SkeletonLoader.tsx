@@ -9,6 +9,7 @@ import { View, Animated, StyleSheet, ViewStyle } from 'react-native';
 import { useDesignTokens } from './DesignTokens';
 import { LIGHT_CANVAS } from './designTokensStatic';
 import UICard from './UICard';
+import { APP_LAYOUT, UI_CARD_RADIUS } from './appLayout';
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
 /**
@@ -673,102 +674,46 @@ export const TextSkeleton: React.FC<TextSkeletonProps> = ({ lines = 3, delay = 0
  * Skeleton לכרטיס דיווח רווח — לוגו/טיקר בתחילת ה-row (שמאל פיזי),
  * badge בצד השני, Revenue ואז EPS. פס צבע משמאל. לא row-reverse.
  */
+/** אותו מבנה כמו EarningsReportCard (screens/News/EarningsReportsTab) — כרטיס soft, פס צד, לוגו 40,
+ *  טיקר + שם חברה, תגית Pre/After, קו מפריד ושני בלוקים (הכנסות | EPS) עם קו אנכי. */
 export const EarningsReportSkeleton: React.FC<CardSkeletonProps> = ({ delay = 0 }) => {
   const tokens = useDesignTokens();
-  const screenPad = tokens.layout?.screenPadding ?? 20;
-  const cardRadius = tokens.borderRadius['2xl'];
-  const cardPad = tokens.layout?.cardPadding ?? tokens.spacing.xl;
-
+  const divider = tokens.colors.border.divider;
+  const metric = (d: number) => (
+    <View style={{ flex: 1, alignItems: 'center', gap: 6 }}>
+      <SkeletonBox width={44} height={10} delay={d} />
+      <SkeletonBox width={64} height={15} delay={d + 30} />
+      <SkeletonBox width={36} height={10} delay={d + 60} />
+    </View>
+  );
   return (
-    <View style={{ marginHorizontal: screenPad, marginBottom: 12 }}>
-      <View
-        style={{
-          flexDirection: EARNINGS_REPORT_SKELETON_LAYOUT.rowDirection,
-          alignItems: 'flex-start',
-          overflow: 'hidden',
-          borderRadius: cardRadius,
-          padding: cardPad,
-          backgroundColor: 'rgba(255, 255, 255, 0.06)',
-        }}
-      >
+    <View style={{ marginHorizontal: APP_LAYOUT.screenPaddingHorizontal, marginBottom: APP_LAYOUT.cardStackGap }}>
+      <UICard variant="soft" padding="lg" disableBlur style={{ borderRadius: UI_CARD_RADIUS }} contentContainerStyle={{ overflow: 'visible' }}>
         <View
           pointerEvents="none"
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: 10,
-            bottom: 10,
-            width: 3,
-            borderRadius: 3,
-            backgroundColor: 'rgba(255, 255, 255, 0.16)',
-          }}
+          style={{ position: 'absolute', left: 0, top: 10, bottom: 10, width: 3, borderRadius: 3, backgroundColor: divider }}
         />
-
         <View style={{ flex: 1, alignItems: 'flex-start', paddingLeft: 15 }}>
-          <View
-            style={{
-              flexDirection: EARNINGS_REPORT_SKELETON_LAYOUT.rowDirection,
-              alignItems: 'flex-start',
-              justifyContent: 'space-between',
-              width: '100%',
-              marginBottom: 8,
-            }}
-          >
-            <View
-              style={{
-                flexDirection: EARNINGS_REPORT_SKELETON_LAYOUT.rowDirection,
-                alignItems: 'flex-start',
-                flex: 1,
-                marginRight: 8,
-              }}
-            >
-              <View style={{ marginRight: 12 }}>
-                <SkeletonBox width={40} height={40} borderRadius={20} delay={delay} />
-              </View>
-              <View style={{ flex: 1, justifyContent: 'flex-start', gap: 6 }}>
-                <SkeletonBox width={64} height={15} delay={delay + 50} />
-                <SkeletonBox width={120} height={11} delay={delay + 100} />
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', width: '100%' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', flex: 1, marginRight: 8 }}>
+              <SkeletonBox width={40} height={40} borderRadius={20} delay={delay} />
+              <View style={{ flex: 1, marginLeft: APP_LAYOUT.cardTitleToBodyGap, gap: 6, paddingTop: 2 }}>
+                <SkeletonBox width={52} height={15} delay={delay + 40} />
+                <SkeletonBox width="70%" height={12} delay={delay + 80} />
               </View>
             </View>
-            <SkeletonBox width={88} height={22} borderRadius={999} delay={delay + 80} />
+            <SkeletonBox width={96} height={24} borderRadius={999} delay={delay + 60} />
           </View>
-
-          <View style={{ marginTop: 12, width: '100%' }}>
-            <View
-              style={{
-                height: 1,
-                backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                marginBottom: 12,
-              }}
-            />
-            <View
-              style={{
-                flexDirection: EARNINGS_REPORT_SKELETON_LAYOUT.rowDirection,
-                alignItems: 'center',
-                width: '100%',
-                justifyContent: 'space-between',
-              }}
-            >
-              <View style={{ flex: 1, alignItems: 'center', paddingRight: 8, gap: 8 }}>
-                <SkeletonBox width={72} height={12} delay={delay + 150} />
-                <SkeletonBox width={56} height={16} delay={delay + 180} />
-              </View>
-              <View
-                style={{
-                  width: 1,
-                  height: 35,
-                  backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                  marginHorizontal: 8,
-                }}
-              />
-              <View style={{ flex: 1, alignItems: 'center', paddingLeft: 8, gap: 8 }}>
-                <SkeletonBox width={64} height={12} delay={delay + 150} />
-                <SkeletonBox width={48} height={16} delay={delay + 180} />
-              </View>
+          <View style={{ marginTop: APP_LAYOUT.cardTitleToBodyGap, width: '100%' }}>
+            <View style={{ height: 1, backgroundColor: divider, marginBottom: APP_LAYOUT.cardTitleToBodyGap }} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%' }}>
+              {metric(delay + 100)}
+              <View style={{ width: 1, height: 48, backgroundColor: divider, marginHorizontal: 8 }} />
+              {metric(delay + 130)}
             </View>
           </View>
         </View>
-      </View>
+      </UICard>
     </View>
   );
 };
@@ -868,6 +813,10 @@ export const EconomicEventSkeleton: React.FC<CardSkeletonProps> = ({ delay = 0 }
 
 export const EarningsReportsListSkeleton: React.FC<{ count?: number }> = ({ count = 5 }) => (
   <View>
+    {/* כמו הדיבידר «מסחר מוקדם» בראש הרשימה */}
+    <View style={{ alignItems: 'center', marginBottom: 16 }}>
+      <SkeletonBox width={120} height={32} borderRadius={999} />
+    </View>
     {Array.from({ length: count }).map((_, i) => (
       <EarningsReportSkeleton key={i} delay={i * 70} />
     ))}

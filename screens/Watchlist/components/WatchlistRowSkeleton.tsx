@@ -35,9 +35,9 @@ function WatchlistRowSkeletonInner({ delay = 0 }: Props) {
           <View style={styles.logoWrap}>
             <SkeletonBox width={28} height={28} borderRadius={14} delay={delay} />
           </View>
+          {/* כמו בשורה האמיתית — רק הטיקר (שם החברה מופיע רק בפירוט) */}
           <View style={styles.textBlock}>
-            <SkeletonBox width={44} height={12} delay={delay + 40} />
-            <SkeletonBox width={64} height={10} delay={delay + 80} />
+            <SkeletonBox width={46} height={13} delay={delay + 40} />
           </View>
         </View>
       </View>
@@ -54,7 +54,7 @@ function WatchlistRowSkeletonInner({ delay = 0 }: Props) {
         <SkeletonBox width={36} height={11} delay={delay + 160} />
       </View>
       <View style={colDrag}>
-        <SkeletonBox width={16} height={14} borderRadius={4} delay={delay + 180} />
+        <SkeletonBox width={20} height={12} borderRadius={4} delay={delay + 180} />
       </View>
     </View>
   );

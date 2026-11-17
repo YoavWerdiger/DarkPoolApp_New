@@ -628,6 +628,10 @@ export default function WatchlistScreen() {
           <MarketsErrorBoundary>
             {isLoading && rows.length === 0 ? (
               <View style={styles.panel}>
+                {/* אותה כותרת עמודות כמו ברשימה האמיתית — השלד נראה כמו המסך */}
+                <View pointerEvents="none">
+                  <WatchlistColumnHeader sortMode={sortMode} onSortChange={setSortMode} />
+                </View>
                 <View style={styles.skeletonList}>
                   {Array.from({ length: 8 }).map((_, i) => (
                     <React.Fragment key={i}>

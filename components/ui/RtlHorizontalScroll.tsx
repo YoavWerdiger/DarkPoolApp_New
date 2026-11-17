@@ -10,7 +10,7 @@ import { IS_RTL_UI } from '../../lib/i18n/direction';
 
 // ScrollView בטיפוסי RN 0.88 הוא ערך ולא טיפוס מופע — ref כללי
 export const RtlHorizontalScroll = forwardRef<any, ScrollViewProps>(function RtlHorizontalScroll(
-  { contentContainerStyle, onContentSizeChange, onScrollBeginDrag, onLayout, ...rest },
+  { style, contentContainerStyle, onContentSizeChange, onScrollBeginDrag, onLayout, ...rest },
   ref,
 ) {
   const innerRef = useRef<any>(null);
@@ -28,6 +28,9 @@ export const RtlHorizontalScroll = forwardRef<any, ScrollViewProps>(function Rtl
       {...rest}
       ref={innerRef}
       horizontal
+      // ה-ScrollView עצמו LTR: באנדרואיד HorizontalScrollView יורש direction:'rtl' מההורה
+      // (wrap של הסקשן) ומשקף את קואורדינטות הגלילה — scrollToEnd נחת בקצה הלא נכון והסדר התהפך
+      style={[style, IS_RTL_UI ? { direction: 'ltr' } : null]}
       contentContainerStyle={[
         contentContainerStyle,
         IS_RTL_UI ? { direction: 'ltr', flexDirection: 'row-reverse' } : null,

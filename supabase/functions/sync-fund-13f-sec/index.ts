@@ -77,6 +77,27 @@ export const SEC_13F_FUNDS: Record<string, Sec13fMeta> = {
   '104889': company('Graham Holdings Co', 'Graham Holdings', 'GHC'),
   '783412': company('Daily Journal Corp', 'Daily Journal', 'DJCO'),
 
+  // ── 2026-11-17: חברות ציבוריות נוספות — 13F-HR ב-Q3/Q4 2026 (אומת מול EDGAR form.idx + company_tickers).
+  //    בכוונה בלי בנקים/מנהלי נכסים (JPM, BLK, GS...) — ה-13F שלהם הוא נכסי לקוחות, לא תיק החברה ──
+  '1067983': company('Berkshire Hathaway Inc.', 'Berkshire Hathaway', 'BRK-B'),
+  '60086': company('Loews Corp', 'Loews', 'L'),
+  '4962': company('American Express Co', 'American Express', 'AXP'),
+  '5272': company('American International Group, Inc.', 'AIG', 'AIG'),
+  '899051': company('The Allstate Corp', 'Allstate', 'ALL'),
+  '86312': company('The Travelers Companies, Inc.', 'Travelers', 'TRV'),
+  '4977': company('Aflac Inc.', 'Aflac', 'AFL'),
+  '1099219': company('MetLife, Inc.', 'MetLife', 'MET'),
+  '1137774': company('Prudential Financial, Inc.', 'Prudential', 'PRU'),
+  '20286': company('Cincinnati Financial Corp', 'Cincinnati Financial', 'CINF'),
+  '11544': company('W. R. Berkley Corp', 'W. R. Berkley', 'WRB'),
+  '947484': company('Arch Capital Group Ltd.', 'Arch Capital', 'ACGL'),
+  '320335': company('Globe Life Inc.', 'Globe Life', 'GL'),
+  '1126328': company('Principal Financial Group, Inc.', 'Principal Financial', 'PFG'),
+  '1331875': company('Fidelity National Financial, Inc.', 'Fidelity National Financial', 'FNF'),
+  '96223': company('Jefferies Financial Group Inc.', 'Jefferies', 'JEF'),
+  '1859392': company('Galaxy Digital Inc.', 'Galaxy Digital', 'GLXY'),
+  '740260': company('Ventas, Inc.', 'Ventas', 'VTR'),
+
   // ── QA 11.3: עוד קרנות (כולל Situational Awareness) — 13F-HR ב-Q3 2026, אומת מול EDGAR ──
   '2045724': { manager: 'Leopold Aschenbrenner', name: 'Situational Awareness LP' },
   '1791786': { manager: 'Paul Singer', name: 'Elliott Investment Management' },

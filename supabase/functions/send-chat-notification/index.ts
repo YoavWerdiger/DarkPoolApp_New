@@ -401,6 +401,8 @@ serve(async (req) => {
           group_id: group_id,
           group_name: groupData.name,
           group_avatar: groupData.avatar_url,
+          // תמונה בטוחה (ציבורית / חתומה) לתמונה הגדולה של ההתראה
+          avatar_url: notificationImageUrl ?? null,
           message_id: message_id,
           sender_id: sender_id,
           sender_name: senderName,
@@ -414,7 +416,9 @@ serve(async (req) => {
         categoryId: isMention ? 'chat_mention' : 'chat_message',
         icon: 'ic_notification',
         ...(notificationImageUrl ? { richContent: { image: notificationImageUrl } } : {}),
-        ...(notificationImageUrl ? { mutableContent: true } : {}),
+        // תמיד — ה-Notification Service Extension של iOS הופך הודעת צ'אט ל-Communication Notification
+        // (תמונת הקבוצה גדולה + אייקון DarkPool קטן בפינה, כמו וואטסאפ)
+        mutableContent: true,
         _displayInForeground: true,
         badge: 1,
         android: {

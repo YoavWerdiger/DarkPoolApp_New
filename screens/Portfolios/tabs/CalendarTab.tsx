@@ -478,7 +478,8 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
         </View>
       </UICard>
 
-      {loading || monthlyTotal.tradeCount > 0 ? (
+      {/* רק כשיש עסקאות בחודש — בלי שלד בטעינה (הבהב לשנייה מתחת ללוח כשאין עסקאות) */}
+      {monthlyTotal.tradeCount > 0 ? (
         <JournalStatsList
           title={i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s24')}
           style={styles.monthStats}

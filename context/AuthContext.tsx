@@ -100,6 +100,15 @@ async function writeRecoveryPending(value: boolean): Promise<void> {
   }
 }
 
+/** מפתחות AsyncStorage של המשתמש המחובר — נמחקים בהתנתקות (טוקן המכשיר משוחרר בנפרד) */
+const USER_SCOPED_STORAGE_KEYS = [
+  'notificationSettings', // העדפות פושים
+  'notificationGroupMutes', // השתקות קבוצות
+  'darkpool:recent_tickers', // חיפושים אחרונים
+  'darkpool:follow-alerts-explained:v1',
+  'tradeShare:options',
+] as const;
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -407,6 +416,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
           await AsyncStorage.removeItem(CACHE_OWNER_KEY);
         } catch (_) { /* non-critical */ }
+        // שום קשר למשתמש הקודם: הגדרות והעדפות שנשמרו על המכשיר שייכות למשתמש שהתנתק
+        try {
+          await AsyncStorage.multiRemove([...USER_SCOPED_STORAGE_KEYS]);
+          const journalKeys = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith('journal:'));
+          if (journalKeys.length) await AsyncStorage.multiRemove(journalKeys);
+        } catch (_) { /* non-critical */ }
+        try {
+          // נעילה ביומטרית — של המשתמש שהתנתק (שאר ההגדרות, כמו ערכת נושא, נשארות למכשיר)
+          const saved = await AsyncStorage.getItem('appSettings');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed?.biometricAuth) {
+              await AsyncStorage.setItem('appSettings', JSON.stringify({ ...parsed, biometricAuth: false }));
+            }
+          }
+        } catch (_) { /* non-critical */ }
+        void Notifications.setBadgeCountAsync(0).catch(() => undefined);
       })();
 
       if (!keepCredentials) {

@@ -169,11 +169,9 @@ async function listReportedFundBooks(limit: number): Promise<ExplorePerson[]> {
     .filter((p): p is ExplorePerson => p != null);
 }
 
-/** סדר תצוגה לפי שווי שוק (בערך) — Mag 7 שמגישות 13F קודם, אחריהן ענקיות ה-S&P */
+/** רק מובילות ה-S&P שמגישות 13F, בסדר שווי שוק (בערך) — Mag 7 קודם. חברות אחרות במסד לא מוצגות */
 const COMPANY_SIZE_ORDER = [
-  'NVDA', 'GOOGL', 'AMZN', 'BRK-B', 'JPM', 'WMT', 'JNJ', 'BAC', 'AMD', 'CVX', 'CSCO', 'MRK', 'GE',
-  'WFC', 'MS', 'AXP', 'GS', 'TM', 'BLK', 'C', 'UBER', 'PFE', 'GILD', 'BABA', 'REGN', 'INTC', 'SNY',
-  'AIG', 'MET', 'TRV', 'ALL', 'AFL', 'PRU', 'BP', 'GSK', 'CVS', 'AXON', 'DAL', 'UAL', 'ACGL',
+  'NVDA', 'GOOGL', 'AMZN', 'BRK-B', 'JPM', 'WMT', 'JNJ', 'BAC', 'AMD', 'CVX', 'CSCO', 'MRK', 'GE', 'WFC', 'MS', 'AXP', 'GS', 'BLK', 'C', 'UBER', 'PFE', 'GILD', 'INTC', 'REGN', 'AIG', 'MET', 'TRV', 'ALL', 'PRU', 'AFL', 'CVS',
 ];
 
 /** חברות ציבוריות שמגישות 13F — לפי גודל החברה (COMPANY_SIZE_ORDER); אווטאר = לוגו הטיקר */
@@ -195,7 +193,9 @@ async function listCompanyBooks(limit: number): Promise<ExplorePerson[]> {
     const i = COMPANY_SIZE_ORDER.indexOf(t);
     return i === -1 ? COMPANY_SIZE_ORDER.length : i;
   };
-  const rows = [...(data ?? [])].sort((a, b) => {
+  const rows = [...(data ?? [])]
+    .filter((r) => COMPANY_SIZE_ORDER.includes(String(r.ticker ?? '').toUpperCase()))
+    .sort((a, b) => {
     const ta = String(a.ticker ?? '').toUpperCase();
     const tb = String(b.ticker ?? '').toUpperCase();
     return rank(ta) - rank(tb) || Number(b.last_value_usd) - Number(a.last_value_usd);

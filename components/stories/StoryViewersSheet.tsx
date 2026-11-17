@@ -1,7 +1,7 @@
 import { SegmentedTabs } from '../ui/SegmentedTabs';
 import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Reanimated, {
   runOnJS,
@@ -117,8 +117,7 @@ export function StoryViewersSheet({
         <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
       </Reanimated.View>
 
-      <GestureDetector gesture={panGesture}>
-        <Reanimated.View
+      <Reanimated.View
           style={[
             sheetStyles.sheet,
             {
@@ -131,6 +130,9 @@ export function StoryViewersSheet({
             sheetStyle,
           ]}
         >
+          {/* גרירה לסגירה רק מהראש (ידית + טאבים) — הרשימה עצמה נגללת */}
+          <GestureDetector gesture={panGesture}>
+          <View>
           {/* Grabber — כמו ידית השיטים באפליקציה */}
           <View style={sheetStyles.grabberWrap} pointerEvents="none">
             <View style={[sheetStyles.grabber, { backgroundColor: tokens.colors.text.secondary }]} />
@@ -146,6 +148,8 @@ export function StoryViewersSheet({
             onChange={onChangeTab}
             style={sheetStyles.tabsRow}
           />
+          </View>
+          </GestureDetector>
 
           {/* List / states */}
           {loading ? (
@@ -164,7 +168,11 @@ export function StoryViewersSheet({
               </Text>
             </View>
           ) : (
-            <View style={{ flex: 1 }}>
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingBottom: insetsBottom + 12 }}
+              showsVerticalScrollIndicator={false}
+            >
               {listData.map((row: any, idx) => {
                 const emoji = tab === 'viewers' ? row.emoji : row.emoji;
                 return (
@@ -185,11 +193,9 @@ export function StoryViewersSheet({
                   </View>
                 );
               })}
-              <View style={{ height: insetsBottom + 12 }} />
-            </View>
+            </ScrollView>
           )}
         </Reanimated.View>
-      </GestureDetector>
     </View>
   );
 }
@@ -223,10 +229,10 @@ const sheetStyles = StyleSheet.create({
     height: 5,
     borderRadius: 2.5,
   },
+  // עטיפה בלבד (שוליים) — סרגל הטאבים האחיד נמתח לכל הרוחב כמו בשאר המסכים
   tabsRow: {
-    flexDirection: 'row-reverse',
     paddingHorizontal: 16,
-    gap: 8,
+    marginTop: 4,
     marginBottom: 12,
   },
   tab: {

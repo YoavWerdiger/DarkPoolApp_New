@@ -209,12 +209,32 @@ function AppContent() {
     checkBiometric();
   }, [user, registrationDone, isLoading, biometricChecked, runBiometricAuth]);
 
+  // התנתקות (משתמש → בלי משתמש): נעילה ביומטרית היא הגדרה של המשתמש שהתנתק, לא של המכשיר.
+  // בלי זה ההגדרה נשארה ב-AppStorage והאימות קפץ שוב ושוב בזמן הרשמה של משתמש חדש.
+  const hadUserRef = useRef(false);
   useEffect(() => {
-    if (!user) {
-      setBiometricChecked(false);
-      setBiometricLocked(false);
+    if (user) {
+      hadUserRef.current = true;
+      return;
     }
+    setBiometricChecked(false);
+    setBiometricLocked(false);
+    if (!hadUserRef.current) return;
+    hadUserRef.current = false;
+    void (async () => {
+      try {
+        const saved = await AsyncStorage.getItem('appSettings');
+        if (!saved) return;
+        const parsed = JSON.parse(saved);
+        if (!parsed.biometricAuth) return;
+        await AsyncStorage.setItem('appSettings', JSON.stringify({ ...parsed, biometricAuth: false }));
+      } catch {}
+    })();
   }, [user]);
+
+  // נעילה ביומטרית רק אחרי שההרשמה הסתיימה (לא באמצע שלבי ההרשמה — יציאה לאימייל/SMS לקוד)
+  const registrationDoneRef = useRef(registrationDone);
+  registrationDoneRef.current = registrationDone;
 
   useEffect(() => {
     if (__DEV__) console.log('[story] biometricLocked =', biometricLocked);
@@ -232,7 +252,7 @@ function AppContent() {
         return;
       }
       // נועלים כבר ביציאה לרקע — בחזרה הנעילה כבר מוצגת (בלי הבזק של תוכן לפני האימות)
-      if (nextState === 'background' && user) {
+      if (nextState === 'background' && user && registrationDoneRef.current) {
         // לזכור את מצב ההרשאה לפני היציאה (למשל להגדרות המכשיר)
         void NotificationService.syncPermissionOnResume();
         try {
@@ -242,7 +262,7 @@ function AppContent() {
       }
       // רק חזרה מרקע אמיתי — לא מ-inactive: iOS נכנס ל-inactive בכל חלון מערכת (הרשאת מצלמה, גלריה,
       // ואפילו בקשת ה-Face ID עצמה) — הנעילה קפצה באמצע יצירת סטורי ונפתחה/נסגרה בלי שרואים
-      if (appState.current === 'background' && nextState === 'active' && user) {
+      if (appState.current === 'background' && nextState === 'active' && user && registrationDoneRef.current) {
         void NotificationService.syncPermissionOnResume();
         try {
           const saved = await AsyncStorage.getItem('appSettings');

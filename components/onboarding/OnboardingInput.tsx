@@ -1,4 +1,5 @@
 import { TEXT_DIR } from '../../lib/i18n/language';
+import { IS_RTL_UI } from '../../lib/i18n/direction';
 import React, { useState } from 'react';
 import { View, Text, TextInput, TextInputProps, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -127,7 +128,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   errorText: {
-    textAlign: 'right',
+    textAlign: IS_RTL_UI ? 'right' : 'left',
     flex: 1,
     writingDirection: TEXT_DIR,
   },

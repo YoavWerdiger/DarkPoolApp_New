@@ -46,7 +46,6 @@ import {
 } from './portfolioConstants';
 import { createPortfolio } from '../../services/portfolios';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import { useIsAdmin } from '../../hooks/useIsAdmin';
 
 /** ההתממשקות ל-Colmex Pro עוד לא פתוחה לכולם — false כשמשיקים */
 const COLMEX_CONNECT_COMING_SOON = true;
@@ -83,9 +82,8 @@ export default function CreatePortfolioScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const isBrokerMode = mode === 'broker';
-  // ההתממשקות ל-Colmex Pro — «בקרוב» לכולם; אדמין ממשיך לגשת (בדיקות)
-  const { isAdmin } = useIsAdmin();
-  const brokerSoon = COLMEX_CONNECT_COMING_SOON && !isAdmin;
+  // ההתממשקות ל-Colmex Pro — «בקרוב» לכולם
+  const brokerSoon = COLMEX_CONNECT_COMING_SOON;
   const importCsv = mode === 'import';
 
   const currencySymbol = useMemo(
@@ -219,6 +217,31 @@ export default function CreatePortfolioScreen() {
           borderBottomWidth: StyleSheet.hairlineWidth,
           borderBottomColor: tokens.colors.border.divider,
         },
+        soonBanner: {
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingVertical: 14,
+          paddingHorizontal: 16,
+        },
+        soonTitle: {
+          ...journalCardBodyStyle,
+          fontWeight: '600',
+          color: tokens.colors.text.primary,
+        },
+        soonPill: {
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          gap: 6,
+          height: 28,
+          paddingHorizontal: 12,
+          borderRadius: 14,
+        },
+        soonPillText: {
+          fontSize: 13,
+          lineHeight: 18,
+          fontWeight: '600',
+        },
         benefitText: {
           ...journalCardBodyStyle,
           flex: 1,
@@ -266,13 +289,29 @@ export default function CreatePortfolioScreen() {
               <>
                 <FieldGroupLabel>{i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s17')}</FieldGroupLabel>
                 <SettingsGlassCard style={styles.card}>
+                  {brokerSoon ? (
+                    // באנר «בקרוב» בראש הכרטיס — תגית CTA + הסבר
+                    <View style={[styles.soonBanner, styles.rowDivider]}>
+                      <View style={[styles.soonPill, { backgroundColor: tokens.colors.primary.lightCta }]}>
+                        <Ionicons name="time-outline" size={14} color={tokens.colors.text.inverse} />
+                        <Text style={[styles.soonPillText, { color: tokens.colors.text.inverse }]}>
+                          {i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.soon1')}
+                        </Text>
+                      </View>
+                      <Text style={styles.soonTitle}>Colmex Pro</Text>
+                    </View>
+                  ) : null}
                   {BROKER_BENEFITS.map((line, i) => (
                     <View
                       key={line}
                       style={[styles.benefitRow, i < BROKER_BENEFITS.length - 1 && styles.rowDivider]}
                     >
-                      <Ionicons name="checkmark-circle" size={20} color={tokens.colors.success.main} />
-                      <Text style={styles.benefitText}>{line}</Text>
+                      <Ionicons
+                        name={brokerSoon ? 'ellipse-outline' : 'checkmark-circle'}
+                        size={20}
+                        color={brokerSoon ? tokens.colors.text.tertiary : tokens.colors.success.main}
+                      />
+                      <Text style={[styles.benefitText, brokerSoon && { color: tokens.colors.text.secondary }]}>{line}</Text>
                     </View>
                   ))}
                 </SettingsGlassCard>

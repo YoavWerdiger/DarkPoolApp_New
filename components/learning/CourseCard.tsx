@@ -160,6 +160,8 @@ export const CourseCard: React.FC<CourseCardProps> = ({
                 {i18n.t('auto.components__learning__CourseInfoSheet.s2', { count: minutes })}
               </Text>
             ) : null}
+            {fillHeight ? <View style={{ flex: 1 }} /> : null}
+            {/* פס ההתקדמות באמצע בין הטקסט לכפתור — מרווח שווה מעליו ומתחתיו */}
             {canContinue ? (
               <View style={styles.progressTrack}>
                 <View
@@ -170,7 +172,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
                 />
               </View>
             ) : null}
-            {fillHeight ? <View style={{ flex: 1 }} /> : null}
+            {fillHeight && canContinue ? <View style={{ flex: 1 }} /> : null}
             <View pointerEvents="none">
               <UIButton title={ctaLabel} variant="primary" size="lg" fullWidth haptic={false} />
             </View>

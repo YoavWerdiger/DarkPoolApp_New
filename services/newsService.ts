@@ -4,6 +4,13 @@ import { supabase } from './supabase';
 import { DesignTokens } from '../components/ui/DesignTokens';
 
 // טיפוסי נתונים לחדשות
+/** תמונת פרופיל של חשבון X (pbs.twimg.com/profile_images) היא לא תמונת הכתבה — חדשה בלי תמונה עדיפה */
+export function cleanNewsImage(url: unknown): string | undefined {
+  if (typeof url !== 'string' || !url.trim()) return undefined;
+  if (/\/profile_images\//i.test(url) || /cdn\.discordapp\.com\/avatars\//i.test(url)) return undefined;
+  return url;
+}
+
 export interface NewsArticle {
   id: string;
   label?: string;              // כותרת קצרה להצגה

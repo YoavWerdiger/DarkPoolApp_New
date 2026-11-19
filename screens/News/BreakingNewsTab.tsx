@@ -32,6 +32,7 @@ import UICard from '../../components/ui/UICard';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import { APP_TYPE, appSheetButtonLabelStyle } from '../../components/ui/appType';
 import ShareDestinationSheet from '../../components/share/ShareDestinationSheet';
+import { cleanNewsImage } from '../../services/newsService';
 import { buildNewsAttachment } from '../../types/shareableEntity';
 
 const BREAKING_NEWS_QUERY_KEY = appQueryKeys.newsList('breaking');
@@ -626,14 +627,6 @@ export const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, on
     if (onShare) onShare(article);
   };
 
-  const isTwitterPost = article.source === 'Twitter' ||
-    article.source === 'Bloomberg' || article.source === 'Reuters' ||
-    article.source === 'CNN' || article.source === 'BBC' ||
-    article.source === 'טוויטר' ||
-    article.url?.includes('twitter.com') ||
-    article.source_url?.includes('twitter.com') ||
-    article.id?.length > 15;
-
   const hasImage = !!article.image_url;
   // Square thumbnail on the right side — compact, doesn't dominate the card.
   const THUMB_SIZE = 92;
@@ -669,43 +662,29 @@ export const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, on
             gap: APP_LAYOUT.cardTitleToBodyGap,
           }}
         >
-          {/* Square thumbnail */}
-          <View
-            style={{
-              width: THUMB_SIZE,
-              height: THUMB_SIZE,
-              borderRadius: DesignTokens.borderRadius.lg,
-              overflow: 'hidden',
-              backgroundColor: DesignTokens.colors.background.tertiary,
-            }}
-          >
-            {hasImage ? (
+          {/* תמונה רק כשיש — בלי תמונה הטקסט מתפרס לכל רוחב הכרטיס (בלי placeholder) */}
+          {hasImage ? (
+            <View
+              style={{
+                width: THUMB_SIZE,
+                height: THUMB_SIZE,
+                borderRadius: DesignTokens.borderRadius.lg,
+                overflow: 'hidden',
+                backgroundColor: DesignTokens.colors.background.tertiary,
+              }}
+            >
               <Image
                 source={{ uri: article.image_url }}
                 style={{ width: '100%', height: '100%' }}
                 resizeMode="cover"
               />
-            ) : (
-              <View
-                style={{
-                  flex: 1,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Ionicons
-                  name={isTwitterPost ? 'logo-twitter' : 'newspaper-outline'}
-                  size={36}
-                  color={DesignTokens.colors.text.tertiary}
-                />
-              </View>
-            )}
-          </View>
+            </View>
+          ) : null}
 
           {/* Headline + summary column. Title and summary sit tightly
              together at the top; the category is pushed to the bottom of
              the column with marginTop:'auto'. */}
-          <View style={{ flex: 1, minHeight: THUMB_SIZE }}>
+          <View style={{ flex: 1, minHeight: hasImage ? THUMB_SIZE : undefined }}>
             <Text
               style={{
                 ...APP_TYPE.cardTitle,
@@ -737,7 +716,8 @@ export const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, on
             {article.category && article.category !== 'כללי' && article.category !== i18n.t('auto.screens__News__BreakingNewsTab.s12') ? (
               <View
                 style={{
-                  marginTop: 'auto',
+                  // בלי תמונה אין גובה מינימלי — רווח קבוע במקום דחיפה לתחתית
+                  marginTop: hasImage ? 'auto' : APP_LAYOUT.stackGapSmall,
                   alignSelf: 'flex-end',
                   backgroundColor: categoryColor + '25',
                   paddingHorizontal: 10,
@@ -1002,7 +982,7 @@ export default function BreakingNewsTab({
             source: row.source || row.author || row.username || i18n.t('auto.screens__News__BreakingNewsTab.s11'),
             source_url: row.url || row.link || '',
             author: row.author || row.username || '',
-            image_url: row.img || row.image || row.image_url || row.photo || null,
+            image_url: cleanNewsImage(row.img || row.image || row.image_url || row.photo),
             published_at: row.time || row.created_at || row.date || row.timestamp || new Date().toISOString(),
             created_at: row.time || row.created_at || row.date || new Date().toISOString(),
             updated_at: row.updated_at || null,
@@ -1057,9 +1037,9 @@ export default function BreakingNewsTab({
                       i18n.t('auto.screens__News__BreakingNewsTab.s11');
         
         // חיפוש תמונה - לפי המבנה שלך
-        const image_url = row.img || row.image_url || row.image || row.thumbnail || 
+        const image_url = cleanNewsImage(row.img || row.image_url || row.image || row.thumbnail || 
                          row.media_url || row.photo || row.picture || 
-                         row.profile_image || null;
+                         row.profile_image || null);
         
         // חיפוש קטגוריה
         const category = row.category || row.type || row.topic || 
@@ -1214,7 +1194,7 @@ export default function BreakingNewsTab({
                     title: row.label || row.text || a.title,
                     content: row.text ?? a.content,
                     source: row.source || a.source,
-                    image_url: row.img || row.image_url || null,
+                    image_url: cleanNewsImage(row.img || row.image_url),
                   }
                 : a,
             );
@@ -1318,7 +1298,7 @@ export default function BreakingNewsTab({
           source: row.source || i18n.t('auto.screens__News__BreakingNewsTab.s11'),
           source_url: row.source_url || row.url || '',
           author: row.author || '',
-          image_url: row.img || row.image_url || null,
+          image_url: cleanNewsImage(row.img || row.image_url),
           published_at: row.time || row.published_at || row.created_at || new Date().toISOString(),
           created_at: row.time || row.created_at || new Date().toISOString(),
           category: row.category || i18n.t('auto.screens__News__BreakingNewsTab.s12'),

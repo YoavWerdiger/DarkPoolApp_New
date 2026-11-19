@@ -29,6 +29,8 @@ import { TickerLogo, prefetchTickerLogos } from '../../components/ui/TickerLogo'
 import { SkeletonBox, SkeletonLine } from '../../components/ui/SkeletonLoader';
 import EarningsService, { EarningsReport } from '../../services/earningsService';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
+import { sessionPillColors } from './sessionPillColors';
+import { useTheme } from '../../context/ThemeContext';
 
 // ניקוי סימבול לתצוגה — מסיר סיומת ".US" ומינוס מתחילת הקוד. משותף עם התצוגה היומית.
 export function getSymbolDisplay(code: string | null | undefined): string {
@@ -325,12 +327,19 @@ const SubSectionHeader: React.FC<{
   color: string;
   isFirst?: boolean;
 }> = ({ label, icon: Icon, color, isFirst = false }) => {
-  const DesignTokens = useDesignTokens();
+  const { isDarkMode } = useTheme();
+  // צבע האייקון קובע את הסשן (זהב = מוקדם, כחול = מאוחר)
+  const c = sessionPillColors(color === POST_COLOR ? 'after' : 'before', isDarkMode);
   return (
     <View style={[weekStyles.subHeader, !isFirst && weekStyles.subHeaderSpaced]}>
-      <View style={[weekStyles.subHeaderPill, { backgroundColor: DesignTokens.colors.background.primary }]}>
-        <Icon size={14} color={color} strokeWidth={2} />
-        <Text style={[weekStyles.subHeaderText, { color: DesignTokens.colors.text.secondary }]}>
+      <View
+        style={[
+          weekStyles.subHeaderPill,
+          { backgroundColor: c.background, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border },
+        ]}
+      >
+        <Icon size={14} color={c.icon} strokeWidth={2.2} />
+        <Text style={[weekStyles.subHeaderText, { color: c.text, fontWeight: '600' }]}>
           {label}
         </Text>
       </View>

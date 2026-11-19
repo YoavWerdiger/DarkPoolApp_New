@@ -28,6 +28,8 @@ import EarningsDetailSheet from './EarningsDetailSheet';
 import { buildEarningsAttachment } from '../../types/shareableEntity';
 import EarningsWeeklyView, { WeekDay, getSymbolDisplay as getWeeklySymbolDisplay } from './EarningsWeeklyView';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
+import { sessionPillColors, type TradingSession } from './sessionPillColors';
+import { useTheme } from '../../context/ThemeContext';
 
 export type EarningsViewMode = 'daily' | 'weekly';
 
@@ -449,10 +451,12 @@ const DIVIDER_GAP_BETWEEN_SESSIONS = 28;
 const SectionDivider: React.FC<{
   label: string;
   icon?: React.ComponentType<{ size?: number; color?: string; strokeWidth?: number; style?: object }>;
-  iconColor?: string;
+  session: TradingSession;
   marginTop?: number;
-}> = ({ label, icon: Icon, iconColor, marginTop = DIVIDER_GAP_TOP }) => {
+}> = ({ label, icon: Icon, session, marginTop = DIVIDER_GAP_TOP }) => {
   const DesignTokens = useDesignTokens();
+  const { isDarkMode } = useTheme();
+  const c = sessionPillColors(session, isDarkMode);
   return (
     <View
       style={{
@@ -472,13 +476,13 @@ const SectionDivider: React.FC<{
           height: 32,
           paddingHorizontal: 14,
           borderRadius: DesignTokens.borderRadius.full,
-          backgroundColor: DesignTokens.colors.background.cardSolid,
+          backgroundColor: c.background,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: c.border,
         }}
       >
-        {Icon ? (
-          <Icon size={14} color={iconColor || DesignTokens.colors.text.secondary} strokeWidth={2} />
-        ) : null}
-        <Text style={{ ...APP_TYPE.groupLabel, color: DesignTokens.colors.text.secondary, textAlign: 'center' }}>
+        {Icon ? <Icon size={14} color={c.icon} strokeWidth={2.2} /> : null}
+        <Text style={{ ...APP_TYPE.groupLabel, fontWeight: '600', color: c.text, textAlign: 'center' }}>
           {label}
         </Text>
       </View>
@@ -1228,12 +1232,12 @@ export default function EarningsReportsTab({
           <SectionDivider
             label={i18n.t('auto.screens__News__EarningsReportsTab.s15')}
             icon={Sun}
-            iconColor="#d1a11d"
+            session="before"
             marginTop={isListHead ? 0 : DIVIDER_GAP_TOP}
           />
         )}
         {isFirstAfterMarket && (
-          <SectionDivider label={i18n.t('auto.screens__News__EarningsReportsTab.s16')} icon={Moon} iconColor="#007AFF" marginTop={DIVIDER_GAP_BETWEEN_SESSIONS} />
+          <SectionDivider label={i18n.t('auto.screens__News__EarningsReportsTab.s16')} icon={Moon} session="after" marginTop={DIVIDER_GAP_BETWEEN_SESSIONS} />
         )}
         <View style={undefined}>
           <EarningsReportCard

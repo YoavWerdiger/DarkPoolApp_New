@@ -27,6 +27,31 @@ const BRAND: Record<string, string> = {
   MSFT: '#00A4EF',
   META: '#0866FF',
   TSLA: '#E31937',
+  QCOM: '#3253DC',
+  // בנקים, ביטוח והחזקות
+  JPM: '#117ACA',
+  BAC: '#DC1431',
+  WFC: '#D71E28',
+  MS: '#002B51',
+  GS: '#7399C6',
+  C: '#056DAE',
+  BLK: '#2B2B2B',
+  AXP: '#006FCF',
+  AIG: '#00A4E4',
+  MET: '#0090DA',
+  PRU: '#001F5F',
+  TRV: '#E01933',
+  ALL: '#0033A0',
+  AFL: '#00A7E1',
+  MKL: '#D50032',
+  L: '#002D72',
+  CINF: '#003865',
+  FRFHF: '#003B71',
+  WRB: '#00205B',
+  AFG: '#0B2F6B',
+  // אנרגיה, קמעונאות ובריאות
+  CVX: '#0054A4',
+  CVS: '#CC0000',
 };
 
 const NEUTRAL_DARK: [string, string] = ['#1E2A3A', '#0B0F15'];

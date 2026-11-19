@@ -1,4 +1,4 @@
-import { ROOT_DIR, dirIcon } from '../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
@@ -367,7 +367,7 @@ export default function CalendarTab() {
                 glassIntensity="subtle"
                 accessibilityLabel={i18n.t('auto.screens__Journal__CalendarTab.s9')}
               >
-                <Ionicons name={dirIcon('chevron-back')} size={20} color={DesignTokens.colors.text.primary} />
+                <Ionicons name={dirIcon('chevron-forward')} size={20} color={DesignTokens.colors.text.primary} />
               </DayNavBlurButton>
 
               <View style={styles.monthInfo}>
@@ -393,7 +393,7 @@ export default function CalendarTab() {
                 glassIntensity="subtle"
                 accessibilityLabel={i18n.t('auto.screens__Journal__CalendarTab.s11')}
               >
-                <Ionicons name={dirIcon('chevron-forward')} size={20} color={DesignTokens.colors.text.primary} />
+                <Ionicons name={dirIcon('chevron-back')} size={20} color={DesignTokens.colors.text.primary} />
               </DayNavBlurButton>
             </View>
           </UICard>
@@ -537,8 +537,8 @@ const createStyles = (
   },
   monthHeader: {
     flexDirection: 'row',
-    /** בלי זה, ב־rtlRoot הכפתור הראשון נזרק לימין והחצים נראים הפוכים */
-    direction: ROOT_DIR as 'ltr' | 'rtl',
+    // עברית: אחורה מימין, קדימה משמאל (אנגלית הפוך) — כמו כל מנווטי התאריך
+    direction: UI_DIR,
     alignItems: 'center',
     justifyContent: 'space-between',
   },

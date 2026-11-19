@@ -1,7 +1,7 @@
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
-import { dirIcon } from '../../lib/i18n/direction';
+import { UI_DIR, dirIcon } from '../../lib/i18n/direction';
 /**
  * לוח חודשי ליומן הכלכלי (QA 15.1) — כל יום צבוע לפי עוצמת האירועים:
  * אדום = אירוע מסומן אדום, כתום = כתום, ירוק = יש אירועים רגילים.
@@ -103,13 +103,13 @@ export default function EconomicMonthSheet({ visible, onClose, selectedDate, day
       <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <View style={styles.header}>
           <DayNavBlurButton onPress={() => shiftMonth(-1)} style={{ backgroundColor: tokens.colors.background.tertiary }}>
-            <Ionicons name={dirIcon('chevron-back')} size={20} color={tokens.colors.text.secondary} />
+            <Ionicons name={dirIcon('chevron-forward')} size={20} color={tokens.colors.text.primary} />
           </DayNavBlurButton>
           <Text style={[styles.monthTitle, { color: tokens.colors.text.primary }]}>
             {month.toLocaleDateString(appLocale(), { month: 'long', year: 'numeric' })}
           </Text>
-          <DayNavBlurButton onPress={() => shiftMonth(1)} style={{ backgroundColor: tokens.colors.success.main }}>
-            <Ionicons name={dirIcon('chevron-forward')} size={20} color="#FFFFFF" />
+          <DayNavBlurButton onPress={() => shiftMonth(1)} style={{ backgroundColor: tokens.colors.background.tertiary }}>
+            <Ionicons name={dirIcon('chevron-back')} size={20} color={tokens.colors.text.primary} />
           </DayNavBlurButton>
         </View>
 
@@ -224,8 +224,10 @@ export default function EconomicMonthSheet({ visible, onClose, selectedDate, day
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     wrap: { paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal, paddingTop: 4 },
+    // עברית: אחורה מימין, קדימה משמאל (אנגלית הפוך) — כמו כל מנווטי התאריך
     header: {
       flexDirection: 'row',
+      direction: UI_DIR,
       alignItems: 'center',
       justifyContent: 'space-between',
       marginBottom: 12,

@@ -19,7 +19,8 @@ import {
   ChevronDown,
   Edit3,
 } from 'lucide-react-native';
-import { ChevronLeft, ChevronRight, ArrowRight } from '../../lib/i18n/dirIcons';
+import { ArrowRight } from '../../lib/i18n/dirIcons';
+import { UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
 import { SkeletonBox, SkeletonLine } from '../../components/ui/SkeletonLoader';
@@ -598,10 +599,10 @@ export const LessonPlayerScreen: React.FC = () => {
                   disabled={currentBlockIndex === 0}
                   style={{ backgroundColor: DesignTokens.colors.background.primary }}
                 >
-                  <ChevronLeft
-                    size={18}
+                  <Ionicons
+                    name={dirIcon('chevron-forward')}
+                    size={20}
                     color={currentBlockIndex === 0 ? DesignTokens.colors.text.tertiary : DesignTokens.colors.text.primary}
-                    strokeWidth={2}
                   />
                 </DayNavBlurButton>
                 <View style={styles.blockNavCenter} />
@@ -610,14 +611,14 @@ export const LessonPlayerScreen: React.FC = () => {
                   disabled={!lesson.blocks || currentBlockIndex >= lesson.blocks.length - 1}
                   style={{ backgroundColor: DesignTokens.colors.background.primary }}
                 >
-                  <ChevronRight
-                    size={18}
+                  <Ionicons
+                    name={dirIcon('chevron-back')}
+                    size={20}
                     color={
                       !lesson.blocks || currentBlockIndex >= lesson.blocks.length - 1
                         ? DesignTokens.colors.text.tertiary
                         : DesignTokens.colors.text.primary
                     }
-                    strokeWidth={2}
                   />
                 </DayNavBlurButton>
               </View>
@@ -697,8 +698,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     borderRadius: 24,
     overflow: 'hidden',
   },
+  // עברית: אחורה מימין, קדימה משמאל (אנגלית הפוך)
   blockNavRow: {
     flexDirection: 'row',
+    direction: UI_DIR,
     alignItems: 'center',
     justifyContent: 'space-between',
     minHeight: 44,

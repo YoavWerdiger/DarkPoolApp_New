@@ -1,4 +1,4 @@
-import { ROOT_DIR, dirIcon } from '../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
@@ -749,14 +749,15 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
           <View
             style={{
               flexDirection: 'row',
-              direction: ROOT_DIR,
+              // כמו המנווט היומי: עברית — אחורה מימין, קדימה משמאל; אנגלית הפוך
+              direction: UI_DIR,
               alignItems: 'center',
               justifyContent: 'space-between',
             }}
           >
-            {/* QA 14.1: הקודם אפור, הבא מודגש בירוק — ברור לאן כל חץ מוביל */}
-            <DayNavBlurButton onPress={onPrevWeek} style={{ backgroundColor: DesignTokens.colors.background.tertiary }} accessibilityLabel={i18n.t('auto.screens__News__EarningsWeeklyView.s9')}>
-              <Ionicons name={dirIcon('chevron-back')} size={20} color={DesignTokens.colors.text.secondary} />
+            {/* שני הכפתורים לפי ערכת הנושא — כמו בפריסה היומית */}
+            <DayNavBlurButton onPress={onPrevWeek} style={{ backgroundColor: DesignTokens.colors.background.primary }} accessibilityLabel={i18n.t('auto.screens__News__EarningsWeeklyView.s9')}>
+              <Ionicons name={dirIcon('chevron-forward')} size={20} color={DesignTokens.colors.text.primary} />
             </DayNavBlurButton>
 
             <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 10 }}>
@@ -781,8 +782,8 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
               </Text>
             </View>
 
-            <DayNavBlurButton onPress={onNextWeek} style={{ backgroundColor: DesignTokens.colors.success.main }} accessibilityLabel={i18n.t('auto.screens__News__EarningsWeeklyView.s12')}>
-              <Ionicons name={dirIcon('chevron-forward')} size={20} color="#FFFFFF" />
+            <DayNavBlurButton onPress={onNextWeek} style={{ backgroundColor: DesignTokens.colors.background.primary }} accessibilityLabel={i18n.t('auto.screens__News__EarningsWeeklyView.s12')}>
+              <Ionicons name={dirIcon('chevron-back')} size={20} color={DesignTokens.colors.text.primary} />
             </DayNavBlurButton>
           </View>
         </UICard>
@@ -893,8 +894,6 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
           <UIButton
             title={i18n.t('auto.screens__News__EarningsWeeklyView.s10')}
             variant="primary"
-            icon="calendar-outline"
-            iconPosition="right"
             onPress={onGoToCurrentWeek}
           />
         </View>

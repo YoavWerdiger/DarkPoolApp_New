@@ -73,15 +73,8 @@ export const MyLearningScreen: React.FC = () => {
   }, [refetch]);
 
   const handleCoursePress = useCallback((course: CourseWithProgress) => {
-    if (isComingSoonCourse(course)) {
-      navigation.navigate('CourseComingSoonScreen', {
-        courseId: course.id,
-        title: course.title,
-        subtitle: getAcademyCourseSubtitle(course),
-        coverUrl: course.cover_url ?? undefined,
-      });
-      return;
-    }
+    // קורס «בקרוב» (האורקל) — אין דף פנימי
+    if (isComingSoonCourse(course)) return;
     if (isNativeLearningCourse(course)) {
       navigation.navigate('LearningScreen', { courseId: course.id });
     } else {
@@ -91,15 +84,8 @@ export const MyLearningScreen: React.FC = () => {
 
   const handleContinueLearning = useCallback((course: CourseWithProgress) => {
     void HapticFeedback.impactLight();
-    if (isComingSoonCourse(course)) {
-      navigation.navigate('CourseComingSoonScreen', {
-        courseId: course.id,
-        title: course.title,
-        subtitle: getAcademyCourseSubtitle(course),
-        coverUrl: course.cover_url ?? undefined,
-      });
-      return;
-    }
+    // קורס «בקרוב» (האורקל) — אין דף פנימי
+    if (isComingSoonCourse(course)) return;
     if (course.progress?.last_lesson_id) {
       navigation.navigate('LessonPlayerScreen', {
         lessonId: course.progress.last_lesson_id,

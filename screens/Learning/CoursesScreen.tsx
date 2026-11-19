@@ -143,15 +143,8 @@ export const CoursesScreen: React.FC = () => {
   const handleCoursePress = useCallback(
     (course: CourseWithProgress) => {
       const nav = navigation as Nav;
-      if (isComingSoonCourse(course)) {
-        nav.navigate('CourseComingSoonScreen', {
-          courseId: course.id,
-          title: course.title,
-          subtitle: getAcademyCourseSubtitle(course),
-          coverUrl: course.cover_url ?? undefined,
-        });
-        return;
-      }
+      // קורס «בקרוב» (האורקל) — אין דף פנימי
+      if (isComingSoonCourse(course)) return;
       if (isNativeLearningCourse(course)) {
         nav.navigate('LearningScreen', { courseId: course.id });
       } else {
@@ -179,7 +172,9 @@ export const CoursesScreen: React.FC = () => {
         else nav.navigate('CourseCheckout', { courseId: course.id });
         return;
       }
-      if (isComingSoonCourse(course) || hasAcademyCourseAccess(course, isPremium)) {
+      // «בקרוב» (האורקל) — אין דף פנימי, הכרטיס לא מנווט
+      if (isComingSoonCourse(course)) return;
+      if (hasAcademyCourseAccess(course, isPremium)) {
         handleCoursePress(course);
         return;
       }

@@ -162,10 +162,29 @@ function AppContent() {
     void signOut(true);
   }, [isLoading, user, passwordRecoveryMode, midRegistrationWizard, signOut]);
 
-  // חלון האימות עצמו (טביעת אצבע / Face ID / קוד מכשיר) מוציא את האפליקציה לרקע לרגע — באנדרואיד
-  // זה background→active אמיתי. בלי הדגל הזה, החזרה מהחלון נראתה כחזרה מרקע ונעלה שוב → לולאה.
+  // ── נעילה ביומטרית (נבנה מחדש) ──
+  // 1) בדיקה אחת לכל משתמש (לפי id) — נפילה רגעית של user ל-null (רענון סשן) לא מאפסת ולא מכבה את ההגדרה
+  //    (ההגדרה נמחקת רק בהתנתקות אמיתית — AuthContext.signOut).
+  // 2) חלון האימות עצמו מוציא את האפליקציה לרקע (אנדרואיד: background→active אמיתי) — מתעלמים מהמעברים
+  //    בזמן האימות ושנייה וחצי אחריו.
+  // 3) חזרה מרקע נועלת רק אחרי שהיה ברקע לפחות BIOMETRIC_GRACE_MS — מעבר קצר (התראה, החלפת אפליקציה לרגע)
+  //    לא מקפיץ אימות שוב ושוב.
+  const BIOMETRIC_GRACE_MS = 30_000;
+  const userId = user?.id ?? null;
   const biometricAuthInFlightRef = useRef(false);
   const biometricAuthEndedAtRef = useRef(0);
+  const backgroundAtRef = useRef<number | null>(null);
+  const checkedUserIdRef = useRef<string | null>(null);
+
+  const isBiometricEnabled = useCallback(async (): Promise<boolean> => {
+    try {
+      const saved = await AsyncStorage.getItem('appSettings');
+      return !!(saved && JSON.parse(saved).biometricAuth);
+    } catch {
+      return false;
+    }
+  }, []);
+
   const runBiometricAuth = useCallback(async () => {
     if (biometricAuthInFlightRef.current) return;
     biometricAuthInFlightRef.current = true;
@@ -175,9 +194,7 @@ function AppContent() {
         cancelLabel: i18n.t('auto.App.s2'),
         disableDeviceFallback: false,
       });
-      if (result.success) {
-        setBiometricLocked(false);
-      }
+      if (result.success) setBiometricLocked(false);
     } catch {
       /* נשאר נעול — כפתור «פתח» בתוך מסך הנעילה */
     } finally {
@@ -187,99 +204,71 @@ function AppContent() {
   }, []);
   const attemptBiometricAuth = runBiometricAuth;
 
+  // בדיקה בכניסה — פעם אחת לכל משתמש
   useEffect(() => {
-    if (!user || !registrationDone || isLoading || biometricChecked) return;
-
-    const checkBiometric = async () => {
-      try {
-        const saved = await AsyncStorage.getItem('appSettings');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed.biometricAuth) {
-            setBiometricLocked(true);
-            setBiometricChecked(true);
-            await runBiometricAuth();
-            return;
-          }
-        }
-      } catch {}
-      setBiometricChecked(true);
-    };
-
-    checkBiometric();
-  }, [user, registrationDone, isLoading, biometricChecked, runBiometricAuth]);
-
-  // התנתקות (משתמש → בלי משתמש): נעילה ביומטרית היא הגדרה של המשתמש שהתנתק, לא של המכשיר.
-  // בלי זה ההגדרה נשארה ב-AppStorage והאימות קפץ שוב ושוב בזמן הרשמה של משתמש חדש.
-  const hadUserRef = useRef(false);
-  useEffect(() => {
-    if (user) {
-      hadUserRef.current = true;
+    if (!userId || !registrationDone || isLoading) return;
+    if (checkedUserIdRef.current === userId) {
+      if (!biometricChecked) setBiometricChecked(true);
       return;
     }
-    setBiometricChecked(false);
-    setBiometricLocked(false);
-    if (!hadUserRef.current) return;
-    hadUserRef.current = false;
+    checkedUserIdRef.current = userId;
     void (async () => {
-      try {
-        const saved = await AsyncStorage.getItem('appSettings');
-        if (!saved) return;
-        const parsed = JSON.parse(saved);
-        if (!parsed.biometricAuth) return;
-        await AsyncStorage.setItem('appSettings', JSON.stringify({ ...parsed, biometricAuth: false }));
-      } catch {}
+      const enabled = await isBiometricEnabled();
+      if (enabled) {
+        setBiometricLocked(true);
+        setBiometricChecked(true);
+        await runBiometricAuth();
+        return;
+      }
+      setBiometricChecked(true);
     })();
-  }, [user]);
+  }, [userId, registrationDone, isLoading, biometricChecked, isBiometricEnabled, runBiometricAuth]);
+
+  // התנתקות: אין משתמש → בלי נעילה (ההגדרה עצמה נמחקת ב-signOut)
+  useEffect(() => {
+    if (userId) return;
+    setBiometricLocked(false);
+  }, [userId]);
 
   // נעילה ביומטרית רק אחרי שההרשמה הסתיימה (לא באמצע שלבי ההרשמה — יציאה לאימייל/SMS לקוד)
   const registrationDoneRef = useRef(registrationDone);
   registrationDoneRef.current = registrationDone;
-
-  useEffect(() => {
-    if (__DEV__) console.log('[story] biometricLocked =', biometricLocked);
-  }, [biometricLocked]);
+  const userIdRef = useRef(userId);
+  userIdRef.current = userId;
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', async (nextState) => {
-      if (__DEV__) console.log('[story] AppState', appState.current, '->', nextState);
-      // מעבר שנגרם מחלון האימות עצמו (או שנייה אחריו) — לא יציאה אמיתית מהאפליקציה
-      if (
-        biometricAuthInFlightRef.current ||
-        Date.now() - biometricAuthEndedAtRef.current < 1500
-      ) {
-        appState.current = nextState;
+      const prev = appState.current;
+      appState.current = nextState;
+      // מעבר שנגרם מחלון האימות עצמו (או שנייה וחצי אחריו) — לא יציאה אמיתית מהאפליקציה
+      if (biometricAuthInFlightRef.current || Date.now() - biometricAuthEndedAtRef.current < 1500) return;
+      if (!userIdRef.current || !registrationDoneRef.current) return;
+
+      if (nextState === 'background') {
+        backgroundAtRef.current = Date.now();
+        void NotificationService.syncPermissionOnResume();
+        // נועלים כבר ביציאה — בלי הבזק תוכן בחזרה / ב-app switcher
+        if (await isBiometricEnabled()) setBiometricLocked(true);
         return;
       }
-      // נועלים כבר ביציאה לרקע — בחזרה הנעילה כבר מוצגת (בלי הבזק של תוכן לפני האימות)
-      if (nextState === 'background' && user && registrationDoneRef.current) {
-        // לזכור את מצב ההרשאה לפני היציאה (למשל להגדרות המכשיר)
+      // רק חזרה מרקע אמיתי — לא מ-inactive (חלונות מערכת ב-iOS)
+      if (prev === 'background' && nextState === 'active') {
         void NotificationService.syncPermissionOnResume();
-        try {
-          const saved = await AsyncStorage.getItem('appSettings');
-          if (saved && JSON.parse(saved).biometricAuth) setBiometricLocked(true);
-        } catch {}
+        const awayMs = backgroundAtRef.current ? Date.now() - backgroundAtRef.current : 0;
+        backgroundAtRef.current = null;
+        if (awayMs < BIOMETRIC_GRACE_MS) {
+          // חזרה מהירה — משחררים בלי לבקש אימות
+          setBiometricLocked(false);
+          return;
+        }
+        if (await isBiometricEnabled()) {
+          setBiometricLocked(true);
+          await runBiometricAuth();
+        }
       }
-      // רק חזרה מרקע אמיתי — לא מ-inactive: iOS נכנס ל-inactive בכל חלון מערכת (הרשאת מצלמה, גלריה,
-      // ואפילו בקשת ה-Face ID עצמה) — הנעילה קפצה באמצע יצירת סטורי ונפתחה/נסגרה בלי שרואים
-      if (appState.current === 'background' && nextState === 'active' && user && registrationDoneRef.current) {
-        void NotificationService.syncPermissionOnResume();
-        try {
-          const saved = await AsyncStorage.getItem('appSettings');
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            if (parsed.biometricAuth) {
-              setBiometricLocked(true);
-              await runBiometricAuth();
-            }
-          }
-        } catch {}
-      }
-      appState.current = nextState;
     });
-
     return () => subscription.remove();
-  }, [user, runBiometricAuth]);
+  }, [isBiometricEnabled, runBiometricAuth]);
 
   useEffect(() => {
     HapticFeedback.init();

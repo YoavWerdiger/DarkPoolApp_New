@@ -39,7 +39,6 @@ import { createCommunityPost } from '../../services/tweetsService';
 import type { CommunityMention, CommunityPost } from '../../types/tweets.types';
 import type { ShareableAttachment } from '../../types/shareableEntity';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import EntityAttachPickerSheet from '../../components/share/EntityAttachPickerSheet';
 import EntityEmbedCard from '../../components/share/EntityEmbedCard';
 import MentionPickerSheet from '../../components/share/MentionPickerSheet';
 import CommunityPostImage from './CommunityPostImage';
@@ -153,7 +152,6 @@ function CreateCommunityPostSheetBody({
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<ShareableAttachment[]>([]);
   const [mentions, setMentions] = useState<CommunityMention[]>([]);
-  const [entityPickerOpen, setEntityPickerOpen] = useState(false);
   const [mentionPickerOpen, setMentionPickerOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -171,7 +169,6 @@ function CreateCommunityPostSheetBody({
       setImageUri(null);
       setAttachments([]);
       setMentions([]);
-      setEntityPickerOpen(false);
       setMentionPickerOpen(false);
       setGalleryOpen(false);
       setBusy(false);
@@ -211,17 +208,6 @@ function CreateCommunityPostSheetBody({
   const removeImage = useCallback(() => {
     setImageUri(null);
     void HapticFeedback.selection();
-  }, []);
-
-  const addAttachment = useCallback((att: ShareableAttachment) => {
-    setAttachments((prev) => {
-      if (prev.some((a) => a.ref.type === att.ref.type && a.ref.id === att.ref.id)) {
-        return prev;
-      }
-      if (prev.length >= MAX_ATTACHMENTS) return prev;
-      return [...prev, att];
-    });
-    setEntityPickerOpen(false);
   }, []);
 
   const removeAttachment = useCallback((index: number) => {
@@ -456,21 +442,6 @@ function CreateCommunityPostSheetBody({
             <TouchableOpacity
               onPress={() => {
                 void HapticFeedback.impactLight();
-                setEntityPickerOpen(true);
-              }}
-              disabled={busy || attachments.length >= MAX_ATTACHMENTS}
-              style={[
-                styles.attachBtn,
-                (busy || attachments.length >= MAX_ATTACHMENTS) && styles.attachBtnDisabled,
-              ]}
-              accessibilityLabel={i18n.t('auto.screens__Tweets__CreateCommunityPostSheet.s8')}
-              hitSlop={8}
-            >
-              <Ionicons name="link-outline" size={22} color={tokens.colors.text.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => {
-                void HapticFeedback.impactLight();
                 void pickImage();
               }}
               disabled={busy}
@@ -547,11 +518,6 @@ function CreateCommunityPostSheetBody({
           ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
-      <EntityAttachPickerSheet
-        visible={entityPickerOpen}
-        onClose={() => setEntityPickerOpen(false)}
-        onSelect={addAttachment}
-      />
       <MentionPickerSheet
         visible={mentionPickerOpen}
         onClose={() => setMentionPickerOpen(false)}

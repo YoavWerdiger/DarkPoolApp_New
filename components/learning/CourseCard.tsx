@@ -88,8 +88,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
 
   const canContinue = hasAccess ?? !!course.enrollment;
   const { progressPct } = getCourseLessonStats(course);
-  // מקף עברי (־) נופל לפונט חלופי ב-iOS ומגביה את השורה — מקף רגיל
-  const subtitle = getAcademyCourseSubtitle(course).replace(/\u05BE/g, '-');
+  const subtitle = getAcademyCourseSubtitle(course);
   const accent = getAcademyCourseAccentColor(
     course as CourseWithProgress & { price?: number },
     T.colors.primary.main
@@ -147,7 +146,8 @@ export const CourseCard: React.FC<CourseCardProps> = ({
         {expanded ? (
           // כל המלל בתוך הכרטיס (בלי שיט) — כותרת, תת-כותרת, למי מתאים, על הקורס, משך; CTA רחב בתחתית
           <View style={[styles.body, styles.expandedBody, fillHeight && styles.fillFlex]}>
-            <View style={styles.titleBlock}>
+            {/* flex: 0 — בעמודה titleBlock (flex: 1) תפס חצי מהמקום הפנוי והוריד את הטקסט */}
+            <View style={[styles.titleBlock, styles.titleBlockExpanded]}>
               <Text style={[styles.title, styles.titleExpanded]} numberOfLines={2}>
                 {course.title}
               </Text>
@@ -353,6 +353,9 @@ const createStyles = (
       lineHeight: APP_TYPE.sectionTitle.lineHeight,
       fontWeight: APP_TYPE.sectionTitle.fontWeight,
       letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
+    },
+    titleBlockExpanded: {
+      flex: 0,
     },
     expandedBody: {
       gap: APP_LAYOUT.cardTitleToBodyGap,

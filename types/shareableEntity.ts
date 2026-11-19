@@ -485,9 +485,11 @@ export function buildNewsAttachment(article: {
   published_at?: string | null;
 }): ShareableAttachment {
   const asStr = (v: unknown) => (typeof v === 'string' ? v : v == null ? '' : String(v));
+  // ב-NewsArticle ה-label הוא הכותרת הקצרה ו-title הוא הטקסט המלא — label קודם,
+  // אחרת התיאור מוצג ככותרת בכרטיס השיתוף
   const title =
-    asStr(article.title).trim() ||
     asStr(article.label).trim() ||
+    asStr(article.title).trim() ||
     asStr(article.text).trim() ||
     'חדשה';
   const bodyText =

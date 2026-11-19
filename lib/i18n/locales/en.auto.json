@@ -5306,5 +5306,9 @@
     "s17": "Secure payment via CardCom. Access opens once the payment is approved.",
     "s18": "Pay · ₪{{v0}}",
     "s19": "Buy {{v0}} course"
+  },
+  "screens__Portfolios__components__PositionCard": {
+    "s1": "Last price",
+    "s2": "Share"
   }
 }

@@ -59,7 +59,7 @@ import type {
 } from '../portfolioTypes';
 import { formatCurrency, formatPercent } from '../utils/format';
 import { TickerLogo } from '../components/TickerLogo';
-import PortfolioTradesTable from '../components/PortfolioTradesTable';
+import { PositionCard } from '../components/PositionCard';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import {
   JOURNAL_TYPE,
@@ -69,6 +69,7 @@ import {
 } from '../../Journal/journalLayout';
 // סכומים עם פסיקי אלפים (QA 9.4): פורמט בהקלדה, פענוח על המספר הנקי
 import { formatThousandsInput, parseFormattedNumber } from '../../../utils/numberInput';
+import { EmptyState } from '../../../components/ui/EmptyState';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 /** גובה תוכן שיט הסגירה האחרון — הפתיחה הבאה עולה ישר בגובה הנכון */
@@ -337,6 +338,9 @@ export default function OpenTradesTab({
           paddingTop: 4,
           direction: UI_DIR,
         },
+        cardsList: {
+          gap: APP_LAYOUT.cardStackGap,
+        },
         loading: { paddingVertical: 60, alignItems: 'center' },
         empty: {
           alignItems: 'center',
@@ -525,30 +529,31 @@ export default function OpenTradesTab({
 
   if (trades.length === 0) {
     return (
-      <View style={styles.empty}>
-        <Ionicons
-          name="document-text-outline"
-          size={42}
-          color={tokens.colors.text.tertiary}
-        />
-        <Text style={styles.emptyTitle}>{i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s19')}</Text>
-        <Text style={styles.emptyText}>{i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s20')}</Text>
-      </View>
+      <EmptyState
+        icon="document-text-outline"
+        title={i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s19')}
+        subtitle={i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s20')}
+      />
     );
   }
 
   return (
     <View style={styles.root}>
-      <PortfolioTradesTable
-        mode="open"
-        trades={trades}
-        priceMap={priceMap}
-        readOnly={readOnly}
-        onClose={readOnly ? undefined : openCloseModal}
-        onDelete={readOnly ? undefined : handleDeleteTrade}
-        onShare={openShareImage}
-        onEdit={readOnly ? undefined : handleEditTrade}
-      />
+      {/* כרטיס לכל פוזיציה (במקום טבלה) — סגירה ושיתוף מובנים */}
+      <View style={styles.cardsList}>
+        {trades.map((t) => (
+          <PositionCard
+            key={t.id}
+            trade={t}
+            lastPrice={priceMap[t.symbol]}
+            readOnly={readOnly}
+            onClose={readOnly ? undefined : openCloseModal}
+            onDelete={readOnly ? undefined : handleDeleteTrade}
+            onShare={openShareImage}
+            onEdit={readOnly ? undefined : handleEditTrade}
+          />
+        ))}
+      </View>
 
       <ExportTradeImage
         trade={exportTrade}

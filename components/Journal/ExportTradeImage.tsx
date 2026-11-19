@@ -723,8 +723,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       alignItems: 'center',
       paddingHorizontal: 16,
       paddingBottom: 12,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: tokens.colors.border.divider,
       gap: 10,
     },
     headerIconButton: {

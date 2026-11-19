@@ -503,8 +503,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       alignItems: 'center',
       paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
       paddingBottom: APP_LAYOUT.cardTitleToBodyGap,
-      borderBottomWidth: 1,
-      borderBottomColor: tokens.colors.border.divider,
     },
     // כמו כפתור הסגירה בשאר השיטים — בולט על קנבס השיט
     headerFace: {

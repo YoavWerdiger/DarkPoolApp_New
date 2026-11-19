@@ -309,8 +309,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flexDirection: 'row',
       alignItems: 'center',
       paddingBottom: 12,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: tokens.colors.border.divider,
       gap: 10,
     },
     headerCenter: {

@@ -330,8 +330,6 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignItems: 'center',
       paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
       paddingBottom: APP_LAYOUT.cardTitleToBodyGap,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: tokens.colors.border.divider,
       gap: 10,
       flexShrink: 0,
     },

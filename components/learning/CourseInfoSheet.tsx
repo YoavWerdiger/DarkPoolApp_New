@@ -60,6 +60,8 @@ export type CourseInfoSheetProps = {
   onClose: () => void;
   /** כניסה לקורס (אותו ניווט כמו לחיצה על כרטיס של קורס רשום) */
   onOpenCourse: (course: CourseWithProgress) => void;
+  /** טקסט כפתור מותאם (למשל «לרכישת הקורס · ₪4,990» לקורס ברכישה בודדת) */
+  ctaLabel?: string;
 };
 
 /** התיאור בלי פסקת «למי הקורס מתאים» — היא מוצגת בנפרד */
@@ -75,8 +77,10 @@ function CourseInfoBody({
   onOpenCourse,
   onClose,
   onHeightChange,
+  ctaLabel: ctaLabelOverride,
 }: {
   course: CourseWithProgress;
+  ctaLabel?: string;
   onOpenCourse: (course: CourseWithProgress) => void;
   onClose: () => void;
   onHeightChange: (h: number) => void;
@@ -110,9 +114,10 @@ function CourseInfoBody({
       : null,
   ].filter(Boolean) as string[];
 
-  const ctaLabel = isPremium
-    ? i18n.t('auto.components__learning__CourseInfoSheet.s5')
-    : i18n.t('auto.components__learning__CourseInfoSheet.s6');
+  const ctaLabel = ctaLabelOverride
+    ?? (isPremium
+      ? i18n.t('auto.components__learning__CourseInfoSheet.s5')
+      : i18n.t('auto.components__learning__CourseInfoSheet.s6'));
 
   const handleCta = useCallback(() => {
     if (animatedClose) animatedClose();
@@ -184,7 +189,7 @@ function CourseInfoBody({
   );
 }
 
-export function CourseInfoSheet({ course, onClose, onOpenCourse }: CourseInfoSheetProps) {
+export function CourseInfoSheet({ course, onClose, onOpenCourse, ctaLabel }: CourseInfoSheetProps) {
   const insets = useSafeAreaInsets();
   // הכפתור צמוד ל-safe area (בלי התוספת הקבועה של השיטים, שהרימה אותו גבוה מדי)
   const bottomPadding = sheetSafeBottomInset(insets.bottom) + 4;
@@ -225,6 +230,7 @@ export function CourseInfoSheet({ course, onClose, onOpenCourse }: CourseInfoShe
           course={shown}
           onClose={onClose}
           onOpenCourse={onOpenCourse}
+          ctaLabel={ctaLabel}
           onHeightChange={setContentHeight}
         />
       ) : null}

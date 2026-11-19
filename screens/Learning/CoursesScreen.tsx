@@ -46,7 +46,10 @@ import { ACADEMY_TYPE } from '../../components/learning/academyLayout';
 import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
 import { triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
-import { isPurchaseCourse } from '../../services/coursePurchaseService';
+import { fetchCourseAccess, isPurchaseCourse } from '../../services/coursePurchaseService';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '../../context/AuthContext';
+import { appQueryKeys } from '../../lib/appQueryKeys';
 
 type Nav = { navigate: (n: string, p?: object) => void };
 
@@ -158,13 +161,35 @@ export const CoursesScreen: React.FC = () => {
     [navigation]
   );
 
+  // גישה לקורס ברכישה בודדת — לפי השרת (has_course_access: רכישה מאושרת / אדמין)
+  const { user: authUser } = useAuth();
+  const { data: purchasedAccess } = useQuery({
+    queryKey: appQueryKeys.courseAccess(authUser?.id ?? 'anon', 'whales-course-1'),
+    queryFn: () => fetchCourseAccess('whales-course-1'),
+    enabled: !!authUser?.id,
+    staleTime: 60_000,
+  });
+
+  /** שיט ההסבר: לקורס ברכישה בלי גישה — הכפתור פותח ישר את דף התשלום */
+  const infoNeedsPurchase = !!infoCourse && isPurchaseCourse(infoCourse.id) && purchasedAccess !== true;
+  const handleInfoCta = useCallback(
+    (course: CourseWithProgress) => {
+      if (isPurchaseCourse(course.id) && purchasedAccess !== true) {
+        (navigation as Nav).navigate('CourseCheckout', { courseId: course.id });
+        return;
+      }
+      handleCoursePress(course);
+    },
+    [handleCoursePress, navigation, purchasedAccess],
+  );
+
   // יש גישה (רשום / מנוי פרימיום) → ישר לדף הקורס; אין גישה (כולל האורקל) → שיט פירוט
   const handleCardPress = useCallback(
     (course: CourseWithProgress) => {
-      // קורס ברכישה בודדת (הלוויתנים): תמיד נכנסים — בתוך הקורס מסך הנעילה עם «לרכישת הקורס»
-      // (הגישה עצמה נבדקת בשרת: has_course_access)
+      // קורס ברכישה בודדת (הלוויתנים): עם רכישה מאושרת בשרת — נכנסים; בלי — שיט ההסבר עם «לרכישת הקורס»
       if (isPurchaseCourse(course.id)) {
-        handleCoursePress(course);
+        if (purchasedAccess === true) handleCoursePress(course);
+        else setInfoCourse(course);
         return;
       }
       if (hasAcademyCourseAccess(course, isPremium)) {
@@ -173,7 +198,7 @@ export const CoursesScreen: React.FC = () => {
       }
       setInfoCourse(course);
     },
-    [handleCoursePress, isPremium]
+    [handleCoursePress, isPremium, purchasedAccess]
   );
 
   const closeInfoSheet = useCallback(() => setInfoCourse(null), []);
@@ -209,7 +234,7 @@ export const CoursesScreen: React.FC = () => {
         <CourseCard
           key={course.id}
           course={course}
-          hasAccess={hasAcademyCourseAccess(course, isPremium)}
+          hasAccess={isPurchaseCourse(course.id) ? purchasedAccess === true : hasAcademyCourseAccess(course, isPremium)}
           onPress={handleCardPress}
           onEnroll={course.enrollment ? undefined : handleEnroll}
         />
@@ -303,7 +328,14 @@ export const CoursesScreen: React.FC = () => {
       <CourseInfoSheet
         course={infoCourse}
         onClose={closeInfoSheet}
-        onOpenCourse={handleCoursePress}
+        onOpenCourse={handleInfoCta}
+        ctaLabel={
+          infoNeedsPurchase && infoCourse
+            ? i18n.t('auto.screens__Learning__CoursesScreen.buyCourse', {
+                v0: Number((infoCourse as { price?: number }).price ?? 0).toLocaleString('he-IL'),
+              })
+            : undefined
+        }
       />
     </ScreenChrome>
   );

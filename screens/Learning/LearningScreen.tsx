@@ -3918,7 +3918,11 @@ function LearningScreenGate() {
   const purchaseLocked = purchaseCourse && accessQuery.data !== true;
   // overlay רק אחרי תשובה מהשרת (בלי הבהוב של מנעול למי שכבר רכש); בזמן הטעינה — לא ניתן ללחוץ
   const showPurchaseLock = purchaseCourse && accessQuery.isFetched && accessQuery.data !== true;
-  const locked = isCourseTeaserLocked(courseId) || showPurchaseLock;
+  // בלי רכישה — אין דף נעילה: חוזרים לאקדמיה (שם שיט ההסבר עם «לרכישת הקורס»)
+  useEffect(() => {
+    if (showPurchaseLock) navigation.goBack();
+  }, [showPurchaseLock, navigation]);
+  const locked = isCourseTeaserLocked(courseId);
   // Android: BlurView מטשטש רק תוכן שעטוף ב-BlurTargetView
   const blurTargetRef = useRef<View>(null);
   return (

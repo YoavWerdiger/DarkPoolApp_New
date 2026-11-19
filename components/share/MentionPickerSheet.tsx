@@ -25,6 +25,7 @@ import { supabase } from '../../services/supabase';
 import type { CommunityMention } from '../../types/tweets.types';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { UserNameRow, badgeSizeForLineHeight } from '../ui/badges/UserBadges';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Props = {
   visible: boolean;
@@ -53,6 +54,7 @@ export default function MentionPickerSheet({
   excludeUserIds = [],
 }: Props) {
   const tokens = useDesignTokens();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const [query, setQuery] = useState('');
@@ -203,9 +205,11 @@ export default function MentionPickerSheet({
             data={results}
             keyExtractor={(item) => item.id}
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={
-              results.length === 0 ? styles.listEmpty : styles.listContent
-            }
+            contentContainerStyle={[
+              results.length === 0 ? styles.listEmpty : styles.listContent,
+              // safe area תחתון — השיט עם contentPaddingBottom=0
+              { paddingBottom: 28 + insets.bottom },
+            ]}
             ListEmptyComponent={
               <Text style={[styles.empty, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.components__share__MentionPickerSheet.s7')}</Text>
             }

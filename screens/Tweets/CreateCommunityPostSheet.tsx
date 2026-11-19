@@ -42,6 +42,7 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 import EntityEmbedCard from '../../components/share/EntityEmbedCard';
 import MentionPickerSheet from '../../components/share/MentionPickerSheet';
 import CommunityPostImage from './CommunityPostImage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Props = {
   visible: boolean;
@@ -143,6 +144,7 @@ function CreateCommunityPostSheetBody({
   onBusyChange,
 }: Props & { onBusyChange?: (busy: boolean) => void }) {
   const tokens = useDesignTokens();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const animatedClose = useBottomSheetClose();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
@@ -347,7 +349,8 @@ function CreateCommunityPostSheetBody({
 
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
+          // השיט מוותר על ריפוד תחתון (contentPaddingBottom=0) — ה-safe area כאן, שלא יגלוש מתחת לסרגל
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: APP_LAYOUT.sectionGap + insets.bottom }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}

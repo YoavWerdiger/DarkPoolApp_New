@@ -31,6 +31,7 @@ import {
 } from '../../types/shareableEntity';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { TickerLogo } from '../ui/TickerLogo';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Category = 'people' | 'earnings' | 'news';
 
@@ -62,6 +63,7 @@ export default function EntityAttachPickerSheet({
   onSelect,
 }: Props) {
   const tokens = useDesignTokens();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const [category, setCategory] = useState<Category>('people');
@@ -240,9 +242,11 @@ export default function EntityAttachPickerSheet({
           <FlatList
             data={items}
             keyExtractor={(item) => item.key}
-            contentContainerStyle={
-              items.length === 0 ? styles.listEmpty : styles.listContent
-            }
+            contentContainerStyle={[
+              items.length === 0 ? styles.listEmpty : styles.listContent,
+              // safe area תחתון — השיט עם contentPaddingBottom=0
+              { paddingBottom: 28 + insets.bottom },
+            ]}
             ListEmptyComponent={
               <Text style={[styles.empty, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.components__share__EntityAttachPickerSheet.s8')}</Text>
             }

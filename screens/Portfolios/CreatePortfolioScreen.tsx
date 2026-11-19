@@ -222,28 +222,34 @@ export default function CreatePortfolioScreen() {
           borderBottomWidth: StyleSheet.hairlineWidth,
           borderBottomColor: tokens.colors.border.divider,
         },
-        soonHero: {
-          marginTop: APP_LAYOUT.componentGap,
-          borderRadius: 26,
-          overflow: 'hidden',
-          alignItems: 'center',
-          paddingTop: 28,
-          paddingBottom: 22,
-          gap: 10,
-        },
-        // הלוגו עצמו מוגדל ומטושטש — הילה בצבע המותג
-        soonHeroBlur: {
+        soonScreenBlur: {
           position: 'absolute',
-          top: -60,
-          left: -40,
-          right: -40,
-          height: 260,
-          opacity: 0.55,
+          alignSelf: 'center',
+          top: '22%',
+          width: '130%',
+          height: '50%',
+          left: '-15%',
+          opacity: 0.45,
+        },
+        soonCenter: {
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 12,
+          paddingVertical: 32,
+          paddingHorizontal: 12,
+        },
+        soonHint: {
+          ...journalCardBodyStyle,
+          marginTop: 4,
+          textAlign: 'center',
+          color: tokens.colors.text.secondary,
+          maxWidth: 300,
         },
         soonLogoTile: {
-          width: 72,
-          height: 72,
-          borderRadius: 20,
+          width: 88,
+          height: 88,
+          borderRadius: 24,
           overflow: 'hidden',
           shadowColor: '#000',
           shadowOpacity: 0.16,
@@ -288,6 +294,17 @@ export default function CreatePortfolioScreen() {
   return (
     <View style={styles.root}>
       <ChatSessionBackdrop />
+      {isBrokerMode && brokerSoon ? (
+        // «בקרוב» על כל המסך — הלוגו מוגדל ומטושטש כרקע, דוהה לרקע המסך למעלה ולמטה
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <ExpoImage source={COLMEX_LOGO} style={styles.soonScreenBlur} contentFit="contain" blurRadius={60} />
+          <LinearGradient
+            colors={[tokens.colors.background.primary, 'transparent', 'transparent', tokens.colors.background.primary]}
+            locations={[0.12, 0.4, 0.6, 0.95]}
+            style={StyleSheet.absoluteFill}
+          />
+        </View>
+      ) : null}
       <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
         <PortfolioScreenHeader title={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s10')} onBack={() => navigation.goBack()} />
         <KeyboardAvoidingView
@@ -296,7 +313,7 @@ export default function CreatePortfolioScreen() {
         >
           <ScrollView
             style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={[styles.scrollContent, isBrokerMode && brokerSoon && { flexGrow: 1 }]}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}
@@ -310,31 +327,19 @@ export default function CreatePortfolioScreen() {
                 setMode(id === 'broker' ? 'broker' : importCsv ? 'import' : 'manual');
               }}
             />
-            <Text style={styles.modeHint}>
-              {isBrokerMode
-                ? brokerSoon
-                  ? i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.soon2')
-                  : i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s16')
-                : i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s14')}
-            </Text>
+            {isBrokerMode && brokerSoon ? null : (
+              <Text style={styles.modeHint}>
+                {isBrokerMode
+                  ? i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s16')
+                  : i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s14')}
+              </Text>
+            )}
 
             {isBrokerMode ? (
               <>
                 {brokerSoon ? (
-                  // «בקרוב» — הלוגו מטושטש ומוגדל כרקע, הלוגו החד במרכז, תגית CTA וכותרת
-                  <View style={[styles.soonHero, { backgroundColor: tokens.colors.background.cardSolid }]}>
-                    <ExpoImage
-                      source={COLMEX_LOGO}
-                      style={styles.soonHeroBlur}
-                      contentFit="cover"
-                      blurRadius={36}
-                    />
-                    <LinearGradient
-                      colors={['transparent', tokens.colors.background.cardSolid]}
-                      locations={[0.15, 1]}
-                      style={StyleSheet.absoluteFill}
-                      pointerEvents="none"
-                    />
+                  // «בקרוב» — בלי כרטיס: לוגו, כותרת, תגית והסבר במרכז המסך (הרקע המטושטש מאחורי כל המסך)
+                  <View style={styles.soonCenter}>
                     <View style={styles.soonLogoTile}>
                       <ExpoImage source={COLMEX_LOGO} style={styles.soonLogo} contentFit="cover" />
                     </View>
@@ -345,6 +350,9 @@ export default function CreatePortfolioScreen() {
                         {i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.soon1')}
                       </Text>
                     </View>
+                    <Text style={styles.soonHint}>
+                      {i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.soon2')}
+                    </Text>
                   </View>
                 ) : null}
                 {/* «מה קורה בחיבור» — רק כשהחיבור פתוח (לא במצב בקרוב) */}

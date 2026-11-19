@@ -445,9 +445,9 @@ function isPreMarketOverForDay(
 
 // תווית קבוצה מחוץ לכרטיס — מסחר מוקדם / מאוחר, ממורכזת בין שני קווים
 /** מרווח סביב דיבידרי מסחר מוקדם/מאוחר — קצת יותר אוויר מהכרטיסים */
-const DIVIDER_GAP_TOP = 20;
-const DIVIDER_GAP_BOTTOM = 16;
-const DIVIDER_GAP_BETWEEN_SESSIONS = 28;
+const DIVIDER_GAP_TOP = 12;
+const DIVIDER_GAP_BOTTOM = 12;
+const DIVIDER_GAP_BETWEEN_SESSIONS = 16;
 
 const SectionDivider: React.FC<{
   label: string;

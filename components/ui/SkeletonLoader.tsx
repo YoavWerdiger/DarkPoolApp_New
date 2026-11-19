@@ -770,7 +770,7 @@ export const EconomicEventSkeleton: React.FC<CardSkeletonProps> = ({ delay = 0 }
 export const EarningsReportsListSkeleton: React.FC<{ count?: number }> = ({ count = 5 }) => (
   <View>
     {/* כמו הדיבידר «מסחר מוקדם» בראש הרשימה */}
-    <View style={{ alignItems: 'center', marginBottom: 16 }}>
+    <View style={{ alignItems: 'center', marginBottom: 12 }}>
       <SkeletonBox width={120} height={32} borderRadius={999} />
     </View>
     {Array.from({ length: count }).map((_, i) => (

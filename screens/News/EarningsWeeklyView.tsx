@@ -1118,11 +1118,11 @@ const weekStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 16,
-    marginBottom: 16,
+    marginTop: 10,
+    marginBottom: 10,
   },
   subHeaderSpaced: {
-    marginTop: 24,
+    marginTop: 16,
   },
   subHeaderPill: {
     flexDirection: 'row',

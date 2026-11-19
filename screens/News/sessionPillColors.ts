@@ -5,7 +5,8 @@
 export type TradingSession = 'before' | 'after';
 
 const SESSION = {
-  before: { light: '#D1A11D', dark: '#D9AA22', fg: '#1A1405' },
+  // זהב מעט עמוק יותר כדי שטקסט לבן ייקרא — כמו הכחול של מסחר מאוחר
+  before: { light: '#C7950F', dark: '#C99A12', fg: '#FFFFFF' },
   after: { light: '#007AFF', dark: '#0A84FF', fg: '#FFFFFF' },
 } as const;
 

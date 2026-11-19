@@ -347,6 +347,9 @@ export default function CreatePortfolioScreen() {
                     </View>
                   </View>
                 ) : null}
+                {/* «מה קורה בחיבור» — רק כשהחיבור פתוח (לא במצב בקרוב) */}
+                {!brokerSoon ? (
+                  <>
                 <FieldGroupLabel>{i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s17')}</FieldGroupLabel>
                 <SettingsGlassCard style={styles.card}>
                   {BROKER_BENEFITS.map((line, i) => (
@@ -363,6 +366,8 @@ export default function CreatePortfolioScreen() {
                     </View>
                   ))}
                 </SettingsGlassCard>
+                  </>
+                ) : null}
               </>
             ) : (
               <>

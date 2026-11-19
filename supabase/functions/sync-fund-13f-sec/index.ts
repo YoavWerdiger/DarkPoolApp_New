@@ -43,6 +43,10 @@ export const SEC_13F_FUNDS: Record<string, Sec13fMeta> = {
   // ── חברות (לא פיננסיות) — 13F-HR ב-2 הרבעונים האחרונים, אומת מול EDGAR 2026-10-26 ──
   // חייב להישאר מסונכרן עם CURATED_MATERIALIZE_TARGETS ב-_shared/darkpoolPortfolioSnapshots.ts
   '1045810': company('NVIDIA Corp', 'NVIDIA', 'NVDA'),
+  // ענקיות טק נוספות שמגישות 13F (מוצגות בחברות ציבוריות)
+  '1065521': company('SoftBank Group Corp.', 'SoftBank', 'SFTBY'),
+  '1577552': company('Alibaba Group Holding Ltd', 'Alibaba', 'BABA'),
+  '1110646': company('NetEase, Inc.', 'NetEase', 'NTES'),
   '1652044': company('Alphabet Inc.', 'Alphabet', 'GOOGL'),
   '1543151': company('Uber Technologies, Inc.', 'Uber', 'UBER'),
   '1018724': company('Amazon.com, Inc.', 'Amazon', 'AMZN'),

@@ -5284,6 +5284,7 @@
     "s15": "One-time purchase · access to all lessons",
     "s16": "Total",
     "s17": "Secure payment via CardCom. Access opens once the payment is approved.",
-    "s18": "Pay · ₪{{v0}}"
+    "s18": "Pay · ₪{{v0}}",
+    "s19": "Buy {{v0}} course"
   }
 }

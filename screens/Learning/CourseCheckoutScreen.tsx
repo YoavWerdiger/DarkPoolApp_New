@@ -208,6 +208,8 @@ export function CourseCheckoutScreen({ navigation, route }: any) {
     navigation.navigate('LearningScreen', { courseId });
   };
 
+  // כותרת הדף הפנימי: «רכישת קורס הלוויתנים» (שם הקורס מהמסד)
+  const headerTitle = course?.title ? t('s19', { v0: course.title }) : t('s3');
   const body = APP_TYPE.cardBody;
   const textStyle = { ...appPhysicalRightText, writingDirection: TEXT_DIR } as const;
 
@@ -215,7 +217,7 @@ export function CourseCheckoutScreen({ navigation, route }: any) {
   if (phase === 'webview' && paymentUrl) {
     return (
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <ChatSubScreenHeader title={t('s3')} onBack={() => navigation.goBack()} />
+        <ChatSubScreenHeader title={headerTitle} onBack={() => navigation.goBack()} />
         <WebView
           source={{ uri: paymentUrl }}
           style={{ flex: 1, backgroundColor: 'transparent' }}
@@ -260,7 +262,7 @@ export function CourseCheckoutScreen({ navigation, route }: any) {
     const busy = phase === 'preparing' || phase === 'verifying';
     return (
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        <ChatSubScreenHeader title={t('s3')} onBack={() => navigation.goBack()} />
+        <ChatSubScreenHeader title={headerTitle} onBack={() => navigation.goBack()} />
         <View style={[styles.center, { flex: 1, paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal, gap: 12 }]}>
           {busy ? (
             <ActivityIndicator size="large" />
@@ -290,7 +292,7 @@ export function CourseCheckoutScreen({ navigation, route }: any) {
   // ===== סיכום לפני תשלום =====
   return (
     <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-      <ChatSubScreenHeader title={t('s3')} onBack={() => navigation.goBack()} />
+      <ChatSubScreenHeader title={headerTitle} onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={{ padding: APP_LAYOUT.screenPaddingHorizontal, gap: APP_LAYOUT.cardStackGap }}>
         <UICard variant="soft" padding="lg">
           <Text style={[APP_TYPE.cardTitle, textStyle, { color: colors.text.primary }]}>{course?.title ?? ''}</Text>

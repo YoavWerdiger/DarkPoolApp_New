@@ -32,7 +32,7 @@ import {
   adminMetric,
   adminPhysicalRightText,
 } from '../../components/admin/adminType';
-import { APP_TYPE } from '../../components/ui/appType';
+import { APP_TYPE, appFormFieldHelperStyle } from '../../components/ui/appType';
 import {
   adminService,
   type AdminGrowthPoint,
@@ -205,21 +205,6 @@ export default function AdminDashboardScreen({ navigation }: any) {
           </View>
         </AdminSurface>
 
-        <AdminSectionLabel>{i18n.t('auto.screens__Admin__AdminDashboardScreen.auto1')}</AdminSectionLabel>
-        <AdminSurface>
-          <SettingsSwitchRow
-            title={i18n.t('auto.screens__Admin__AdminDashboardScreen.auto2')}
-            value={newsAuto === true}
-            loading={newsAuto === null}
-            disabled={newsAutoBusy}
-            onValueChange={(v) => void toggleNewsAuto(v)}
-            showDivider={false}
-          />
-          <Text style={[styles.metricSubtitle, { color: tokens.colors.text.secondary, paddingHorizontal: 16, paddingBottom: 12 }]}>
-            {i18n.t('auto.screens__Admin__AdminDashboardScreen.auto4')}
-          </Text>
-        </AdminSurface>
-
         <AdminSurface>
           <SettingsActionRow
             title={i18n.t('auto.screens__Admin__AdminDashboardScreen.s7')}
@@ -263,6 +248,22 @@ export default function AdminDashboardScreen({ navigation }: any) {
             }}
           />
         </AdminSurface>
+
+        <AdminSectionLabel>{i18n.t('auto.screens__Admin__AdminDashboardScreen.auto1')}</AdminSectionLabel>
+        <AdminSurface>
+          <SettingsSwitchRow
+            title={i18n.t('auto.screens__Admin__AdminDashboardScreen.auto2')}
+            value={newsAuto === true}
+            loading={newsAuto === null}
+            disabled={newsAutoBusy}
+            onValueChange={(v) => void toggleNewsAuto(v)}
+            showDivider={false}
+          />
+        </AdminSurface>
+        {/* הסבר מתחת לכרטיס — סגנון helper כמו מתחת לשדות */}
+        <Text style={[appFormFieldHelperStyle, styles.surfaceHelper]}>
+          {i18n.t('auto.screens__Admin__AdminDashboardScreen.auto4')}
+        </Text>
 
         <AdminSectionLabel>{i18n.t('auto.screens__Admin__AdminDashboardScreen.s11')}</AdminSectionLabel>
         <AdminSurface>
@@ -373,6 +374,12 @@ function GrowthLineChart({
 }
 
 const styles = StyleSheet.create({
+  // צמוד לכרטיס שמעליו (מבטל את ה-marginBottom שלו), ורווח רגיל לפני הקבוצה הבאה
+  surfaceHelper: {
+    marginTop: 6 - APP_LAYOUT.cardStackGap,
+    marginBottom: APP_LAYOUT.cardStackGap,
+    paddingHorizontal: 18,
+  },
   root: { flex: 1, backgroundColor: 'transparent' },
   metricBlock: {
     width: '100%',

@@ -371,6 +371,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
         <TouchableOpacity
           style={{
             flex: 1,
+            // שם הכפתור ואחריו האייקון (משמאל בעברית) — כמו UIButton; row-reverse + אייקון אחרון
             flexDirection: 'row-reverse',
             alignItems: 'center',
             justifyContent: 'center',
@@ -390,11 +391,6 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
           }}
           activeOpacity={0.7}
         >
-          <Ionicons
-            name={isLiked ? 'heart' : 'heart-outline'}
-            size={18}
-            color={isLiked ? '#FF6B8A' : DesignTokens.colors.text.secondary}
-          />
           <Text
             style={{
               ...appSheetButtonLabelStyle,
@@ -415,11 +411,17 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
               ({likeCount})
             </Text>
           ) : null}
+          <Ionicons
+            name={isLiked ? 'heart' : 'heart-outline'}
+            size={18}
+            color={isLiked ? '#FF6B8A' : DesignTokens.colors.text.secondary}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={{
             flex: 1,
+            // שם הכפתור ואחריו האייקון (משמאל בעברית) — כמו UIButton; row-reverse + אייקון אחרון
             flexDirection: 'row-reverse',
             alignItems: 'center',
             justifyContent: 'center',
@@ -433,11 +435,6 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
           onPress={() => (shareAttachment ? setShareOpen(true) : onShare(article))}
           activeOpacity={0.7}
         >
-          <Ionicons
-            name="share-outline"
-            size={18}
-            color={DesignTokens.colors.text.secondary}
-          />
           <Text
             style={{
               ...appSheetButtonLabelStyle,
@@ -445,6 +442,11 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
               ...newsDetailRtlText,
             }}
           >{i18n.t('auto.screens__News__BreakingNewsTab.s5')}</Text>
+          <Ionicons
+            name="share-outline"
+            size={18}
+            color={DesignTokens.colors.text.secondary}
+          />
         </TouchableOpacity>
       </View>
     </View>

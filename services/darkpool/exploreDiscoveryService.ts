@@ -173,15 +173,17 @@ async function listReportedFundBooks(limit: number): Promise<ExplorePerson[]> {
 const COMPANY_SIZE_ORDER = [
   // ברקשייר — תיק של וורן באפט, מוצג במשקיעים ולא בחברות
   // טכנולוגיה קודם (שמגישות 13F): Mag 7 שמגישות, ואחריהן ענקיות טק נוספות
-  'NVDA', 'GOOGL', 'AMZN', 'AMD', 'INTC', 'CSCO', 'UBER', 'SFTBY', 'BABA', 'NTES', 'CRM', 'QCOM', 'JPM', 'WMT', 'JNJ', 'BAC', 'CVX', 'MRK', 'GE', 'WFC', 'MS', 'AXP', 'GS', 'BLK', 'C', 'PFE', 'GILD', 'REGN', 'AIG', 'MET', 'TRV', 'ALL', 'PRU', 'AFL', 'CVS', 'LLY', 'CB', 'PGR', 'MKL', 'L', 'FRFHF', 'CINF', 'WRB', 'AFG',
+  'NVDA', 'GOOGL', 'AMZN', 'AMD', 'INTC', 'CSCO', 'UBER', 'SFTBY', 'BABA', 'NTES', 'QCOM', 'JPM', 'WMT', 'JNJ', 'BAC', 'CVX', 'MRK', 'GE', 'WFC', 'MS', 'AXP', 'GS', 'BLK', 'C', 'PFE', 'GILD', 'REGN', 'AIG', 'MET', 'TRV', 'ALL', 'PRU', 'AFL', 'CVS', 'MKL', 'L', 'CINF', 'FRFHF', 'WRB', 'AFG',
 ];
 
 /** חברות ציבוריות שמגישות 13F — לפי גודל החברה (COMPANY_SIZE_ORDER); אווטאר = לוגו הטיקר */
 async function listCompanyBooks(limit: number): Promise<ExplorePerson[]> {
   const { data, error } = await supabase
     .from('dark_pool_fund_managers')
-    .select('cik, name, manager_name, ticker, last_value_usd')
+    .select('cik, name, manager_name, ticker, last_value_usd, last_filing_date')
     .eq('entity_type', 'company')
+    // חברה שהפסיקה להגיש (הגשה אחרונה לפני יותר משנה) — לא מציגים תיק ישן
+    .gte('last_filing_date', new Date(Date.now() - 400 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10))
     .not('last_value_usd', 'is', null)
     .gt('last_value_usd', 0)
     .order('last_value_usd', { ascending: false })

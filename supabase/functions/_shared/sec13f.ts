@@ -139,7 +139,12 @@ export async function mapCusipsToTickers(
       idValue: c,
       ...(exch ? { exchCode: 'US' } : {}),
     }));
-    const res = await fetch(OPENFIGI_URL, { method: 'POST', headers, body: JSON.stringify(jobs) });
+    // 429 (מכסה לדקה) — מחכים ומנסים שוב במקום להפיל את כל הסנכרון
+    let res = await fetch(OPENFIGI_URL, { method: 'POST', headers, body: JSON.stringify(jobs) });
+    for (let attempt = 1; res.status === 429 && attempt <= 4; attempt++) {
+      await sleep((key ? 2_000 : 8_000) * attempt);
+      res = await fetch(OPENFIGI_URL, { method: 'POST', headers, body: JSON.stringify(jobs) });
+    }
     await sleep(key ? 300 : OPENFIGI_GAP_MS);
     if (!res.ok) throw new Error(`openfigi ${res.status}`);
     return (await res.json()) as Array<{ data?: Array<{ ticker?: string; name?: string; securityType?: string }> }>;

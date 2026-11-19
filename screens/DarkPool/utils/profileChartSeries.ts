@@ -151,11 +151,11 @@ export function chartSampleGapMs(period: PerformancePeriod): number {
     // 1W: ברי 15 דקות (~130 נקודות); 1M: ברי שעה (~150)
     case '1W':
       return 15 * 60_000;
-    // צפיפות דומה ל-1W בכל הטווחים (כשיש נתון תוך-יומי): 1M חצי שעה, 3M שלוש שעות
+    // רזולוציה מינימלית; המרווח בפועל נגזר מאורך הטווח (CHART_TARGET_POINTS)
     case '1M':
-      return 30 * 60_000;
+      return 15 * 60_000;
     case '3M':
-      return 3 * MS.hour;
+      return MS.hour;
     case 'YTD':
     case '1Y':
       return MS.day;
@@ -180,68 +180,48 @@ function chartPointMs(date: string): number {
 /** תקרה ל-SVG — מספיק לצורה, לא אלפי נקודות. */
 /** מקסימום נקודות בקו — מספיק לסגירה יומית של ~שנה וחצי; טווחים ארוכים נדגמים אחיד */
 export const CHART_DISPLAY_MAX_POINTS = 500;
+/** מספר נקודות יעד לכל טווח — אותה צפיפות יחסית ב-1W, 1M, 3M, 1Y… */
+export const CHART_TARGET_POINTS = 150;
 
 export function sampleChartSeriesForPeriod(
   series: ChartPoint[],
   period: PerformancePeriod,
-  maxPoints = CHART_DISPLAY_MAX_POINTS
+  maxPoints = CHART_TARGET_POINTS
 ): ChartPoint[] {
   const sorted = sortSeries(series);
   if (sorted.length <= 2) return sorted;
-
-  let gapMs = chartSampleGapMs(period);
-  if (period === 'All') {
-    const spanMs =
-      chartPointMs(sorted[sorted.length - 1].date) - chartPointMs(sorted[0].date);
-    if (spanMs < 120 * MS.day) gapMs = MS.day;
-  }
-
-  // 1) סופ"ש: סנאפשוט יומי (תאריך בלי שעה) בשבת/ראשון הוא כפילות של שישי — לא יום מסחר.
-  //    שבוע = 5 נקודות, שנה ≈ 252 (לא 7 / 365 עם קטעים שטוחים). נשמר אם יש הפקדה/משיכה.
-  // 2) טווחים יומיים (3M ומעלה): נקודה אחת לכל יום — האחרונה ביום (בלי צפיפות תוך-יומית בסוף).
-  // 1W/1M: פירוט תוך-יומי רק כשהוא מכסה את רוב ימי הטווח — אחרת היום האחרון (שיש לו נקודות
-  // תוך-יומיות) תופס את רוב הגרף והטווח לא סימטרי. במקרה כזה — נקודה אחת לכל יום, כמו בשאר.
-  if (period === '1W' || period === '1M' || period === '3M') {
-    const days = new Set(sorted.map((p) => p.date.slice(0, 10)));
-    const intradayDays = new Set(sorted.filter((p) => /T\d{2}:/.test(p.date)).map((p) => p.date.slice(0, 10)));
-    if (days.size > 0 && intradayDays.size / days.size < 0.8) gapMs = MS.day;
-  }
-  const daily = gapMs >= MS.day;
-  const trading = sorted.filter((p, i) => {
-    if (i === sorted.length - 1 || (p.external_flow ?? 0) !== 0) return true;
-    if (/T\d{2}:/.test(p.date)) return true;
+  const isIntraday = (p: ChartPoint) => /T\d{2}:/.test(p.date);
+  const isWeekend = (p: ChartPoint) => {
     const dow = new Date(`${p.date.slice(0, 10)}T12:00:00Z`).getUTCDay();
-    return dow !== 0 && dow !== 6;
-  });
-  const base = daily
-    ? trading.filter(
+    return dow === 0 || dow === 6;
+  };
+
+  // 1) סופ"ש: סנאפשוט יומי בשבת/ראשון הוא כפילות של שישי — לא יום מסחר (נשמר אם יש הפקדה/משיכה)
+  const trading = sorted.filter(
+    (p, i) => i === sorted.length - 1 || (p.external_flow ?? 0) !== 0 || isIntraday(p) || !isWeekend(p),
+  );
+
+  // 2) רזולוציה: תוך-יומי ב-1D/1W/1M/3M רק כשהוא מכסה את רוב ימי המסחר בטווח —
+  //    אחרת נקודה אחת לכל יום (אחרת היום האחרון תופס את רוב הגרף)
+  let intraday = false;
+  if (period === '1D' || period === '1W' || period === '1M' || period === '3M') {
+    const days = new Set(trading.map((p) => p.date.slice(0, 10)));
+    const intradayDays = new Set(trading.filter(isIntraday).map((p) => p.date.slice(0, 10)));
+    intraday = period === '1D' || (days.size > 0 && intradayDays.size / days.size >= 0.8);
+  }
+  const base = intraday
+    ? trading
+    : trading.filter(
         (p, i) =>
           i === trading.length - 1 ||
           (p.external_flow ?? 0) !== 0 ||
           p.date.slice(0, 10) !== trading[i + 1].date.slice(0, 10),
-      )
-    : trading;
-  if (base.length <= 2) return base.length >= 2 ? base : sorted.slice(-2);
+      );
+  if (base.length < 2) return sorted.slice(-2);
 
-  const out: ChartPoint[] = [];
-  let lastKept = -Infinity;
-  const lastMs = chartPointMs(base[base.length - 1].date);
-  for (let i = 0; i < base.length; i++) {
-    const p = base[i];
-    const t = chartPointMs(p.date);
-    const isEdge = i === 0 || i === base.length - 1;
-    const hasFlow = (p.external_flow ?? 0) !== 0;
-    const inSession = !daily && /T\d{2}:/.test(p.date) && lastMs - t <= 16 * MS.hour;
-    const gap = inSession ? Math.min(gapMs, SESSION_SNAPSHOT_MAX_GAP_MS) : gapMs;
-    if (isEdge || hasFlow || t - lastKept >= gap) {
-      out.push(p);
-      lastKept = t;
-    }
-  }
-  const sampled = out.length >= 2 ? out : base.slice(0, 2);
-  return sampled.length > maxPoints
-    ? downsampleChartSeries(sampled, maxPoints)
-    : sampled;
+  // 3) יחס שווה בכל הטווחים: אותו מספר נקודות (CHART_TARGET_POINTS) — דגימה אחידה על ציר זמן-המסחר
+  //    (הגרף מציב נקודות במרווח שווה), כך ש-1W, 1M, 3M ו-1Y באותה צפיפות
+  return base.length > maxPoints ? downsampleChartSeries(base, maxPoints) : base;
 }
 
 /** האם יש מספיק היסטוריה לתקופה */

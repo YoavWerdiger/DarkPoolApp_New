@@ -1,7 +1,7 @@
 /**
  * תמונת המטה (HQ) של החברה — מותאמת ידנית (סטטית) לכל חברה, מוצגת חלש ברקע מתחת ללוגו.
  * Wikimedia Commons בלבד (רישיון חופשי), כל קישור נבדק (200), 2026-10-30.
- * בלי תמונת מטה ודאית (JNJ, MRK, REGN, SNY, SFTBY) — רק רקע צבע המותג.
+ * בלי תמונת מטה ודאית (JNJ, MRK, REGN, SNY, CINF, FRFHF) — רק רקע צבע המותג.
  */
 const HQ: Record<string, string> = {
   AMD: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/1/11/2485_Augustine_Drive_headquarters_in_Santa_Clara%2C_California.jpg/960px-2485_Augustine_Drive_headquarters_in_Santa_Clara%2C_California.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail', // 2485 Augustine Drive headquarters in Santa Clara, California.jpg
@@ -35,6 +35,13 @@ const HQ: Record<string, string> = {
   PRU: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e3/Prudential_Financial_in_Newark_%2855176286141%29.jpg/960px-Prudential_Financial_in_Newark_%2855176286141%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail', // Prudential Financial in Newark (55176286141).jpg
   TRV: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d9/Travelers_Tower%2C_Hartford%2C_Connecticut.jpg/960px-Travelers_Tower%2C_Hartford%2C_Connecticut.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail', // Travelers Tower, Hartford, Connecticut.jpg
   UAL: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9b/Willis_Tower.jpg/960px-Willis_Tower.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail', // Willis Tower.jpg
+  // ── 2026-11-19: חברות 13F חדשות — Wikimedia Commons, כל קישור נבדק (200). CINF/FRFHF בלי תמונה ודאית ──
+  QCOM: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/2/25/Qualcomm_headquarters.jpg/960px-Qualcomm_headquarters.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail', // Qualcomm headquarters.jpg
+  SFTBY: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/a/af/TOKYO_PORTCITY_TAKESHIBA_3.jpg/960px-TOKYO_PORTCITY_TAKESHIBA_3.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail', // TOKYO PORTCITY TAKESHIBA 3.jpg
+  MKL: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/5/57/Markel_Building_03.jpg/960px-Markel_Building_03.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail', // Markel Building 03.jpg
+  L: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0f/Solow_Building_2024.jpg/960px-Solow_Building_2024.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail', // Solow Building 2024.jpg
+  AFG: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d1/Great_American_Tower_at_Queen_City_Square.jpg/960px-Great_American_Tower_at_Queen_City_Square.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail', // Great American Tower at Queen City Square.jpg
+  WRB: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d6/W._R._Berkley_Corporation_headquarters_1.jpg/960px-W._R._Berkley_Corporation_headquarters_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail', // W. R. Berkley Corporation headquarters 1.jpg
 };
 
 export function companyFacilityPhotoUrl(ticker: string | null | undefined): string | null {

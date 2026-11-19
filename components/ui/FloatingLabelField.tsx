@@ -189,8 +189,10 @@ const styles = StyleSheet.create({
   },
   inputWrap: { marginTop: 14 },
   // רב-שורתי: התווית קבועה למעלה (בלי מרכוז אנכי), הטקסט מתחתיה
-  labelMultiline: { top: 10 - RISE + 4 },
-  inputWrapMultiline: { marginTop: 18 },
+  // אותו מיקום כמו בשדה חד-שורתי: שם התווית ממורכזת ב-HEIGHT ואז עולה RISE (סופית: 8 מלמעלה),
+  // והטקסט מתחיל ב-26 מלמעלה (paddingTop 10 + 16). קודם התווית עלתה אל מחוץ לשדה.
+  labelMultiline: { top: (HEIGHT - 22) / 2 },
+  inputWrapMultiline: { marginTop: 16 },
   // צד נגדי (שמאל בעברית) — כפתור/אייקון
   trailing: {
     position: 'absolute',

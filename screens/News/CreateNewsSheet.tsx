@@ -36,6 +36,7 @@ import { newsService } from '../../services/newsService';
 import { mediaService } from '../../services/mediaService';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { APP_TYPE, appFormFieldLabelStyle } from '../../components/ui/appType';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export type EditableNews = {
   id: string;
@@ -58,6 +59,7 @@ const DEFAULT_SOURCE = 'DarkPool';
 export default function CreateNewsSheet({ visible, onClose, onCreated, editArticle }: CreateNewsSheetProps) {
   const isEdit = !!editArticle;
   const DesignTokens = useDesignTokens();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const animatedClose = useBottomSheetClose();
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
@@ -303,7 +305,8 @@ export default function CreateNewsSheet({ visible, onClose, onCreated, editArtic
         {/* גוף גלילה */}
         <KeyboardAwareScrollView
           style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
+          // מרווח תחתון מעל ה-safe area (באנדרואיד edge-to-edge השדה האחרון נפל מתחת לסרגל הניווט)
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: APP_LAYOUT.sectionGap + Math.max(insets.bottom, 16) }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
           bottomOffset={24}

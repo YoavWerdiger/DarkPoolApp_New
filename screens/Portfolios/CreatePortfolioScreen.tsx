@@ -46,6 +46,10 @@ import {
 } from './portfolioConstants';
 import { createPortfolio } from '../../services/portfolios';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { useIsAdmin } from '../../hooks/useIsAdmin';
+
+/** ההתממשקות ל-Colmex Pro עוד לא פתוחה לכולם — false כשמשיקים */
+const COLMEX_CONNECT_COMING_SOON = true;
 
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'CreatePortfolio'>;
 
@@ -79,6 +83,9 @@ export default function CreatePortfolioScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const isBrokerMode = mode === 'broker';
+  // ההתממשקות ל-Colmex Pro — «בקרוב» לכולם; אדמין ממשיך לגשת (בדיקות)
+  const { isAdmin } = useIsAdmin();
+  const brokerSoon = COLMEX_CONNECT_COMING_SOON && !isAdmin;
   const importCsv = mode === 'import';
 
   const currencySymbol = useMemo(
@@ -109,7 +116,7 @@ export default function CreatePortfolioScreen() {
   }, [riskFree]);
 
   const blockingError = nameError ?? cashError ?? riskError;
-  const canSubmit = isBrokerMode || (!blockingError && !submitting);
+  const canSubmit = isBrokerMode ? !brokerSoon : !blockingError && !submitting;
   const dimmed = !canSubmit && !submitting;
 
   // ריבית לא תקינה חיה בתוך "הגדרות מתקדמות" — נפתח אותן כדי שלא ייווצר מבוי סתום
@@ -119,6 +126,7 @@ export default function CreatePortfolioScreen() {
 
   const handleSubmit = useCallback(async () => {
     if (mode === 'broker') {
+      if (brokerSoon) return;
       navigation.navigate('ConnectBroker');
       return;
     }
@@ -166,7 +174,7 @@ export default function CreatePortfolioScreen() {
     initialCash,
     mode,
     navigation,
-  ]);
+  , brokerSoon]);
 
   const styles = useMemo(
     () =>
@@ -248,7 +256,9 @@ export default function CreatePortfolioScreen() {
             />
             <Text style={styles.modeHint}>
               {isBrokerMode
-                ? i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s16')
+                ? brokerSoon
+                  ? i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.soon2')
+                  : i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s16')
                 : i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s14')}
             </Text>
 
@@ -416,10 +426,12 @@ export default function CreatePortfolioScreen() {
               submitting
                 ? i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s38')
                 : isBrokerMode
-                  ? i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s39')
+                  ? brokerSoon
+                    ? i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.soon1')
+                    : i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s39')
                   : i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s40')
             }
-            icon={isBrokerMode ? 'link' : 'checkmark'}
+            icon={isBrokerMode ? (brokerSoon ? 'time-outline' : 'link') : 'checkmark'}
             disabled={!canSubmit}
             loading={submitting}
             onPress={() => void handleSubmit()}

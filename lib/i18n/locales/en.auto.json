@@ -1297,7 +1297,9 @@
     "s37": "Portfolio goal, strategy, notes…",
     "s38": "Creating portfolio…",
     "s39": "Continue to connect Colmex Pro",
-    "s40": "Create portfolio"
+    "s40": "Create portfolio",
+    "soon1": "Coming soon",
+    "soon2": "The Colmex Pro integration is coming soon. Meanwhile you can open a manual trading journal."
   },
   "screens__Learning__CoursePreviewScreen": {
     "s1": "Success!",

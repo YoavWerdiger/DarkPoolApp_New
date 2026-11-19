@@ -1410,13 +1410,14 @@ function LearningScreen() {
           <View
             style={[
               styles.chapterHeaderBadge,
-              { backgroundColor: DesignTokens.colors.background.navChrome },
+              // תגית החלק — בצבע ה-CTA של ערכת הנושא
+              { backgroundColor: DesignTokens.colors.primary.lightCta },
             ]}
           >
             <Text
               style={[
                 styles.chapterHeaderBadgeText,
-                { color: DesignTokens.colors.text.secondary },
+                { color: DesignTokens.colors.text.inverse },
               ]}
             >{i18n.t('auto.screens__Learning__LearningScreen.s33', { v0: chapterNum })}
             </Text>
@@ -1938,9 +1939,9 @@ function LearningScreen() {
             <UICard variant="soft" padding="md" style={styles.lessonGlassCard}>
               {/* תגית «שיעור X» — כמו תגיות הפרקים ברשימת השיעורים (טופו) */}
               <View style={styles.lessonPlayerIndexRow}>
-                {/* tertiary — בולט על הכרטיס בשתי הערכות (navChrome נבלע בכרטיס הלבן בלייט) */}
-                <View style={[styles.chapterHeaderBadge, { backgroundColor: DesignTokens.colors.background.tertiary }]}>
-                  <Text style={[styles.chapterHeaderBadgeText, { color: DesignTokens.colors.text.secondary }]}>
+                {/* תגית השיעור — בצבע ה-CTA של ערכת הנושא */}
+                <View style={[styles.chapterHeaderBadge, { backgroundColor: DesignTokens.colors.primary.lightCta }]}>
+                  <Text style={[styles.chapterHeaderBadgeText, { color: DesignTokens.colors.text.inverse }]}>
                     {i18n.t('auto.screens__Learning__LearningScreen.s41', { v0: lessonNumberLabel })}
                   </Text>
                 </View>

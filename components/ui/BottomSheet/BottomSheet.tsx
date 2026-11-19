@@ -97,10 +97,12 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
   const dragStripMinHeight = showHandle ? 44 : 28;
   /** באנדרואיד לפעמים insets.bottom=0 למרות סרגל ניווט/מחוות — מגנים על ריפוד תחתון */
   const contentPaddingBottom = useMemo(() => {
+    // גלובלי: תוכן השיט לעולם לא נכנס ל-safe area התחתון (home indicator / סרגל ניווט באנדרואיד)
+    const minSafe = sheetContentBottomPadding(insets.bottom);
     if (contentPaddingBottomOverride != null) {
-      return contentPaddingBottomOverride;
+      return Math.max(contentPaddingBottomOverride, minSafe);
     }
-    return sheetContentBottomPadding(insets.bottom);
+    return minSafe;
   }, [insets.bottom, contentPaddingBottomOverride]);
   const snapKey = (snapPoints ?? []).map((point) => Number(point).toFixed(4)).join('|');
   const visibleHeightPx = useMemo(
@@ -544,10 +546,11 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
     if (!fitContent) return {};
     // מרימים את השיט מעל המקלדת בלי להגדיל אותו מעבר למסך — אחרת הראש נחתך והשדות נשארים מאחוריה.
     const kb = keyboardShift.value;
-    const maxH = SCREEN_HEIGHT - kb - 12;
+    // גלובלי: לא עולים מעל ה-safe area העליון (סטטוס בר / Dynamic Island)
+    const maxH = SCREEN_HEIGHT - kb - minAllowedY;
     const h = Math.min(fitContentHeight.value, Math.max(180, maxH));
     return { height: h, marginBottom: kb };
-  }, [fitContent]);
+  }, [fitContent, minAllowedY]);
 
   const backdropStyle = useAnimatedStyle(() => {
     'worklet';

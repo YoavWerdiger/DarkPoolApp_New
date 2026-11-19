@@ -30,6 +30,9 @@ const CARDCOM_WEBVIEW_USER_AGENT = Platform.select({
     'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
 });
 
+/** מסתיר את כותרת דף התשלום של CardCom («הכנס פרטי אשראי») — CSS שמוזרק לדף ב-WebView */
+const HIDE_CARDCOM_HEADING_JS = `(function(){try{var s=document.createElement('style');s.innerHTML='h1{display:none!important}body{padding-top:12px!important}';(document.head||document.documentElement).appendChild(s);}catch(e){}})();true;`;
+
 function parseSmartActionOutcome(url: string): { isSuccess: boolean; transactionId: string } | null {
   try {
     if (!/smart-action/i.test(url)) return null;
@@ -353,6 +356,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
             mediaPlaybackRequiresUserAction={false}
             setSupportMultipleWindows={false}
             userAgent={CARDCOM_WEBVIEW_USER_AGENT}
+            injectedJavaScript={HIDE_CARDCOM_HEADING_JS}
             onShouldStartLoadWithRequest={(req: ShouldStartLoadRequest) => {
               const url = req.url || '';
 

@@ -33,6 +33,9 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
  * המסך שואל has_course_access עד שהגישה נפתחת (או מציג «התשלום בבדיקה»).
  */
 
+/** מסתיר את כותרת דף התשלום של CardCom («הכנס פרטי אשראי») — CSS שמוזרק לדף ב-WebView */
+const HIDE_CARDCOM_HEADING_JS = `(function(){try{var s=document.createElement('style');s.innerHTML='h1{display:none!important}body{padding-top:12px!important}';(document.head||document.documentElement).appendChild(s);}catch(e){}})();true;`;
+
 /** reCAPTCHA של CardCom נשבר עם UA של WebView — כמו ב-CreditCardCheckoutScreen */
 const CARDCOM_WEBVIEW_USER_AGENT = Platform.select({
   ios: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
@@ -232,6 +235,7 @@ export function CourseCheckoutScreen({ navigation, route }: any) {
           originWhitelist={['*']}
           setSupportMultipleWindows={false}
           userAgent={CARDCOM_WEBVIEW_USER_AGENT}
+          injectedJavaScript={HIDE_CARDCOM_HEADING_JS}
           startInLoadingState
           renderLoading={() => (
             <View style={[StyleSheet.absoluteFill, styles.center, { backgroundColor: colors.background.primary }]}>

@@ -335,7 +335,7 @@ const SubSectionHeader: React.FC<{
       <View
         style={[
           weekStyles.subHeaderPill,
-          { backgroundColor: c.background, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border },
+          { backgroundColor: c.background },
         ]}
       >
         <Icon size={14} color={c.icon} strokeWidth={2.2} />

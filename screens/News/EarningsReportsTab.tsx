@@ -477,8 +477,6 @@ const SectionDivider: React.FC<{
           paddingHorizontal: 14,
           borderRadius: DesignTokens.borderRadius.full,
           backgroundColor: c.background,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: c.border,
         }}
       >
         {Icon ? <Icon size={14} color={c.icon} strokeWidth={2.2} /> : null}

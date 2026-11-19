@@ -28,6 +28,7 @@ import { isUserPresenceOnline } from '../../utils/userPresence';
 import { ChatBottomSheet, ChatSheetContent } from './ChatBottomSheet';
 import { chatRtlRow } from './chatDesignTokens';
 import { APP_TYPE, appPhysicalRightText, appSectionTitleStyle } from '../ui/appType';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 interface User {
   id: string;
@@ -190,15 +191,11 @@ export default function AddMemberSheet({
         {isSearching ? (
           <ActivityIndicator size="large" color={tokens.colors.primary.main} style={{ marginTop: 32 }} />
         ) : results.length === 0 && query.trim().length > 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="person-outline" size={40} color={tokens.colors.text.tertiary} />
-            <Text style={[styles.emptyText, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.components__chat__AddMemberSheet.s5')}</Text>
-          </View>
+          <EmptyState icon="person-outline" title={i18n.t('auto.components__chat__AddMemberSheet.s5')}>
+          </EmptyState>
         ) : results.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="search-outline" size={40} color={tokens.colors.text.tertiary} />
-            <Text style={[styles.emptyText, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.components__chat__AddMemberSheet.s6')}</Text>
-          </View>
+          <EmptyState icon="search-outline" title={i18n.t('auto.components__chat__AddMemberSheet.s6')}>
+          </EmptyState>
         ) : (
           <FlatList
             data={results}

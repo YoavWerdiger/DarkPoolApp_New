@@ -35,6 +35,7 @@ import {
 } from '../../components/profile/settingsType';
 import { isolateNumericRuns } from '../DarkPool/utils/bidi';
 import { logger } from '../../utils/logger';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 type MediaFilter = 'all' | 'image' | 'video';
 
@@ -277,19 +278,17 @@ export default function GroupMediaGalleryScreen() {
 
     if (items.length === 0) {
       return (
-        <View style={styles.centerContent}>
-          <View style={styles.emptyIcon}>
-            <Ionicons name="images-outline" size={28} color={DesignTokens.colors.text.secondary} />
-          </View>
-          <Text style={styles.emptyTitle}>{i18n.t('auto.screens__ChatNew__GroupMediaGalleryScreen.s1')}</Text>
-          <Text style={styles.emptyText}>
-            {filter === 'video'
+        <EmptyState
+          icon="images-outline"
+          title={i18n.t('auto.screens__ChatNew__GroupMediaGalleryScreen.s1')}
+          subtitle={
+            filter === 'video'
               ? i18n.t('auto.screens__ChatNew__GroupMediaGalleryScreen.s2')
               : filter === 'image'
                 ? i18n.t('auto.screens__ChatNew__GroupMediaGalleryScreen.s3')
-                : i18n.t('auto.screens__ChatNew__GroupMediaGalleryScreen.s4')}
-          </Text>
-        </View>
+                : i18n.t('auto.screens__ChatNew__GroupMediaGalleryScreen.s4')
+          }
+        />
       );
     }
 

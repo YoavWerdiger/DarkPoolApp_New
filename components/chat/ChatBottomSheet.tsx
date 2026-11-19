@@ -1,4 +1,5 @@
 import { ROOT_DIR, UI_DIR, dirIcon } from '../../lib/i18n/direction';
+import { EmptyState } from '../ui/EmptyState';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
@@ -434,17 +435,8 @@ export function ChatSheetEmptyState({
   title: string;
   subtitle?: string;
 }) {
-  const sheet = useChatSheetStyles();
-  const tokens = useDesignTokens();
-  return (
-    <View style={sheet.emptyState}>
-      {icon ? (
-        <Ionicons name={icon} size={48} color={tokens.colors.text.tertiary} />
-      ) : null}
-      <Text style={sheet.emptyTitle}>{title}</Text>
-      {subtitle ? <Text style={sheet.emptySubtitle}>{subtitle}</Text> : null}
-    </View>
-  );
+  // אותו מצב ריק כמו בכל האפליקציה (גרסה קומפקטית לשיט)
+  return <EmptyState icon={icon} title={title} subtitle={subtitle} compact />;
 }
 
 export function ChatSheetLoading({ label = i18n.t('auto.components__chat__ChatBottomSheet.s4') }: { label?: string }) {

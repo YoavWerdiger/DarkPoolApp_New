@@ -87,6 +87,7 @@ import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import { APP_TYPE, appPhysicalRightText } from '../../components/ui/appType';
 import { SkeletonBox, SkeletonLine } from '../../components/ui/SkeletonLoader';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 // RTL is configured once inside the component via useEffect (not at module level)
 
@@ -1511,32 +1512,20 @@ export default function ChatGroupsListScreen() {
     isLoading ? (
       renderListSkeleton()
     ) : (
-    <View style={styles.emptyContainer}>
-      {searchQuery ? (
-        <>
-          <Ionicons name="search-outline" size={64} color={tokens.colors.text.tertiary} />
-          <Text style={styles.emptyTitle}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s38')}</Text>
-          <Text style={styles.emptyText}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s39')}</Text>
-        </>
-      ) : activeTab === 'unread' ? (
-        <>
-          <Ionicons name="checkmark-done-circle-outline" size={64} color={tokens.colors.text.success} />
-          <Text style={styles.emptyTitle}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s40')}</Text>
-          <Text style={styles.emptyText}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s41')}</Text>
-        </>
-      ) : activeTab === 'mentions' ? (
-        <>
-          <Ionicons name="at-outline" size={64} color={tokens.colors.text.tertiary} />
-          <Text style={styles.emptyTitle}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s42')}</Text>
-          <Text style={styles.emptyText}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s43')}</Text>
-        </>
-      ) : (
-        <>
-          <Ionicons name="chatbubbles-outline" size={64} color={tokens.colors.text.tertiary} />
-          <Text style={styles.emptyTitle}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s44')}</Text>
-        </>
-      )}
-    </View>
+    searchQuery ? (
+      <EmptyState icon="search-outline" title={i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s38')} subtitle={i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s39')} />
+    ) : activeTab === 'unread' ? (
+      <EmptyState
+        icon="checkmark-done-circle-outline"
+        iconColor={tokens.colors.text.success}
+        title={i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s40')}
+        subtitle={i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s41')}
+      />
+    ) : activeTab === 'mentions' ? (
+      <EmptyState icon="at-outline" title={i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s42')} subtitle={i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s43')} />
+    ) : (
+      <EmptyState icon="chatbubbles-outline" title={i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s44')} />
+    )
     );
 
   return (

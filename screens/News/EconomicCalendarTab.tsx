@@ -36,6 +36,7 @@ import {
   type EconomicImportance,
 } from '../../utils/economicEventImportance';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 /** חלון קצר אחרי זמן האירוע — מציגים "עכשיו" לפני מעבר לקאונטדאון הבא. */
 const COUNTDOWN_GRACE_MS = 45_000;
@@ -956,48 +957,10 @@ export default function EconomicCalendarTab({
     });
 
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32, paddingTop: 40 }}>
-        <View 
-          style={{ 
-            width: 72,
-            height: 72,
-            borderRadius: 36,
-            backgroundColor: DesignTokens.colors.background.cardSolid,
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: APP_LAYOUT.componentGap
-          }}
-        >
-          <Ionicons 
-            name="calendar-outline"
-            size={32}
-            color={DesignTokens.colors.text.secondary}
-          />
-        </View>
-        <Text 
-          style={{ 
-            ...APP_TYPE.sectionTitle,
-            marginBottom: APP_LAYOUT.cardTitleToBodyGap, 
-            textAlign: 'center',
-            color: DesignTokens.colors.text.primary 
-          }}
-        >
-          {isToday ? i18n.t('auto.screens__News__EconomicCalendarTab.s13') : i18n.t('auto.screens__News__EconomicCalendarTab.s14')}
-        </Text>
-        <Text 
-          style={{ 
-            ...APP_TYPE.body,
-            marginBottom: APP_LAYOUT.groupLabelToContent, 
-            textAlign: 'center',
-            color: DesignTokens.colors.text.secondary,
-          }}
-        >
-          {isToday 
+      <EmptyState icon="calendar-outline" title={isToday ? i18n.t('auto.screens__News__EconomicCalendarTab.s13') : i18n.t('auto.screens__News__EconomicCalendarTab.s14')} subtitle={isToday 
             ? i18n.t('auto.screens__News__EconomicCalendarTab.s15')
-            : i18n.t('auto.screens__News__EconomicCalendarTab.s16', { v0: dateStr })
-          }
-        </Text>
-    </View>
+            : i18n.t('auto.screens__News__EconomicCalendarTab.s16', { v0: dateStr })}>
+    </EmptyState>
   );
   };
 

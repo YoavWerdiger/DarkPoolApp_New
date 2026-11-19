@@ -13,6 +13,7 @@ import {
   APP_TYPE,
 } from '../../../components/ui/appType';
 import UIButton from '../../../components/ui/UIButton';
+import { EMPTY_STATE_CIRCLE, EMPTY_STATE_ICON } from '../../../components/ui/EmptyState';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import { SUGGESTED_WATCHLIST_SYMBOLS } from '../../../services/watchlist/watchlistTypes';
 
@@ -40,22 +41,23 @@ export function WatchlistEmpty({ onAddPress, picked, onTogglePick }: Props) {
           borderBottomColor: tokens.colors.border.divider,
         },
         iconWrap: {
-          width: 56,
-          height: 56,
-          borderRadius: 28,
+          // אותו עיגול ואייקון כמו EmptyState בכל האפליקציה
+          width: EMPTY_STATE_CIRCLE,
+          height: EMPTY_STATE_CIRCLE,
+          borderRadius: EMPTY_STATE_CIRCLE / 2,
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: tokens.colors.background.cardSolid,
           marginBottom: APP_LAYOUT.componentGap,
         },
         title: {
-          ...appCardTitleStyle,
+          ...APP_TYPE.sectionTitle,
           color: tokens.colors.text.primary,
           textAlign: 'center',
         },
         subtitle: {
-          ...appCardSubtitleStyle,
-          marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+          ...APP_TYPE.body,
+          marginTop: APP_LAYOUT.cardTitleToBodyGap,
           color: tokens.colors.text.secondary,
           textAlign: 'center',
         },
@@ -126,7 +128,7 @@ export function WatchlistEmpty({ onAddPress, picked, onTogglePick }: Props) {
     <View style={styles.wrap}>
       <View style={styles.hero}>
         <View style={styles.iconWrap}>
-          <Ionicons name="eye-outline" size={26} color={tokens.colors.text.primary} />
+          <Ionicons name="eye-outline" size={EMPTY_STATE_ICON} color={tokens.colors.text.secondary} />
         </View>
         <Text style={styles.title}>{i18n.t('auto.screens__Watchlist__components__WatchlistEmpty.s1')}</Text>
         <Text style={styles.subtitle}>{i18n.t('auto.screens__Watchlist__components__WatchlistEmpty.s2')}</Text>

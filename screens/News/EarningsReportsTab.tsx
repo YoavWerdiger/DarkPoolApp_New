@@ -30,6 +30,7 @@ import EarningsWeeklyView, { WeekDay, getSymbolDisplay as getWeeklySymbolDisplay
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 import { sessionPillColors, type TradingSession } from './sessionPillColors';
 import { useTheme } from '../../context/ThemeContext';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 export type EarningsViewMode = 'daily' | 'weekly';
 
@@ -1275,47 +1276,9 @@ export default function EarningsReportsTab({
       : null;
 
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32, paddingTop: 40 }}>
-        <View 
-          style={{ 
-            width: 72,
-            height: 72,
-            borderRadius: 36,
-            backgroundColor: DesignTokens.colors.background.cardSolid,
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: APP_LAYOUT.componentGap
-          }}
-        >
-          <Ionicons 
-            name="notifications-outline"
-            size={32}
-            color={DesignTokens.colors.text.secondary}
-          />
-        </View>
-        <Text 
-          style={{ 
-            ...APP_TYPE.sectionTitle,
-            marginBottom: APP_LAYOUT.cardTitleToBodyGap, 
-            textAlign: 'center',
-            color: DesignTokens.colors.text.primary, 
-          }}
-        >
-          {isToday ? i18n.t('auto.screens__News__EarningsReportsTab.s17') : i18n.t('auto.screens__News__EarningsReportsTab.s18', { v0: dateStr })}
-        </Text>
-        <Text 
-          style={{ 
-            ...APP_TYPE.body,
-            marginBottom: APP_LAYOUT.groupLabelToContent, 
-            textAlign: 'center',
-            color: DesignTokens.colors.text.secondary,
-          }}
-        >
-          {isToday 
+      <EmptyState icon="notifications-outline" title={isToday ? i18n.t('auto.screens__News__EarningsReportsTab.s17') : i18n.t('auto.screens__News__EarningsReportsTab.s18', { v0: dateStr })} subtitle={isToday 
             ? i18n.t('auto.screens__News__EarningsReportsTab.s19')
-            : i18n.t('auto.screens__News__EarningsReportsTab.s20', { v0: dateStr })
-          }
-        </Text>
+            : i18n.t('auto.screens__News__EarningsReportsTab.s20', { v0: dateStr })}>
         {hasClosestReports && closestDate && (
           <UIButton
             title={i18n.t('auto.screens__News__EarningsReportsTab.s21', { v0: closestDate.toLocaleDateString(appLocale(), { day: 'numeric', month: 'short' }) })}
@@ -1332,7 +1295,7 @@ export default function EarningsReportsTab({
             style={{ marginTop: APP_LAYOUT.cardStackGap }}
           />
         )}
-      </View>
+      </EmptyState>
     );
   };
 

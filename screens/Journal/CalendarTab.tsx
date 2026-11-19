@@ -21,6 +21,7 @@ import { supabase } from '../../services/supabase';
 import UICard from '../../components/ui/UICard';
 import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import type { Trade } from './tradeTypes';
+import { EmptyState } from '../../components/ui/EmptyState';
 import {
   JOURNAL_LAYOUT,
   JOURNAL_TYPE,
@@ -420,10 +421,8 @@ export default function CalendarTab() {
         </View>
         
         {calendarData.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="calendar-outline" size={64} color={DesignTokens.colors.text.tertiary} />
-            <Text style={styles.emptyText}>{i18n.t('auto.screens__Journal__CalendarTab.s12')}</Text>
-          </View>
+          <EmptyState icon="calendar-outline" title={i18n.t('auto.screens__Journal__CalendarTab.s12')}>
+          </EmptyState>
         ) : (
           <FlatList
             data={calendarData}

@@ -31,6 +31,7 @@ import {
 import { hebrewAssetTypeLabel } from "../../../services/portfolios/symbolSearchFilter";
 import { TickerLogo } from "./TickerLogo";
 import { HapticFeedback } from "../../../utils/hapticFeedback";
+import { EmptyState } from '../../../components/ui/EmptyState';
 
 interface Props {
   visible: boolean;
@@ -285,20 +286,11 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
             ) : null}
 
             {!loading && results.length === 0 ? (
-              <View style={styles.emptyState}>
-                <View style={styles.emptyIcon}>
-                  <Ionicons
-                    name="search-outline"
-                    size={26}
-                    color={tokens.colors.text.secondary}
-                  />
-                </View>
-                <Text style={styles.emptyText}>
-                  {query
-                    ? i18n.t('auto.screens__Portfolios__components__SymbolSearchModal.s4')
-                    : i18n.t('auto.screens__Portfolios__components__SymbolSearchModal.s5')}
-                </Text>
-              </View>
+              <EmptyState
+                compact
+                icon="search-outline"
+                title={query ? i18n.t('auto.screens__Portfolios__components__SymbolSearchModal.s4') : i18n.t('auto.screens__Portfolios__components__SymbolSearchModal.s5')}
+              />
             ) : null}
 
             <FlatList

@@ -20,6 +20,7 @@ import UICard from '../../components/ui/UICard';
 import { DayDividerPill } from '../../components/ui/DayDividerPill';
 import { queryClient } from '../../lib/queryClient';
 import { appQueryKeys } from '../../lib/appQueryKeys';
+import { EmptyState } from '../../components/ui/EmptyState';
 import {
   JOURNAL_LAYOUT,
   JOURNAL_TYPE,
@@ -364,20 +365,11 @@ export default function TradesListTab() {
       </View>
 
       {filteredTrades.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="document-outline" size={64} color={DesignTokens.colors.text.tertiary} />
-          {trades.length === 0 ? (
-            <>
-              <Text style={styles.emptyText}>{i18n.t('auto.screens__Journal__TradesListTab.s12')}</Text>
-              <Text style={styles.emptySubtext}>{i18n.t('auto.screens__Journal__TradesListTab.s13')}</Text>
-            </>
-          ) : (
-            <>
-              <Text style={styles.emptyText}>{i18n.t('auto.screens__Journal__TradesListTab.s14')}</Text>
-              <Text style={styles.emptySubtext}>{i18n.t('auto.screens__Journal__TradesListTab.s15')}</Text>
-            </>
-          )}
-        </View>
+        <EmptyState
+          icon="document-outline"
+          title={trades.length === 0 ? i18n.t('auto.screens__Journal__TradesListTab.s12') : i18n.t('auto.screens__Journal__TradesListTab.s14')}
+          subtitle={trades.length === 0 ? i18n.t('auto.screens__Journal__TradesListTab.s13') : i18n.t('auto.screens__Journal__TradesListTab.s15')}
+        />
       ) : (
         <View style={styles.listWrap}>
           <FlatList

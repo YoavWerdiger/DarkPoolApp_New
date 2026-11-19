@@ -33,6 +33,7 @@ import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
 import { HapticFeedback, triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 export const MyLearningScreen: React.FC = () => {
   const refreshRing = useRefreshRing();
@@ -141,16 +142,13 @@ export const MyLearningScreen: React.FC = () => {
   }, [handleCoursePress, handleContinueLearning]);
 
   const renderEmptyState = () => (
-    <View style={styles.emptyState}>
-      <Text style={styles.emptyStateIcon}>📚</Text>
-      <Text style={styles.emptyStateTitle}>{i18n.t('auto.screens__Learning__MyLearningScreen.s3')}</Text>
-      <Text style={styles.emptyStateSubtitle}>{i18n.t('auto.screens__Learning__MyLearningScreen.s4')}</Text>
-      <UIButton
-        title={i18n.t('auto.screens__Learning__MyLearningScreen.s5')}
-        variant="primary"
-        onPress={() => navigation.navigate('CoursesScreen')}
-      />
-    </View>
+    <EmptyState
+      icon="school-outline"
+      title={i18n.t('auto.screens__Learning__MyLearningScreen.s3')}
+      subtitle={i18n.t('auto.screens__Learning__MyLearningScreen.s4')}
+      actionLabel={i18n.t('auto.screens__Learning__MyLearningScreen.s5')}
+      onAction={() => navigation.navigate('CoursesScreen')}
+    />
   );
 
   const renderStats = () => {

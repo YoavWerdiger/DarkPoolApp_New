@@ -51,6 +51,7 @@ import UserNameButton from '../../components/profile/UserNameButton';
 import CommunityPostImage from './CommunityPostImage';
 import { UserBadges, badgeSizeForLineHeight } from '../../components/ui/badges/UserBadges';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 const PAGE_SIZE = 30;
 
@@ -737,14 +738,7 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
     return (
       <View style={{ flex: 1 }}>
         <FeedTabToggle value={feedMode} onChange={handleFeedModeChange} />
-        <View style={styles.center}>
-        <Ionicons
-          name="cloud-offline-outline"
-          size={40}
-          color={tokens.colors.text.tertiary}
-        />
-        <Text style={styles.errorTitle}>{i18n.t('auto.screens__Tweets__TweetsFeed.s11')}</Text>
-        <Text style={styles.hint}>{error}</Text>
+        <EmptyState icon="cloud-offline-outline" title={i18n.t('auto.screens__Tweets__TweetsFeed.s11')} subtitle={error}>
         <TouchableOpacity
           onPress={() => {
             setLoading(true);
@@ -754,7 +748,7 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
         >
           <Text style={styles.retryText}>{i18n.t('auto.screens__Tweets__TweetsFeed.s18')}</Text>
         </TouchableOpacity>
-        </View>
+        </EmptyState>
       </View>
     );
   }
@@ -796,17 +790,8 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
             />
           )}
           ListEmptyComponent={
-            <View style={styles.center}>
-              <Ionicons
-                name="chatbubble-ellipses-outline"
-                size={40}
-                color={tokens.colors.text.tertiary}
-              />
-              <Text style={styles.errorTitle}>
-                {feedMode === 'following' ? i18n.t('auto.screens__Tweets__TweetsFeed.s22') : i18n.t('auto.screens__Tweets__TweetsFeed.s23')}
-              </Text>
-              <Text style={styles.hint}>{emptyMessage}</Text>
-            </View>
+            <EmptyState icon="chatbubble-ellipses-outline" title={feedMode === 'following' ? i18n.t('auto.screens__Tweets__TweetsFeed.s22') : i18n.t('auto.screens__Tweets__TweetsFeed.s23')} subtitle={emptyMessage}>
+            </EmptyState>
           }
           ListFooterComponent={
             loadingMore ? (

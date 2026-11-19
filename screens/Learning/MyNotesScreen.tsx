@@ -34,6 +34,7 @@ import {
 } from '../../components/learning/academyLayout';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 interface NoteWithDetails {
   id?: string;
@@ -170,17 +171,11 @@ export const MyNotesScreen: React.FC = () => {
   );
 
   const renderEmptyState = () => (
-    <View style={styles.emptyState}>
-      <View style={styles.emptyIconWrap}>
-        <Ionicons
-          name="book-outline"
-          size={40}
-          color={DesignTokens.colors.text.tertiary}
-        />
-      </View>
-      <Text style={styles.emptyTitle}>{i18n.t('auto.screens__Learning__MyNotesScreen.s10')}</Text>
-      <Text style={styles.emptySubtitle}>{i18n.t('auto.screens__Learning__MyNotesScreen.s11', { v0: '\n' })}</Text>
-    </View>
+    <EmptyState
+      icon="book-outline"
+      title={i18n.t('auto.screens__Learning__MyNotesScreen.s10')}
+      subtitle={i18n.t('auto.screens__Learning__MyNotesScreen.s11', { v0: '\n' })}
+    />
   );
 
   return (

@@ -22,6 +22,7 @@ import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { NewsScreenShell } from './NewsScreenShell';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 interface LikedArticleCardProps {
   article: LikedArticle;
@@ -348,25 +349,8 @@ export default function LikedArticlesScreen() {
 
   // רינדור רשימה ריקה
   const renderEmptyState = () => (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 }}>
-      <Ionicons 
-        name="heart-outline" 
-        size={64} 
-        color={DesignTokens.colors.text.tertiary} 
-      />
-      <Text style={{
-        ...APP_TYPE.sectionTitle,
-        marginTop: APP_LAYOUT.componentGap,
-        textAlign: 'center',
-        color: DesignTokens.colors.text.primary
-      }}>{i18n.t('auto.screens__News__LikedArticlesScreen.s11')}</Text>
-      <Text style={{
-        ...APP_TYPE.cardSubtitle,
-        marginTop: APP_LAYOUT.groupLabelToContent,
-        textAlign: 'center',
-        color: DesignTokens.colors.text.secondary,
-      }}>{i18n.t('auto.screens__News__LikedArticlesScreen.s12')}</Text>
-    </View>
+    <EmptyState icon="heart-outline" title={i18n.t('auto.screens__News__LikedArticlesScreen.s11')} subtitle={i18n.t('auto.screens__News__LikedArticlesScreen.s12')}>
+    </EmptyState>
   );
 
   const headerRight =

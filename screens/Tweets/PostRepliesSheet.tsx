@@ -55,6 +55,7 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 import UserAvatarButton from '../../components/profile/UserAvatarButton';
 import UserNameButton from '../../components/profile/UserNameButton';
 import FollowUserButton from '../../components/profile/FollowUserButton';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 type Props = {
   visible: boolean;
@@ -371,7 +372,7 @@ function PostRepliesSheetBody({
         keyboardDismissMode="on-drag"
         ListEmptyComponent={
           !loading ? (
-            <Text style={[styles.emptyText, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Tweets__PostRepliesSheet.s4')}</Text>
+            <EmptyState compact icon="chatbubble-outline" title={i18n.t('auto.screens__Tweets__PostRepliesSheet.s4')} />
           ) : null
         }
         ListHeaderComponent={

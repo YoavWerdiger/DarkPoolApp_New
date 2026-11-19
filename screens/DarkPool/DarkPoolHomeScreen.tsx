@@ -72,6 +72,7 @@ import {
 import { useDrawerSwipeGuard } from '../../hooks/useDrawerSwipeGuard';
 import { RtlHorizontalScroll } from '../../components/ui/RtlHorizontalScroll';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 const FEED_INITIAL_RENDER = 8;
 const FEED_MAX_BATCH = 6;
@@ -309,10 +310,7 @@ export default function DarkPoolHomeScreen() {
       );
     }
     return (
-      <UICard variant="soft" padding="lg" style={styles.emptyCard}>
-        <Text style={styles.emptyTitle}>{i18n.t('auto.screens__DarkPool__DarkPoolHomeScreen.s1')}</Text>
-        <Text style={styles.emptyBody}>{i18n.t('auto.screens__DarkPool__DarkPoolHomeScreen.s2')}</Text>
-      </UICard>
+      <EmptyState icon="pulse-outline" title={i18n.t('auto.screens__DarkPool__DarkPoolHomeScreen.s1')} subtitle={i18n.t('auto.screens__DarkPool__DarkPoolHomeScreen.s2')} />
     );
   }, [loading, styles]);
 

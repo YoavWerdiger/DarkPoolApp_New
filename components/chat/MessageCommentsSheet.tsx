@@ -56,6 +56,7 @@ import { subscribeToMessageComments } from '../../services/chat/chatRealtimeServ
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import UserAvatarButton from '../../components/profile/UserAvatarButton';
 import UserNameButton from '../../components/profile/UserNameButton';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 /** ההודעה שמגיבים עליה (הכרזה) */
 export type CommentTarget = { id: string; groupId: string };
@@ -366,7 +367,7 @@ function MessageCommentsSheetBody({
         keyboardDismissMode="on-drag"
         ListEmptyComponent={
           !loading ? (
-            <Text style={[styles.emptyText, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.components__chat__MessageCommentsSheet.s4')}</Text>
+            <EmptyState compact icon="chatbubble-outline" title={i18n.t('auto.components__chat__MessageCommentsSheet.s4')} />
           ) : null
         }
         ListHeaderComponent={

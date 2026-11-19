@@ -73,6 +73,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { donateShareTarget } from '../../lib/shareTargets';
 import { useChatMessageScroll } from '../../hooks/useChatMessageScroll';
 import { SkeletonBox } from '../../components/ui/SkeletonLoader';
+import { EmptyState } from '../../components/ui/EmptyState';
 import {
   scrollChatListToBottom,
 } from '../../utils/chatListScrollToBottom';
@@ -2098,11 +2099,11 @@ export default function ChatGroupScreen() {
               onOpenInfo={handleGroupInfoPress}
             />
           ) : (
-            <>
-              <Ionicons name="chatbubbles-outline" size={64} color={DesignTokens.colors.text.tertiary} />
-              <Text style={styles.emptyText}>{i18n.t('auto.screens__ChatNew__ChatGroupScreen.s23')}</Text>
-              <Text style={styles.emptySubtext}>{i18n.t('auto.screens__ChatNew__ChatGroupScreen.s24')}</Text>
-            </>
+            <EmptyState
+              icon="chatbubbles-outline"
+              title={i18n.t('auto.screens__ChatNew__ChatGroupScreen.s23')}
+              subtitle={i18n.t('auto.screens__ChatNew__ChatGroupScreen.s24')}
+            />
           )}
         </View>
       );

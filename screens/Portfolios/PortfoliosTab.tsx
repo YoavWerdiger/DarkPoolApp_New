@@ -41,6 +41,7 @@ import {
   journalSectionTitleStyle,
 } from '../Journal/journalLayout';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 type SortMode = 'default' | 'value_desc' | 'return_desc' | 'name_asc';
 
@@ -466,24 +467,17 @@ export default function PortfoliosTab() {
   if (items.length === 0) {
     return (
       <View style={styles.root}>
-        <View style={styles.emptyWrap}>
-          <View style={styles.emptyIconWrap}>
-            <Ionicons name="briefcase" size={36} color={tokens.colors.primary.main} />
-          </View>
-          <Text style={styles.emptyTitle}>{i18n.t('auto.screens__Portfolios__PortfoliosTab.s13')}</Text>
-          <Text style={styles.emptyText}>{i18n.t('auto.screens__Portfolios__PortfoliosTab.s14')}</Text>
-          <TouchableOpacity
-            style={styles.emptyBtn}
-            onPress={() => {
-              void HapticFeedback.medium();
-              handleCreate();
-            }}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="add" size={22} color={tokens.colors.text.inverse} />
-            <Text style={styles.emptyBtnText}>{i18n.t('auto.screens__Portfolios__PortfoliosTab.s15')}</Text>
-          </TouchableOpacity>
-        </View>
+        <EmptyState
+          icon="briefcase-outline"
+          title={i18n.t('auto.screens__Portfolios__PortfoliosTab.s13')}
+          subtitle={i18n.t('auto.screens__Portfolios__PortfoliosTab.s14')}
+          actionLabel={i18n.t('auto.screens__Portfolios__PortfoliosTab.s15')}
+          actionIcon="add"
+          onAction={() => {
+            void HapticFeedback.medium();
+            handleCreate();
+          }}
+        />
       </View>
     );
   }

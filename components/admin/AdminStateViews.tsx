@@ -1,3 +1,5 @@
+import { EmptyState } from '../ui/EmptyState';
+import { Ionicons } from '@expo/vector-icons';
 import i18n from '../../lib/i18n';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
@@ -27,19 +29,14 @@ export function AdminLoadingState({ label = i18n.t('auto.components__admin__Admi
 export function AdminEmptyState({
   title,
   subtitle,
+  icon = 'file-tray-outline',
 }: {
   title: string;
   subtitle?: string;
+  icon?: keyof typeof Ionicons.glyphMap;
 }) {
-  const tokens = useDesignTokens();
-  return (
-    <AdminSurface padding="lg" style={styles.emptyCard}>
-      <Text style={[styles.emptyTitle, { color: tokens.colors.text.primary }]}>{title}</Text>
-      {subtitle ? (
-        <Text style={[styles.emptySub, { color: tokens.colors.text.secondary }]}>{subtitle}</Text>
-      ) : null}
-    </AdminSurface>
-  );
+  // אותו מצב ריק כמו בכל האפליקציה
+  return <EmptyState icon={icon} title={title} subtitle={subtitle} compact />;
 }
 
 export function AdminErrorState({

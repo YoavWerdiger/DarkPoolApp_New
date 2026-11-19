@@ -41,6 +41,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
+import { EmptyState } from '../../components/ui/EmptyState';
 // Fear & Greed מוצג בטאב "עיקרי מדדים" בלבד
 
 const NEWS_DETAIL_IMAGE_HEIGHT = 240;
@@ -1553,33 +1554,8 @@ export default function BreakingNewsTab({
   const renderEmptyState = () => {
     const hasSearch = searchQuery.trim().length > 0;
     return (
-      <View className="flex-1 justify-center items-center px-8 py-16">
-        <Ionicons
-          name={hasSearch ? 'search-outline' : 'newspaper-outline'}
-          size={48}
-          color={DesignTokens.colors.text.tertiary}
-        />
-        <Text
-          style={{
-            ...APP_TYPE.sectionTitle,
-            color: DesignTokens.colors.text.primary,
-            textAlign: 'center',
-            marginTop: APP_LAYOUT.componentGap,
-          }}
-        >
-          {hasSearch ? i18n.t('auto.screens__News__BreakingNewsTab.s19') : i18n.t('auto.screens__News__BreakingNewsTab.s20')}
-        </Text>
-        <Text
-          style={{
-            ...APP_TYPE.body,
-            color: DesignTokens.colors.text.secondary,
-            textAlign: 'center',
-            marginTop: APP_LAYOUT.groupLabelToContent,
-          }}
-        >
-          {hasSearch ? i18n.t('auto.screens__News__BreakingNewsTab.s21') : i18n.t('auto.screens__News__BreakingNewsTab.s22')}
-        </Text>
-      </View>
+      <EmptyState icon={hasSearch ? 'search-outline' : 'newspaper-outline'} title={hasSearch ? i18n.t('auto.screens__News__BreakingNewsTab.s19') : i18n.t('auto.screens__News__BreakingNewsTab.s20')} subtitle={hasSearch ? i18n.t('auto.screens__News__BreakingNewsTab.s21') : i18n.t('auto.screens__News__BreakingNewsTab.s22')}>
+      </EmptyState>
     );
   };
 

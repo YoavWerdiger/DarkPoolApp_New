@@ -6,6 +6,7 @@ import {
   Text,
   ScrollView,
   StyleSheet,
+  useWindowDimensions,
 } from 'react-native';
 import { RefreshControl } from '../../components/ui/AppRefreshControl';
 import { useNavigation } from '@react-navigation/native';
@@ -16,7 +17,6 @@ import {
   AcademyScreenHeader,
   CourseCard,
 } from '../../components/learning';
-import { CourseInfoSheet } from '../../components/learning/CourseInfoSheet';
 import { CourseCardSkeleton } from '../../components/learning/CourseCard';
 import { ACADEMY_CARD_HP } from '../../components/learning/academyCardLayout';
 import {
@@ -50,6 +50,7 @@ import { fetchCourseAccess, isPurchaseCourse } from '../../services/coursePurcha
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { appQueryKeys } from '../../lib/appQueryKeys';
+import { RtlHorizontalScroll } from '../../components/ui/RtlHorizontalScroll';
 
 type Nav = { navigate: (n: string, p?: object) => void };
 
@@ -60,7 +61,6 @@ export const CoursesScreen: React.FC = () => {
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const mainTabsHeight = useMainTabsHeight();
   const [refreshing, setRefreshing] = useState(false);
-  const [infoCourse, setInfoCourse] = useState<CourseWithProgress | null>(null);
   const { isPremium } = useSubscription();
 
   const openMainDrawer = useCallback(() => {
@@ -170,38 +170,39 @@ export const CoursesScreen: React.FC = () => {
     staleTime: 60_000,
   });
 
-  /** שיט ההסבר: לקורס ברכישה בלי גישה — הכפתור פותח ישר את דף התשלום */
-  const infoNeedsPurchase = !!infoCourse && isPurchaseCourse(infoCourse.id) && purchasedAccess !== true;
-  const handleInfoCta = useCallback(
-    (course: CourseWithProgress) => {
-      if (isPurchaseCourse(course.id) && purchasedAccess !== true) {
-        (navigation as Nav).navigate('CourseCheckout', { courseId: course.id });
-        return;
-      }
-      handleCoursePress(course);
-    },
-    [handleCoursePress, navigation, purchasedAccess],
-  );
-
-  // יש גישה (רשום / מנוי פרימיום) → ישר לדף הקורס; אין גישה (כולל האורקל) → שיט פירוט
+  /** CTA של הכרטיס (בלי שיט): גישה → לקורס; הלוויתנים בלי רכישה → תשלום; בקרוב → מסך בקרוב; פרימיום → מנויים */
   const handleCardPress = useCallback(
     (course: CourseWithProgress) => {
-      // קורס ברכישה בודדת (הלוויתנים): עם רכישה מאושרת בשרת — נכנסים; בלי — שיט ההסבר עם «לרכישת הקורס»
+      const nav = navigation as Nav;
       if (isPurchaseCourse(course.id)) {
         if (purchasedAccess === true) handleCoursePress(course);
-        else setInfoCourse(course);
+        else nav.navigate('CourseCheckout', { courseId: course.id });
         return;
       }
-      if (hasAcademyCourseAccess(course, isPremium)) {
+      if (isComingSoonCourse(course) || hasAcademyCourseAccess(course, isPremium)) {
         handleCoursePress(course);
         return;
       }
-      setInfoCourse(course);
+      (navigation as unknown as { navigate: (n: string, p?: object) => void }).navigate('Profile', {
+        screen: 'SubscriptionPlans',
+      });
     },
-    [handleCoursePress, isPremium, purchasedAccess]
+    [handleCoursePress, isPremium, purchasedAccess, navigation],
   );
 
-  const closeInfoSheet = useCallback(() => setInfoCourse(null), []);
+  const cardCtaLabel = (course: CourseWithProgress): string => {
+    if (isPurchaseCourse(course.id)) {
+      return purchasedAccess === true
+        ? i18n.t('auto.screens__Learning__CoursesScreen.ctaContinue')
+        : i18n.t('auto.screens__Learning__CoursesScreen.buyCourse', {
+            v0: Number((course as { price?: number }).price ?? 0).toLocaleString('he-IL'),
+          });
+    }
+    if (isComingSoonCourse(course)) return i18n.t('auto.screens__Learning__CoursesScreen.ctaSoon');
+    if (hasAcademyCourseAccess(course, isPremium)) return i18n.t('auto.screens__Learning__CoursesScreen.ctaContinue');
+    return i18n.t('auto.screens__Learning__CoursesScreen.ctaPremium');
+  };
+
 
   const handleOpenNotes = useCallback(() => {
     void HapticFeedback.impactLight();
@@ -226,20 +227,34 @@ export const CoursesScreen: React.FC = () => {
   );
 
   const orderedCourses = useMemo(() => selectAcademyCatalogCourses(courses), [courses]);
+  const { width: screenW } = useWindowDimensions();
+  // ~85% מהמסך — רואים שיש כרטיס נוסף בצד
+  const courseCardWidth = Math.round(Math.min(screenW * 0.85, 420));
   const listBottomPadding = mainTabsHeight + 28;
   // רשימה אנכית: הלווייתנים ומתחתיהם האורקל (הסדר מ-selectAcademyCatalogCourses)
+  // אקדמיה: שורה אופקית של כרטיסים מורחבים (כל המלל בכרטיס, CTA בתחתית) — בלי שיט
   const renderCourseList = (list: CourseWithProgress[]) => (
-    <View style={styles.courseList}>
+    <RtlHorizontalScroll
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      decelerationRate="fast"
+      snapToInterval={courseCardWidth + 12}
+      snapToAlignment="start"
+      contentContainerStyle={{ paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal, gap: 12, alignItems: 'stretch' }}
+    >
       {list.map((course) => (
         <CourseCard
           key={course.id}
           course={course}
+          width={courseCardWidth}
+          fillHeight
+          expanded
+          ctaLabel={cardCtaLabel(course)}
           hasAccess={isPurchaseCourse(course.id) ? purchasedAccess === true : hasAcademyCourseAccess(course, isPremium)}
           onPress={handleCardPress}
-          onEnroll={course.enrollment ? undefined : handleEnroll}
         />
       ))}
-    </View>
+    </RtlHorizontalScroll>
   );
 
   if (error) {
@@ -325,18 +340,7 @@ export const CoursesScreen: React.FC = () => {
         </ScrollView>
 <RefreshRing ring={refreshRing} />
       </RNSafeAreaView>
-      <CourseInfoSheet
-        course={infoCourse}
-        onClose={closeInfoSheet}
-        onOpenCourse={handleInfoCta}
-        ctaLabel={
-          infoNeedsPurchase && infoCourse
-            ? i18n.t('auto.screens__Learning__CoursesScreen.buyCourse', {
-                v0: Number((infoCourse as { price?: number }).price ?? 0).toLocaleString('he-IL'),
-              })
-            : undefined
-        }
-      />
+
     </ScreenChrome>
   );
 };

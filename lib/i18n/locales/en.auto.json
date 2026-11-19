@@ -1909,7 +1909,10 @@
     "s19": "Try another word or clear the search",
     "s20": "Try again later",
     "s21": "Full courses",
-    "buyCourse": "Buy the course · ₪{{v0}}"
+    "buyCourse": "Buy the course · ₪{{v0}}",
+    "ctaContinue": "Continue learning",
+    "ctaSoon": "Coming soon",
+    "ctaPremium": "Join Premium"
   },
   "screens__Portfolios__CommunityPortfoliosTab": {
     "s1": "Last updated",

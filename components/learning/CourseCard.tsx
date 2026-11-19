@@ -24,12 +24,16 @@ import {
 } from './academyCardLayout';
 import { APP_LAYOUT } from '../ui/appLayout';
 import {
+  appBodyTextStyle,
+  appCaptionStyle,
   appCardSubtitleStyle,
   appCardTitleStyle,
 } from '../ui/appType';
 import {
   getAcademyCourseAccentColor,
+  getAcademyCourseAudience,
   getAcademyCourseSubtitle,
+  getCourseDurationMinutes,
   getCourseLessonStats,
 } from './academyCourses';
 
@@ -46,6 +50,18 @@ interface CourseCardProps {
   fillHeight?: boolean;
   /** יש גישה לקורס (רכש / רשום) — «המשך למידה»; ברירת מחדל: רשום לקורס */
   hasAccess?: boolean;
+  /** מצב מורחב (אקדמיה אופקית): כל המלל בתוך הכרטיס + CTA רחב בתחתית — בלי שיט */
+  expanded?: boolean;
+  /** טקסט ה-CTA (למשל «לרכישת הקורס · ₪4,990») */
+  ctaLabel?: string;
+}
+
+/** התיאור בלי פסקת «למי הקורס מתאים» — היא מוצגת בנפרד */
+export function courseAboutText(description?: string): string {
+  return (description || '')
+    .replace(/למי הקורס מתאים\?\s*\n[^\n]+/, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 export const CourseCard: React.FC<CourseCardProps> = ({
@@ -54,6 +70,8 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   width,
   fillHeight = false,
   hasAccess,
+  expanded = false,
+  ctaLabel: ctaLabelOverride,
 }) => {
   const T = useDesignTokens();
   const { width: screenWidth } = useWindowDimensions();
@@ -74,9 +92,14 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   );
 
   // רשום → המשך למידה; לא רשום → פירוט הקורס בשיט (המלל המלא עבר לשם)
-  const ctaLabel = canContinue
-    ? i18n.t('auto.components__learning__CourseCard.s2')
-    : i18n.t('auto.components__learning__CourseCard.s1');
+  const ctaLabel =
+    ctaLabelOverride ??
+    (canContinue
+      ? i18n.t('auto.components__learning__CourseCard.s2')
+      : i18n.t('auto.components__learning__CourseCard.s1'));
+  const audience = expanded ? getAcademyCourseAudience(course) : '';
+  const about = expanded ? courseAboutText(course.description) : '';
+  const minutes = expanded ? getCourseDurationMinutes(course as CourseWithProgress & { duration_minutes?: number }) : 0;
 
   return (
     <TouchableOpacity
@@ -117,37 +140,70 @@ export const CourseCard: React.FC<CourseCardProps> = ({
           />
         </View>
 
-        {/* חלק תחתון קומפקטי — שם ותת-כותרת לצד כפתור קטן, ופס התקדמות מתחת */}
-        <View style={[styles.body, fillHeight && styles.fillFlex]}>
-          <View style={styles.headerRow}>
-            <View pointerEvents="none" style={styles.ctaSlot}>
-              <UIButton title={ctaLabel} variant="primary" size="sm" haptic={false} />
-            </View>
+        {expanded ? (
+          // כל המלל בתוך הכרטיס (בלי שיט) — כותרת, תת-כותרת, למי מתאים, על הקורס, משך; CTA רחב בתחתית
+          <View style={[styles.body, fillHeight && styles.fillFlex]}>
             <View style={styles.titleBlock}>
-              <Text style={styles.title} numberOfLines={1}>
+              <Text style={styles.title} numberOfLines={2}>
                 {course.title}
               </Text>
-              {subtitle ? (
-                <Text style={styles.subtitle} numberOfLines={2}>
-                  {subtitle}
-                </Text>
-              ) : null}
+              {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+            </View>
+            {audience ? <Text style={styles.bodyText}>{audience}</Text> : null}
+            {about ? <Text style={styles.bodyText}>{about}</Text> : null}
+            {minutes > 0 ? (
+              <Text style={styles.meta}>
+                {i18n.t('auto.components__learning__CourseInfoSheet.s2', { count: minutes })}
+              </Text>
+            ) : null}
+            {canContinue ? (
+              <View style={styles.progressTrack}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    { width: `${Math.min(100, Math.max(0, progressPct))}%`, backgroundColor: accent },
+                  ]}
+                />
+              </View>
+            ) : null}
+            {fillHeight ? <View style={{ flex: 1 }} /> : null}
+            <View pointerEvents="none">
+              <UIButton title={ctaLabel} variant="primary" size="lg" fullWidth haptic={false} />
             </View>
           </View>
-
-          {/* התקדמות בכל כרטיס — 0 למי שעוד לא התחיל */}
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressFill,
-                {
-                  width: `${Math.min(100, Math.max(0, progressPct))}%`,
-                  backgroundColor: accent,
-                },
-              ]}
-            />
+        ) : (
+          // חלק תחתון קומפקטי — שם ותת-כותרת לצד כפתור קטן, ופס התקדמות מתחת
+          <View style={[styles.body, fillHeight && styles.fillFlex]}>
+            <View style={styles.headerRow}>
+              <View pointerEvents="none" style={styles.ctaSlot}>
+                <UIButton title={ctaLabel} variant="primary" size="sm" haptic={false} />
+              </View>
+              <View style={styles.titleBlock}>
+                <Text style={styles.title} numberOfLines={1}>
+                  {course.title}
+                </Text>
+                {subtitle ? (
+                  <Text style={styles.subtitle} numberOfLines={2}>
+                    {subtitle}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+  
+            {/* התקדמות בכל כרטיס — 0 למי שעוד לא התחיל */}
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${Math.min(100, Math.max(0, progressPct))}%`,
+                    backgroundColor: accent,
+                  },
+                ]}
+              />
+            </View>
           </View>
-        </View>
+        )}
       </UICard>
     </TouchableOpacity>
   );
@@ -277,5 +333,15 @@ const createStyles = (
     },
     ctaSlot: {
       flexShrink: 0,
+    },
+    bodyText: {
+      ...appBodyTextStyle,
+      alignSelf: 'stretch',
+      color: T.colors.text.secondary,
+    },
+    meta: {
+      ...appCaptionStyle,
+      alignSelf: 'stretch',
+      color: T.colors.text.tertiary,
     },
   });

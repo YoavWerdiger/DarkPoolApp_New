@@ -68,6 +68,8 @@ const OnboardingInput: React.FC<OnboardingInputProps> = ({
           ref={inputRef}
           style={[
             formFieldInputStyle(tokens),
+            // הרשמה באנגלית: השורש הפוך (מראה) — יישור לשמאל + direction מפורש, רק בשדות ההרשמה
+            IS_RTL_UI ? null : { textAlign: 'left' as const, direction: 'ltr' as const },
             {
               paddingHorizontal: 0,
               paddingVertical: multiline ? 4 : 15,

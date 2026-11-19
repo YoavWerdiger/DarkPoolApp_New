@@ -1,8 +1,4 @@
 import { TEXT_DIR } from '../../lib/i18n/language';
-import { IS_RTL_UI } from '../../lib/i18n/direction';
-
-/** יישור שדות קלט: עברית/ערבית — ימין; אנגלית — שמאל (גם ה-placeholder) */
-const INPUT_ALIGN: TextStyle['textAlign'] = IS_RTL_UI ? 'right' : 'left';
 import type { ViewStyle, TextStyle } from 'react-native';
 import type { useDesignTokens } from './DesignTokens';
 import { APP_TYPE, appPhysicalRightText } from './appType';
@@ -80,10 +76,8 @@ export function formFieldInputStyle(tokens?: Tokens): TextStyle {
     fontWeight: APP_TYPE.body.fontWeight,
     // בלי lineHeight: ב-iOS TextInput חד-שורתי עם lineHeight דוחף את הטקסט למטה («שוקע»).
     // שדות multiline מוסיפים lineHeight בעצמם.
-    textAlign: INPUT_ALIGN,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
-    // באנגלית השורש הוא rtl (תמונת מראה) — בלי direction מפורש left/right מתחלפים
-    ...(IS_RTL_UI ? null : { direction: 'ltr' as const }),
   };
 }
 
@@ -91,7 +85,7 @@ export function formFieldInputStyle(tokens?: Tokens): TextStyle {
 export function formFieldNumericInputStyle(tokens?: Tokens): TextStyle {
   return {
     ...formFieldInputStyle(tokens),
-    textAlign: INPUT_ALIGN,
+    textAlign: 'right',
     writingDirection: 'ltr',
   };
 }

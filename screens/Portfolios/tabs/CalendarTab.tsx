@@ -230,9 +230,9 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           justifyContent: 'center',
         },
         dayHeaderText: {
-          fontSize: 11,
-          fontWeight: '700',
-          lineHeight: 14,
+          fontSize: 12,
+          fontWeight: '600',
+          lineHeight: 16,
           color: tokens.colors.text.tertiary,
           writingDirection: TEXT_DIR,
           textAlign: 'center',
@@ -242,10 +242,11 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
         },
         cell: {
           aspectRatio: 1,
-          borderRadius: 10,
+          borderRadius: 12,
           alignItems: 'center',
           justifyContent: 'center',
           paddingVertical: 3,
+          paddingHorizontal: 2,
         },
         cellEmpty: {
           backgroundColor: 'transparent',
@@ -257,17 +258,22 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           borderWidth: 2,
           borderColor: tokens.colors.text.primary,
         },
+        // מספרים קריאים: יום 14, P&L 11 (מתכווץ רק כשהמספר ארוך)
         cellDay: {
-          fontSize: 11,
-          fontWeight: '700',
+          fontSize: 14,
+          lineHeight: 17,
+          fontWeight: '600',
+          fontVariant: ['tabular-nums'],
           color: tokens.colors.text.primary,
           writingDirection: 'ltr',
           textAlign: 'center',
         },
         cellPnl: {
-          fontSize: 8,
+          fontSize: 11,
+          lineHeight: 13,
           fontWeight: '700',
           marginTop: 1,
+          fontVariant: ['tabular-nums'],
           writingDirection: 'ltr',
           textAlign: 'center',
         },
@@ -464,6 +470,8 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
                           },
                         ]}
                         numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.7}
                       >
                         {Math.abs(pnl) >= 1000
                           ? `${pnl > 0 ? '+' : ''}${(pnl / 1000).toFixed(1)}k`

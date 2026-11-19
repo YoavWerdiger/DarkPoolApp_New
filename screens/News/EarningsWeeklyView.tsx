@@ -1121,8 +1121,9 @@ const weekStyles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 10,
   },
+  // אותו מרווח מעל ומתחת — הכותרת במרכז בין שתי הקבוצות
   subHeaderSpaced: {
-    marginTop: 16,
+    marginTop: 10,
   },
   subHeaderPill: {
     flexDirection: 'row',

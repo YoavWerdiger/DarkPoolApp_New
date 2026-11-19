@@ -61,6 +61,8 @@ interface CourseCardProps {
 export function courseAboutText(description?: string): string {
   return (description || '')
     .replace(/למי הקורס מתאים\?\s*\n[^\n]+/, '')
+    // «מה תלמדו בקורס?» באותה שורה עם הטקסט שאחריה (בלי שבירת שורה)
+    .replace(/(מה תלמדו בקורס\?)[ \t]*\n+/, '$1 ')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }

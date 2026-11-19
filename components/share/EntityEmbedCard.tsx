@@ -535,8 +535,9 @@ function EntityEmbedCardGeneric({ attachment, onPress, compact, style }: Props) 
         ? preview.subtitle?.replace(/^ארה["״]ב\s*·\s*/, '')
         : preview.subtitle
       )?.trim() || null;
+  // חדשה: בלי «חדשות ·» — רק המקור (מוצג מתחת לתיאור, כמו בכרטיס החדשה)
   const typeLabel =
-    !isTrade && !isEconomic && preview.badge?.trim() ? preview.badge.trim() : null;
+    !isTrade && !isEconomic && !isNews && preview.badge?.trim() ? preview.badge.trim() : null;
   const metaLine =
     [typeLabel, subtitleText].filter(Boolean).join(' · ') || null;
   const expandHint = isTrade && hasExtraTradeMetrics
@@ -632,15 +633,21 @@ function EntityEmbedCardGeneric({ attachment, onPress, compact, style }: Props) 
                 </View>
               ) : null}
             </View>
+            {/* חדשה: התיאור צמוד לכותרת והמקור מתחתיו — אותם מרווחים כמו בכרטיס החדשה */}
+            {isNews && preview.snippet ? (
+              <Text style={[styles.snippet, styles.newsSnippet]} numberOfLines={2}>
+                {preview.snippet}
+              </Text>
+            ) : null}
             {metaLine ? (
-              <Text style={styles.subtitle} numberOfLines={1}>
+              <Text style={[styles.subtitle, isNews && styles.newsSource]} numberOfLines={1}>
                 {metaLine}
               </Text>
             ) : null}
           </View>
         </View>
 
-        {preview.snippet ? (
+        {!isNews && preview.snippet ? (
           <Text style={styles.snippet} numberOfLines={isCompact ? 2 : 3}>
             {preview.snippet}
           </Text>
@@ -872,6 +879,15 @@ function createStyles(
       color: tokens.colors.text.secondary,
       textAlign: 'right',
       writingDirection: TEXT_DIR,
+    },
+    newsSnippet: {
+      width: '100%',
+      marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
+    },
+    newsSource: {
+      ...APP_TYPE.caption,
+      marginTop: APP_LAYOUT.stackGapSmall,
+      color: tokens.colors.text.tertiary,
     },
     snippet: {
       ...APP_TYPE.cardSubtitle,

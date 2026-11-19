@@ -194,22 +194,42 @@ export function sampleChartSeriesForPeriod(
     if (spanMs < 120 * MS.day) gapMs = MS.day;
   }
 
+  // 1) סופ"ש: סנאפשוט יומי (תאריך בלי שעה) בשבת/ראשון הוא כפילות של שישי — לא יום מסחר.
+  //    שבוע = 5 נקודות, שנה ≈ 252 (לא 7 / 365 עם קטעים שטוחים). נשמר אם יש הפקדה/משיכה.
+  // 2) טווחים יומיים (3M ומעלה): נקודה אחת לכל יום — האחרונה ביום (בלי צפיפות תוך-יומית בסוף).
+  const daily = gapMs >= MS.day;
+  const trading = sorted.filter((p, i) => {
+    if (i === sorted.length - 1 || (p.external_flow ?? 0) !== 0) return true;
+    if (/T\d{2}:/.test(p.date)) return true;
+    const dow = new Date(`${p.date.slice(0, 10)}T12:00:00Z`).getUTCDay();
+    return dow !== 0 && dow !== 6;
+  });
+  const base = daily
+    ? trading.filter(
+        (p, i) =>
+          i === trading.length - 1 ||
+          (p.external_flow ?? 0) !== 0 ||
+          p.date.slice(0, 10) !== trading[i + 1].date.slice(0, 10),
+      )
+    : trading;
+  if (base.length <= 2) return base.length >= 2 ? base : sorted.slice(-2);
+
   const out: ChartPoint[] = [];
   let lastKept = -Infinity;
-  const lastMs = chartPointMs(sorted[sorted.length - 1].date);
-  for (let i = 0; i < sorted.length; i++) {
-    const p = sorted[i];
+  const lastMs = chartPointMs(base[base.length - 1].date);
+  for (let i = 0; i < base.length; i++) {
+    const p = base[i];
     const t = chartPointMs(p.date);
-    const isEdge = i === 0 || i === sorted.length - 1;
+    const isEdge = i === 0 || i === base.length - 1;
     const hasFlow = (p.external_flow ?? 0) !== 0;
-    const inSession = /T\d{2}:/.test(p.date) && lastMs - t <= 16 * MS.hour;
+    const inSession = !daily && /T\d{2}:/.test(p.date) && lastMs - t <= 16 * MS.hour;
     const gap = inSession ? Math.min(gapMs, SESSION_SNAPSHOT_MAX_GAP_MS) : gapMs;
     if (isEdge || hasFlow || t - lastKept >= gap) {
       out.push(p);
       lastKept = t;
     }
   }
-  const sampled = out.length >= 2 ? out : sorted.slice(0, 2);
+  const sampled = out.length >= 2 ? out : base.slice(0, 2);
   return sampled.length > maxPoints
     ? downsampleChartSeries(sampled, maxPoints)
     : sampled;

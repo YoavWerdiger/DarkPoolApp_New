@@ -197,6 +197,13 @@ export function sampleChartSeriesForPeriod(
   // 1) סופ"ש: סנאפשוט יומי (תאריך בלי שעה) בשבת/ראשון הוא כפילות של שישי — לא יום מסחר.
   //    שבוע = 5 נקודות, שנה ≈ 252 (לא 7 / 365 עם קטעים שטוחים). נשמר אם יש הפקדה/משיכה.
   // 2) טווחים יומיים (3M ומעלה): נקודה אחת לכל יום — האחרונה ביום (בלי צפיפות תוך-יומית בסוף).
+  // 1W/1M: פירוט תוך-יומי רק כשהוא מכסה את רוב ימי הטווח — אחרת היום האחרון (שיש לו נקודות
+  // תוך-יומיות) תופס את רוב הגרף והטווח לא סימטרי. במקרה כזה — נקודה אחת לכל יום, כמו בשאר.
+  if (period === '1W' || period === '1M') {
+    const days = new Set(sorted.map((p) => p.date.slice(0, 10)));
+    const intradayDays = new Set(sorted.filter((p) => /T\d{2}:/.test(p.date)).map((p) => p.date.slice(0, 10)));
+    if (days.size > 0 && intradayDays.size / days.size < 0.8) gapMs = MS.day;
+  }
   const daily = gapMs >= MS.day;
   const trading = sorted.filter((p, i) => {
     if (i === sorted.length - 1 || (p.external_flow ?? 0) !== 0) return true;

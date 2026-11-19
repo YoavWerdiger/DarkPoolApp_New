@@ -236,9 +236,10 @@ const EconomicEventCard: React.FC<{
               <View
                 style={{
                   // קאונטדאון לדוח הקרוב — רקע אדום שבולט; שעה רגילה — רקע הקנבס
+                  // שעה רגילה — בצבע ה-CTA של ערכת הנושא
                   backgroundColor: countdownLabel
                     ? DesignTokens.colors.danger.main
-                    : DesignTokens.colors.background.primary,
+                    : DesignTokens.colors.primary.lightCta,
                   paddingHorizontal: 10,
                   paddingVertical: 4,
                   borderRadius: DesignTokens.borderRadius.full,
@@ -248,7 +249,7 @@ const EconomicEventCard: React.FC<{
                 <Text
                   style={{
                     ...APP_TYPE.cardMetricLabel,
-                    color: countdownLabel ? '#FFFFFF' : DesignTokens.colors.text.primary,
+                    color: countdownLabel ? '#FFFFFF' : DesignTokens.colors.text.inverse,
                     textAlign: 'center',
                     fontVariant: ['tabular-nums'],
                   }}

@@ -722,91 +722,47 @@ export const EarningsReportSkeleton: React.FC<CardSkeletonProps> = ({ delay = 0 
  * Skeleton לאירוע ביומן כלכלי — כותרת ואז שעת דיווח, פס חשיבות מימין (flex sibling),
  * שלוש מטריקות (תוצאה / תחזית / קודם). לא row-reverse.
  */
+/**
+ * כרטיס אירוע כלכלי בטעינה — אותה מעטפת כמו EconomicEventCard (UICard soft, רדיוס, ריפוד):
+ * כותרת + גלולת שעה, קו מפריד, שלוש עמודות ערך (תחזית / תוצאה / קודם) עם מפרידים, ופס חשיבות בצד.
+ */
 export const EconomicEventSkeleton: React.FC<CardSkeletonProps> = ({ delay = 0 }) => {
   const tokens = useDesignTokens();
-  const screenPad = tokens.layout?.screenPadding ?? 20;
-  const cardRadius = tokens.borderRadius['2xl'];
-  const cardPad = tokens.layout?.cardPadding ?? tokens.spacing.xl;
-
+  const divider = tokens.colors.border.divider;
+  const cardPad = APP_LAYOUT.cardPadding;
+  const metric = (d: number) => (
+    <View style={{ flex: 1, alignItems: 'center', gap: 6 }}>
+      <SkeletonBox width={40} height={10} delay={d} />
+      <SkeletonBox width={56} height={14} delay={d + 30} />
+    </View>
+  );
+  const sep = <View style={{ width: 1, height: 34, backgroundColor: divider, marginHorizontal: 8 }} />;
   return (
-    <View style={{ marginHorizontal: screenPad, marginBottom: 12 }}>
-      <View
-        style={{
-          overflow: 'hidden',
-          borderRadius: cardRadius,
-          backgroundColor: 'rgba(255, 255, 255, 0.06)',
-        }}
-      >
-        <View style={{ flexDirection: ECONOMIC_EVENT_SKELETON_LAYOUT.rowDirection, alignItems: 'stretch' }}>
-          <View
-            style={{
-              flex: 1,
-              alignItems: 'flex-end',
-              paddingVertical: cardPad,
-              paddingLeft: cardPad,
-              paddingRight: cardPad,
-            }}
-          >
-            <View
-              style={{
-                flexDirection: ECONOMIC_EVENT_SKELETON_LAYOUT.rowDirection,
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                width: '100%',
-              }}
-            >
-              <View style={{ flex: 1, marginRight: 10, alignItems: 'flex-end' }}>
-                <SkeletonBox width="78%" height={15} delay={delay} />
+    <View style={{ marginHorizontal: APP_LAYOUT.screenPaddingHorizontal, marginBottom: APP_LAYOUT.cardStackGap }} pointerEvents="none">
+      <UICard variant="soft" padding="none" disableBlur style={{ overflow: 'hidden', borderRadius: UI_CARD_RADIUS }}>
+        <View style={{ flexDirection: 'row', alignItems: 'stretch' }}>
+          <View style={{ flex: 1, alignItems: 'flex-end', padding: cardPad }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <View style={{ flex: 1, marginRight: APP_LAYOUT.cardTitleToBodyGap, alignItems: 'flex-end', gap: 6 }}>
+                <SkeletonBox width="72%" height={15} delay={delay} />
               </View>
-              <SkeletonBox width={52} height={24} borderRadius={999} delay={delay + 40} />
+              <SkeletonBox width={56} height={24} borderRadius={999} delay={delay + 40} />
             </View>
-
-            <View style={{ marginTop: 10, width: '100%' }}>
-              <View
-                style={{
-                  height: StyleSheet.hairlineWidth,
-                  backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                  marginBottom: 10,
-                }}
-              />
-              <View
-                style={{
-                  flexDirection: ECONOMIC_EVENT_SKELETON_LAYOUT.metricsRowDirection,
-                  alignItems: 'flex-start',
-                  width: '100%',
-                }}
-              >
-                {[0, 1, 2].map((i) => (
-                  <React.Fragment key={i}>
-                    {i > 0 ? (
-                      <View
-                        style={{
-                          width: StyleSheet.hairlineWidth,
-                          height: 34,
-                          backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                          marginHorizontal: 8,
-                        }}
-                      />
-                    ) : null}
-                    <View style={{ flex: 1, alignItems: 'center', gap: 6 }}>
-                      <SkeletonBox width={36} height={11} delay={delay + 80 + i * 30} />
-                      <SkeletonBox width={48} height={15} delay={delay + 110 + i * 30} />
-                    </View>
-                  </React.Fragment>
-                ))}
+            <View style={{ marginTop: APP_LAYOUT.cardTitleToBodyGap, width: '100%' }}>
+              <View style={{ height: 1, backgroundColor: divider, marginBottom: APP_LAYOUT.cardTitleToBodyGap }} />
+              <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', width: '100%' }}>
+                {metric(delay + 60)}
+                {sep}
+                {metric(delay + 90)}
+                {sep}
+                {metric(delay + 120)}
               </View>
             </View>
           </View>
-
-          <View
-            style={{
-              width: 3,
-              alignSelf: 'stretch',
-              backgroundColor: 'rgba(255, 255, 255, 0.16)',
-            }}
-          />
+          {/* פס חשיבות בצד (כמו בכרטיס האמיתי) */}
+          <View style={{ width: 4, backgroundColor: divider }} />
         </View>
-      </View>
+      </UICard>
     </View>
   );
 };

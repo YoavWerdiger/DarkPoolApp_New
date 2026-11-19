@@ -272,7 +272,6 @@ export function PortfolioValueChart({
       };
     }
 
-    const xs = displaySeries.map((p) => new Date(p.date).getTime());
     const ys = displaySeries.map((p) => p.value);
     let minY = Math.min(...ys);
     let maxY = Math.max(...ys);
@@ -296,11 +295,24 @@ export function PortfolioValueChart({
         : (maxY - minY) * 0.14 || 1;
     minY -= padY;
     maxY += padY;
-    const minX = xs[0];
-    const maxX = Math.max(xs[xs.length - 1], Date.now());
-
-    const xScale = (x: number) =>
-      padding.left + ((x - minX) / (maxX - minX || 1)) * innerWidth;
+    // ציר «זמן מסחר» (כמו בפלטפורמות): נקודות במרווח שווה — לילות וסופ"ש לא תופסים רוחב,
+    // אחרת 1W נראה כמדרגות (קווים שטוחים ארוכים + צבירי נקודות בשעות המסחר)
+    const times = displaySeries.map((p) => new Date(p.date).getTime());
+    const lastIdx = Math.max(times.length - 1, 1);
+    const indexAt = (t: number): number => {
+      if (t <= times[0]) return 0;
+      if (t >= times[times.length - 1]) return times.length - 1;
+      let lo = 0;
+      let hi = times.length - 1;
+      while (hi - lo > 1) {
+        const mid = (lo + hi) >> 1;
+        if (times[mid] <= t) lo = mid;
+        else hi = mid;
+      }
+      const span = times[hi] - times[lo] || 1;
+      return lo + (t - times[lo]) / span;
+    };
+    const xScale = (t: number) => padding.left + (indexAt(t) / lastIdx) * innerWidth;
     const yScale = (y: number) =>
       padding.top + (1 - (y - minY) / (maxY - minY || 1)) * innerHeight;
 

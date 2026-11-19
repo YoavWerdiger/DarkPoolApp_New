@@ -497,18 +497,22 @@ class ShareViewController: UIViewController {
 
     while responder != nil {
       if let application = responder as? UIApplication {
-        if application.canOpenURL(url) {
-          application.open(url)
-        } else {
-          NSLog("redirectToHostApp canOpenURL KO: \(shareProtocol)")
-          self.dismissWithError(
-            message: "Application not found, invalid url scheme \(shareProtocol)")
-          return
+        // iOS 18+: לסגור את ההרחבה רק אחרי שהמערכת פתחה את האפליקציה — סגירה מיידית (completeRequest
+        // מיד אחרי open) הרגה את הבקשה והאפליקציה לא נפתחה לדף «העבר אל».
+        application.open(url, options: [:]) { [weak self] opened in
+          if !opened { NSLog("redirectToHostApp open failed: \(url.absoluteString)") }
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            self?.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+          }
         }
+        return
       }
       responder = responder!.next
     }
-    extensionContext!.completeRequest(returningItems: [], completionHandler: nil)
+    // אין UIApplication בשרשרת — fallback: openURL דרך ה-extensionContext (עובד ב-Today/Action) וסגירה
+    extensionContext?.open(url) { [weak self] _ in
+      self?.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+    }
   }
 
   enum RedirectType {

@@ -98,6 +98,7 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
   const [loading, setLoading] = useState(!initialSnap?.portfolio);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<PortfolioDetailTab>('overview');
+  const [historyHasTrades, setHistoryHasTrades] = useState(false);
   const [portfolioActionsOpen, setPortfolioActionsOpen] = useState(false);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
   /** מפתח שמשתנה בכל פעם שנסגרת פוזיציה — מאלץ את OverviewTab לרענן מדדים/סדרת שווי */
@@ -490,6 +491,8 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
                   portfolioId={portfolio.id}
                   holdings={displayHoldings}
                   refreshKey={dataVersion}
+                  hideEmpty
+                  onHasTradesChange={setHistoryHasTrades}
                 />
                 {/* הפקדות, משיכות, דיבידנדים, עמלות */}
                 <TransactionsTab
@@ -499,6 +502,8 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
                   typeFilter={['deposit', 'withdrawal', 'dividend', 'fee']}
                   sectionTitle={i18n.t('auto.screens__Portfolios__PortfolioDetailScreen.s7')}
                   refreshKey={dataVersion}
+                  // מצב ריק אחד בלבד: כשיש טריידים סגורים לא מציגים «אין טרנזקציות» מתחתם
+                  hideEmpty={historyHasTrades}
                 />
               </View>
             )}

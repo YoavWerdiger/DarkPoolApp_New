@@ -17,6 +17,7 @@ import { loadTrades } from '../../../services/portfolios/portfolioTradeDerive';
 import type { Trade, PortfolioHolding } from '../portfolioTypes';
 import PortfolioTradesTable from '../components/PortfolioTradesTable';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
+import { EmptyState } from '../../../components/ui/EmptyState';
 import ExportTradeImage, {
   portfolioTradeToExportable,
   type ExportableTrade,
@@ -32,10 +33,13 @@ interface Props {
   holdings?: PortfolioHolding[];
   /** מפתח שמשתנה בכל פעם שהמסך האב מרענן נתונים — מאלץ טעינה מחדש */
   refreshKey?: number;
+  /** משולב בטאב עם טרנזקציות — כשאין טריידים לא מציג מצב ריק משלו (מונע כפילות) */
+  hideEmpty?: boolean;
+  onHasTradesChange?: (hasTrades: boolean) => void;
 }
 
 /** טאב היסטוריה — טריידים סגורים, חיפוש לפי סימבול. */
-export default function HistoryTab({ portfolioId, refreshKey }: Props) {
+export default function HistoryTab({ portfolioId, refreshKey, hideEmpty, onHasTradesChange }: Props) {
   const tokens = useDesignTokens();
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
@@ -142,6 +146,10 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
     [tokens]
   );
 
+  useEffect(() => {
+    if (!loading) onHasTradesChange?.(trades.length > 0);
+  }, [loading, trades.length, onHasTradesChange]);
+
   if (loading) {
     return (
       <JournalListSkeleton />
@@ -149,16 +157,13 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
   }
 
   if (trades.length === 0) {
+    if (hideEmpty) return null;
     return (
-      <View style={layoutStyles.empty}>
-        <Ionicons
-          name="time-outline"
-          size={42}
-          color={tokens.colors.text.tertiary}
-        />
-        <Text style={layoutStyles.emptyTitle}>{i18n.t('auto.screens__Portfolios__tabs__HistoryTab.s1')}</Text>
-        <Text style={layoutStyles.emptyText}>{i18n.t('auto.screens__Portfolios__tabs__HistoryTab.s2')}</Text>
-      </View>
+      <EmptyState
+        icon="time-outline"
+        title={i18n.t('auto.screens__Portfolios__tabs__HistoryTab.s1')}
+        subtitle={i18n.t('auto.screens__Portfolios__tabs__HistoryTab.s2')}
+      />
     );
   }
 

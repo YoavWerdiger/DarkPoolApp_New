@@ -79,7 +79,7 @@ export function PositionCard({ trade: t, lastPrice, readOnly, onClose, onDelete,
       accessibilityRole={canEdit ? 'button' : undefined}
       accessibilityLabel={canEdit ? i18n.t(`${T}.s7`, { v0: t.symbol }) : undefined}
     >
-      <UICard variant="soft" padding="md" style={styles.card}>
+      <UICard variant="soft" padding="md" style={styles.card} contentContainerStyle={styles.content}>
         {/* ראש: לוגו + סימבול + כיוון | P&L */}
         <View style={styles.head}>
           <TickerLogo symbol={t.symbol} size={40} />
@@ -151,6 +151,7 @@ export function PositionCard({ trade: t, lastPrice, readOnly, onClose, onDelete,
                   variant="secondary"
                   size="sm"
                   fullWidth
+                  style={{ backgroundColor: tokens.colors.background.tertiary }}
                   onPress={() => onShare(t)}
                 />
               </View>
@@ -187,7 +188,10 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     borderWidth: 0,
     direction: UI_DIR,
-    gap: 14,
+  },
+  // ריווח אחיד בין חלקי הכרטיס (ראש / נתונים / רמות / פעולות)
+  content: {
+    gap: APP_LAYOUT.componentGap,
   },
   head: {
     flexDirection: 'row',
@@ -236,8 +240,8 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: 'row',
-    borderRadius: 16,
-    paddingVertical: 10,
+    borderRadius: 14,
+    paddingVertical: 12,
     paddingHorizontal: 4,
   },
   stat: {

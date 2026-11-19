@@ -30,6 +30,7 @@ import {
 } from '../utils/format';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import { UI_CARD_RADIUS } from '../../../components/ui/appLayout';
+import { EmptyState } from '../../../components/ui/EmptyState';
 import {
   JOURNAL_LAYOUT,
   JOURNAL_TYPE,
@@ -49,6 +50,8 @@ interface Props {
   sectionTitle?: string;
   /** מפתח שמשתנה כל פעם שהמסך האב מרענן נתונים — גורם לטעינה מחדש של הטרנזקציות */
   refreshKey?: number;
+  /** יש תוכן אחר מעל (טריידים סגורים) — בלי מצב ריק כשאין טרנזקציות */
+  hideEmpty?: boolean;
 }
 
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'PortfolioDetail'>;
@@ -60,6 +63,7 @@ export default function TransactionsTab({
   typeFilter,
   sectionTitle,
   refreshKey,
+  hideEmpty,
 }: Props) {
   const tokens = useDesignTokens();
   const navigation = useNavigation<Nav>();
@@ -240,33 +244,27 @@ export default function TransactionsTab({
   }
 
   if (items.length === 0) {
+    if (hideEmpty) return null;
     return (
-      <View style={styles.empty}>
-        <Ionicons
-          name="document-text-outline"
-          size={42}
-          color={tokens.colors.text.tertiary}
-        />
-        <Text style={styles.emptyTitle}>{i18n.t('auto.screens__Portfolios__tabs__TransactionsTab.s7')}</Text>
-        <Text style={styles.emptyText}>
-          {readOnly
+      <EmptyState
+        icon="document-text-outline"
+        title={i18n.t('auto.screens__Portfolios__tabs__TransactionsTab.s7')}
+        subtitle={
+          readOnly
             ? i18n.t('auto.screens__Portfolios__tabs__TransactionsTab.s8')
-            : i18n.t('auto.screens__Portfolios__tabs__TransactionsTab.s9')}
-        </Text>
-        {!readOnly ? (
-          <TouchableOpacity
-            style={styles.emptyBtn}
-            onPress={() => {
-              void HapticFeedback.medium();
-              onAddPress?.();
-            }}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="add" size={18} color={tokens.colors.text.inverse} />
-            <Text style={styles.emptyBtnText}>{i18n.t('auto.screens__Portfolios__tabs__TransactionsTab.s10')}</Text>
-          </TouchableOpacity>
-        ) : null}
-      </View>
+            : i18n.t('auto.screens__Portfolios__tabs__TransactionsTab.s9')
+        }
+        actionLabel={!readOnly ? i18n.t('auto.screens__Portfolios__tabs__TransactionsTab.s10') : undefined}
+        actionIcon="add"
+        onAction={
+          !readOnly
+            ? () => {
+                void HapticFeedback.medium();
+                onAddPress?.();
+              }
+            : undefined
+        }
+      />
     );
   }
 

@@ -145,7 +145,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
           // כל המלל בתוך הכרטיס (בלי שיט) — כותרת, תת-כותרת, למי מתאים, על הקורס, משך; CTA רחב בתחתית
           <View style={[styles.body, styles.expandedBody, fillHeight && styles.fillFlex]}>
             <View style={styles.titleBlock}>
-              <Text style={styles.title} numberOfLines={2}>
+              <Text style={[styles.title, styles.titleExpanded]} numberOfLines={2}>
                 {course.title}
               </Text>
               {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
@@ -343,6 +343,13 @@ const createStyles = (
       lineHeight: APP_TYPE.cardBody.lineHeight,
       fontWeight: APP_TYPE.cardBody.fontWeight,
       color: T.colors.text.secondary,
+    },
+    // כותרת ראשית של הכרטיס המורחב — sectionTitle (22) ולא כותרת כרטיס רגילה
+    titleExpanded: {
+      fontSize: APP_TYPE.sectionTitle.fontSize,
+      lineHeight: APP_TYPE.sectionTitle.lineHeight,
+      fontWeight: APP_TYPE.sectionTitle.fontWeight,
+      letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
     },
     expandedBody: {
       gap: APP_LAYOUT.cardTitleToBodyGap,

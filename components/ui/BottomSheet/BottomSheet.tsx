@@ -97,12 +97,11 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
   const dragStripMinHeight = showHandle ? 44 : 28;
   /** באנדרואיד לפעמים insets.bottom=0 למרות סרגל ניווט/מחוות — מגנים על ריפוד תחתון */
   const contentPaddingBottom = useMemo(() => {
-    // גלובלי: תוכן השיט לעולם לא נכנס ל-safe area התחתון (home indicator / סרגל ניווט באנדרואיד)
-    const minSafe = sheetContentBottomPadding(insets.bottom);
+    // override מפורש (למשל 0) — השיט מטפל ב-safe area בעצמו (footer עם insets.bottom); לא להכפיל
     if (contentPaddingBottomOverride != null) {
-      return Math.max(contentPaddingBottomOverride, minSafe);
+      return contentPaddingBottomOverride;
     }
-    return minSafe;
+    return sheetContentBottomPadding(insets.bottom);
   }, [insets.bottom, contentPaddingBottomOverride]);
   const snapKey = (snapPoints ?? []).map((point) => Number(point).toFixed(4)).join('|');
   const visibleHeightPx = useMemo(

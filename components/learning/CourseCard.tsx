@@ -24,7 +24,8 @@ import {
 } from './academyCardLayout';
 import { APP_LAYOUT } from '../ui/appLayout';
 import {
-  appBodyTextStyle,
+  APP_TYPE,
+  appPhysicalRightText,
   appCaptionStyle,
   appCardSubtitleStyle,
   appCardTitleStyle,
@@ -142,7 +143,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
 
         {expanded ? (
           // כל המלל בתוך הכרטיס (בלי שיט) — כותרת, תת-כותרת, למי מתאים, על הקורס, משך; CTA רחב בתחתית
-          <View style={[styles.body, fillHeight && styles.fillFlex]}>
+          <View style={[styles.body, styles.expandedBody, fillHeight && styles.fillFlex]}>
             <View style={styles.titleBlock}>
               <Text style={styles.title} numberOfLines={2}>
                 {course.title}
@@ -334,10 +335,17 @@ const createStyles = (
     ctaSlot: {
       flexShrink: 0,
     },
+    // מלל בתוך כרטיס — cardBody (15/22) כמו בשאר הכרטיסים, לא body (16) שמתחרה בכותרת
     bodyText: {
-      ...appBodyTextStyle,
+      ...appPhysicalRightText,
       alignSelf: 'stretch',
+      fontSize: APP_TYPE.cardBody.fontSize,
+      lineHeight: APP_TYPE.cardBody.lineHeight,
+      fontWeight: APP_TYPE.cardBody.fontWeight,
       color: T.colors.text.secondary,
+    },
+    expandedBody: {
+      gap: APP_LAYOUT.cardTitleToBodyGap,
     },
     meta: {
       ...appCaptionStyle,

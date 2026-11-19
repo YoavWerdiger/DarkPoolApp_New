@@ -14,6 +14,10 @@ import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { legacyAlert } from '../../utils/appDialog';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { Image as ExpoImage } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
+import { APP_TYPE } from '../../components/ui/appType';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -49,6 +53,7 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 
 /** ההתממשקות ל-Colmex Pro עוד לא פתוחה לכולם — false כשמשיקים */
 const COLMEX_CONNECT_COMING_SOON = true;
+const COLMEX_LOGO = require('../../assets/colmex-logo.png');
 
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'CreatePortfolio'>;
 
@@ -217,17 +222,45 @@ export default function CreatePortfolioScreen() {
           borderBottomWidth: StyleSheet.hairlineWidth,
           borderBottomColor: tokens.colors.border.divider,
         },
-        soonBanner: {
-          flexDirection: 'row-reverse',
+        soonHero: {
+          marginTop: APP_LAYOUT.componentGap,
+          borderRadius: 26,
+          overflow: 'hidden',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingVertical: 14,
-          paddingHorizontal: 16,
+          paddingTop: 28,
+          paddingBottom: 22,
+          gap: 10,
+        },
+        // הלוגו עצמו מוגדל ומטושטש — הילה בצבע המותג
+        soonHeroBlur: {
+          position: 'absolute',
+          top: -60,
+          left: -40,
+          right: -40,
+          height: 260,
+          opacity: 0.55,
+        },
+        soonLogoTile: {
+          width: 72,
+          height: 72,
+          borderRadius: 20,
+          overflow: 'hidden',
+          shadowColor: '#000',
+          shadowOpacity: 0.16,
+          shadowRadius: 14,
+          shadowOffset: { width: 0, height: 6 },
+          elevation: 6,
+          backgroundColor: '#fff',
+        },
+        soonLogo: {
+          width: '100%',
+          height: '100%',
         },
         soonTitle: {
-          ...journalCardBodyStyle,
-          fontWeight: '600',
+          ...APP_TYPE.sectionTitle,
+          marginTop: 4,
           color: tokens.colors.text.primary,
+          textAlign: 'center',
         },
         soonPill: {
           flexDirection: 'row-reverse',
@@ -287,20 +320,35 @@ export default function CreatePortfolioScreen() {
 
             {isBrokerMode ? (
               <>
+                {brokerSoon ? (
+                  // «בקרוב» — הלוגו מטושטש ומוגדל כרקע, הלוגו החד במרכז, תגית CTA וכותרת
+                  <View style={[styles.soonHero, { backgroundColor: tokens.colors.background.cardSolid }]}>
+                    <ExpoImage
+                      source={COLMEX_LOGO}
+                      style={styles.soonHeroBlur}
+                      contentFit="cover"
+                      blurRadius={36}
+                    />
+                    <LinearGradient
+                      colors={['transparent', tokens.colors.background.cardSolid]}
+                      locations={[0.15, 1]}
+                      style={StyleSheet.absoluteFill}
+                      pointerEvents="none"
+                    />
+                    <View style={styles.soonLogoTile}>
+                      <ExpoImage source={COLMEX_LOGO} style={styles.soonLogo} contentFit="cover" />
+                    </View>
+                    <Text style={styles.soonTitle}>Colmex Pro</Text>
+                    <View style={[styles.soonPill, { backgroundColor: tokens.colors.primary.lightCta }]}>
+                      <Ionicons name="time-outline" size={14} color={tokens.colors.text.inverse} />
+                      <Text style={[styles.soonPillText, { color: tokens.colors.text.inverse }]}>
+                        {i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.soon1')}
+                      </Text>
+                    </View>
+                  </View>
+                ) : null}
                 <FieldGroupLabel>{i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s17')}</FieldGroupLabel>
                 <SettingsGlassCard style={styles.card}>
-                  {brokerSoon ? (
-                    // באנר «בקרוב» בראש הכרטיס — תגית CTA + הסבר
-                    <View style={[styles.soonBanner, styles.rowDivider]}>
-                      <View style={[styles.soonPill, { backgroundColor: tokens.colors.primary.lightCta }]}>
-                        <Ionicons name="time-outline" size={14} color={tokens.colors.text.inverse} />
-                        <Text style={[styles.soonPillText, { color: tokens.colors.text.inverse }]}>
-                          {i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.soon1')}
-                        </Text>
-                      </View>
-                      <Text style={styles.soonTitle}>Colmex Pro</Text>
-                    </View>
-                  ) : null}
                   {BROKER_BENEFITS.map((line, i) => (
                     <View
                       key={line}

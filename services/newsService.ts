@@ -280,6 +280,39 @@ export class NewsService {
    * אם הטריגר ל-Push דורש `NEW.content` / `NEW.image_url` והם לא קיימים — צריך לעדכן את הטריגר
    * בצד השרת כך שיקרא ל-`NEW.text` / `NEW.img`. אנחנו מצידנו מכניסים לעמודות שקיימות.
    */
+  /** עריכת כתבה (אדמין — RLS: Admins can update news). מתעדכן לכולם דרך realtime UPDATE */
+  async updateNews(
+    id: string,
+    input: { title: string; content: string; source?: string; image_url?: string | null },
+  ): Promise<void> {
+    const title = (input.title || '').trim();
+    const content = (input.content || '').trim();
+    if (!title) throw new Error('חובה להזין כותרת');
+    if (!content) throw new Error('חובה להזין תוכן');
+    const { error } = await supabase
+      .from('app_news_clean')
+      .update({
+        label: title,
+        text: content,
+        source: (input.source || '').trim() || 'DarkPool',
+        // שתי העמודות קיימות (img — יצירה מהאפליקציה, image_url — n8n); הרשימה קוראת img קודם
+        img: input.image_url ?? null,
+        image_url: input.image_url ?? null,
+      })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+
+  /** מחיקת כתבה (אדמין — RLS: Admins can delete news). נעלמת לכולם דרך realtime DELETE */
+  async deleteNews(id: string): Promise<void> {
+    const { error, count } = await supabase
+      .from('app_news_clean')
+      .delete({ count: 'exact' })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+    if (count === 0) throw new Error('אין הרשאה למחוק או שהכתבה כבר נמחקה');
+  }
+
   async createNews(input: {
     title: string;
     content: string;

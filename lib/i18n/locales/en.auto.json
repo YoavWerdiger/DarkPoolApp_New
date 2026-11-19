@@ -3238,7 +3238,10 @@
     "s21": "Source",
     "s22": "Image",
     "s23": "Saving",
-    "s24": "Published"
+    "s24": "Published",
+    "s25": "Edit article",
+    "s26": "Save",
+    "s27": "Article updated"
   },
   "screens__News__LikedArticlesScreen": {
     "s1": "Remove from saved articles",
@@ -3330,7 +3333,15 @@
     "s19": "No search results",
     "s20": "No news right now",
     "s21": "Try different wording or clear the search",
-    "s22": "Pull down to refresh — news will appear here"
+    "s22": "Pull down to refresh — news will appear here",
+    "adm1": "Manage article",
+    "adm2": "Edit",
+    "adm3": "Delete",
+    "adm4": "Cancel",
+    "adm5": "Delete this article?",
+    "adm6": "The article will be removed for all users.",
+    "adm7": "Delete",
+    "adm8": "Delete failed"
   },
   "screens__DarkPool__components__WhaleCard": {
     "s1": "Buy",

@@ -75,6 +75,8 @@ interface NewsCardProps {
   onLike: (article: NewsArticle) => void;
   onShare?: (article: NewsArticle) => void;
   isLiked: boolean;
+  /** אדמין: לחיצה ארוכה — עריכה / מחיקה */
+  onLongPress?: (article: NewsArticle) => void;
 }
 
 interface ShareModalProps {
@@ -615,7 +617,7 @@ export const BreakingNewsCardSkeleton: React.FC = () => {
   );
 };
 
-export const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, onShare, isLiked }) => {
+export const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, onShare, isLiked, onLongPress }) => {
   const DesignTokens = useDesignTokens();
   const categoryColor = getNewsCategoryColor(article.category);
 
@@ -643,6 +645,8 @@ export const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, on
   return (
     <Pressable
       onPress={() => onPress(article)}
+      onLongPress={onLongPress ? () => onLongPress(article) : undefined}
+      delayLongPress={400}
       style={{ marginHorizontal: screenPad, marginBottom: APP_LAYOUT.cardStackGap }}
       accessibilityRole="button"
     >
@@ -848,9 +852,14 @@ export const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, on
 export default function BreakingNewsTab({
   openArticleId = null,
   onOpenArticleConsumed,
+  isAdmin = false,
+  onAdminEdit,
 }: {
   openArticleId?: string | null;
   onOpenArticleConsumed?: () => void;
+  /** אדמין: לחיצה ארוכה על כתבה → עריכה / מחיקה */
+  isAdmin?: boolean;
+  onAdminEdit?: (article: NewsArticle) => void;
 } = {}) {
   const refreshRing = useRefreshRing();
   const DesignTokens = useDesignTokens();
@@ -1188,6 +1197,44 @@ export default function BreakingNewsTab({
           });
         }
       )
+      // עריכה / מחיקה של אדמין — מתעדכן אצל כל המשתמשים
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'app_news_clean' },
+        (payload) => {
+          const row = payload.new as Record<string, any> | null;
+          if (!row?.id) return;
+          setArticles((prev) => {
+            const next = prev.map((a) =>
+              a.id === row.id
+                ? {
+                    ...a,
+                    label: row.label ?? a.label,
+                    title: row.label || row.text || a.title,
+                    content: row.text ?? a.content,
+                    source: row.source || a.source,
+                    image_url: row.img || row.image_url || null,
+                  }
+                : a,
+            );
+            queryClient.setQueryData(BREAKING_NEWS_QUERY_KEY, next.slice(0, BREAKING_NEWS_CACHE_LIMIT));
+            return next;
+          });
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'app_news_clean' },
+        (payload) => {
+          const id = (payload.old as { id?: string } | null)?.id;
+          if (!id) return;
+          setArticles((prev) => {
+            const next = prev.filter((a) => a.id !== id);
+            queryClient.setQueryData(BREAKING_NEWS_QUERY_KEY, next.slice(0, BREAKING_NEWS_CACHE_LIMIT));
+            return next;
+          });
+        },
+      )
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR') {
           console.warn('[BreakingNews] Realtime subscription error — live updates unavailable');
@@ -1453,6 +1500,44 @@ export default function BreakingNewsTab({
   }, [DesignTokens, navigation, searchQuery, screenPad]);
   
   // רינדור כתבה
+  /** אדמין: עריכה / מחיקה מהרשימה (RLS בשרת מגביל לאדמינים; realtime מעדכן את כולם) */
+  const handleAdminLongPress = useCallback(
+    (article: NewsArticle) => {
+      void HapticFeedback.impactLight();
+      const tt = (k: string) => i18n.t(`auto.screens__News__BreakingNewsTab.${k}`);
+      legacyAlert(tt('adm1'), article.title?.slice(0, 80) || '', [
+        { text: tt('adm2'), onPress: () => onAdminEdit?.(article) },
+        {
+          text: tt('adm3'),
+          style: 'destructive',
+          onPress: () => {
+            legacyAlert(tt('adm5'), tt('adm6'), [
+              { text: tt('adm4'), style: 'cancel' },
+              {
+                text: tt('adm7'),
+                style: 'destructive',
+                onPress: async () => {
+                  const before = articles;
+                  // אופטימי — נעלם מיד; חוזר אם השרת דחה
+                  setArticles((prev) => prev.filter((a) => a.id !== article.id));
+                  try {
+                    await newsService.deleteNews(article.id);
+                    void HapticFeedback.success();
+                  } catch (e) {
+                    setArticles(before);
+                    legacyAlert(tt('adm8'), e instanceof Error ? e.message : '');
+                  }
+                },
+              },
+            ]);
+          },
+        },
+        { text: tt('adm4'), style: 'cancel' },
+      ]);
+    },
+    [articles, onAdminEdit],
+  );
+
   const renderArticle = ({ item }: { item: NewsArticle }) => (
     <BreakingNewsCard
       article={item}
@@ -1460,6 +1545,7 @@ export default function BreakingNewsTab({
       onLike={handleLike}
       onShare={handleSharePress}
       isLiked={likedArticles.has(item.id)}
+      onLongPress={isAdmin ? handleAdminLongPress : undefined}
     />
   );
 

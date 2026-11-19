@@ -10,7 +10,7 @@ import { TEXT_DIR } from '../../lib/i18n/language';
 // שולח Push לכל מי שמנוי על התראות חדשות.
 // ============================================
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Image,
   Linking,
@@ -37,15 +37,26 @@ import { mediaService } from '../../services/mediaService';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { APP_TYPE, appFormFieldLabelStyle } from '../../components/ui/appType';
 
+export type EditableNews = {
+  id: string;
+  title: string;
+  content: string;
+  source?: string | null;
+  image_url?: string | null;
+};
+
 interface CreateNewsSheetProps {
   visible: boolean;
   onClose: () => void;
   onCreated?: () => void;
+  /** עריכת כתבה קיימת (אדמין) — ממלא את השדות ושומר עדכון במקום יצירה */
+  editArticle?: EditableNews | null;
 }
 
 const DEFAULT_SOURCE = 'DarkPool';
 
-export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateNewsSheetProps) {
+export default function CreateNewsSheet({ visible, onClose, onCreated, editArticle }: CreateNewsSheetProps) {
+  const isEdit = !!editArticle;
   const DesignTokens = useDesignTokens();
   const { user } = useAuth();
   const animatedClose = useBottomSheetClose();
@@ -62,6 +73,18 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   /** שלב הפרסום — לפס השלבים (תמונה ← שמירה ← פורסם) */
   const [phase, setPhase] = useState<'idle' | 'image' | 'save' | 'done'>('idle');
+
+  // מצב עריכה: ממלאים מהכתבה הקיימת בכל פתיחה
+  useEffect(() => {
+    if (!visible || !editArticle) return;
+    setTitle(editArticle.title || '');
+    setContent(editArticle.content || '');
+    setSource(editArticle.source || DEFAULT_SOURCE);
+    setImageLocalUri(editArticle.image_url || null);
+    setPhase('idle');
+    setErrorMessage(null);
+    setStatusMessage(null);
+  }, [visible, editArticle]);
 
   const isBusy = isSubmitting || isUploadingImage;
   const canSubmit = title.trim().length >= 2 && content.trim().length >= 2 && !isBusy;
@@ -136,7 +159,10 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
       setIsSubmitting(true);
 
       let uploadedImageUrl: string | null = null;
-      if (imageLocalUri) {
+      // תמונה קיימת (URL) בעריכה — לא מעלים שוב
+      if (imageLocalUri && /^https?:\/\//i.test(imageLocalUri)) {
+        uploadedImageUrl = imageLocalUri;
+      } else if (imageLocalUri) {
         setIsUploadingImage(true);
         setPhase('image');
         setStatusMessage(i18n.t('auto.screens__News__CreateNewsSheet.s5'));
@@ -159,17 +185,26 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
         (user as { full_name?: string; display_name?: string } | null)?.display_name ||
         '';
 
-      await newsService.createNews({
-        title: title.trim(),
-        content: content.trim(),
-        source: source.trim() || DEFAULT_SOURCE,
-        image_url: uploadedImageUrl,
-        author: authorName,
-      });
+      if (editArticle) {
+        await newsService.updateNews(editArticle.id, {
+          title: title.trim(),
+          content: content.trim(),
+          source: source.trim() || DEFAULT_SOURCE,
+          image_url: uploadedImageUrl,
+        });
+      } else {
+        await newsService.createNews({
+          title: title.trim(),
+          content: content.trim(),
+          source: source.trim() || DEFAULT_SOURCE,
+          image_url: uploadedImageUrl,
+          author: authorName,
+        });
+      }
 
       void HapticFeedback.impactLight();
       setPhase('done');
-      setStatusMessage(i18n.t('auto.screens__News__CreateNewsSheet.s8'));
+      setStatusMessage(i18n.t(`auto.screens__News__CreateNewsSheet.${editArticle ? 's27' : 's8'}`));
       onCreated?.();
       setTimeout(() => {
         if (animatedClose) animatedClose();
@@ -195,6 +230,7 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
     animatedClose,
     onClose,
     onCreated,
+    editArticle,
   ]);
 
   const placeholderColor = DesignTokens.colors.text.tertiary;
@@ -235,7 +271,7 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
             <Ionicons name={dirIcon('chevron-forward')} size={22} color={DesignTokens.colors.text.primary} />
           </DayNavBlurButton>
 
-          <Text style={[styles.headerTitle, { color: DesignTokens.colors.text.primary }]}>{i18n.t('auto.screens__News__CreateNewsSheet.s11')}</Text>
+          <Text style={[styles.headerTitle, { color: DesignTokens.colors.text.primary }]}>{i18n.t(`auto.screens__News__CreateNewsSheet.${isEdit ? 's25' : 's11'}`)}</Text>
 
           {/* פרסום — כפתור ירוק (כשאפשר לפרסם); אפור כשלא */}
           <TouchableOpacity

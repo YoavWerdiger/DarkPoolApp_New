@@ -15,7 +15,7 @@ import { APP_TYPE, appSectionTitleStyle } from '../../components/ui/appType';
 import { DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import BreakingNewsTab from './BreakingNewsTab';
 import { NewsScreenShell } from './NewsScreenShell';
-import CreateNewsSheet from './CreateNewsSheet';
+import CreateNewsSheet, { type EditableNews } from './CreateNewsSheet';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
@@ -63,6 +63,8 @@ export default function NewsScreen({ route }: { route?: any }) {
   const navigation = useNavigation();
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const [createSheetVisible, setCreateSheetVisible] = useState(false);
+  /** אדמין: כתבה בעריכה (null = יצירה חדשה) */
+  const [editArticle, setEditArticle] = useState<EditableNews | null>(null);
   const { isAdmin } = useIsAdmin();
   const openArticleId =
     typeof route?.params?.articleId === 'string' ? route.params.articleId : null;
@@ -112,6 +114,17 @@ export default function NewsScreen({ route }: { route?: any }) {
           <BreakingNewsTab
             openArticleId={openArticleId}
             onOpenArticleConsumed={handleOpenArticleConsumed}
+            isAdmin={isAdmin}
+            onAdminEdit={(article) => {
+              setEditArticle({
+                id: article.id,
+                title: article.title,
+                content: article.content,
+                source: article.source,
+                image_url: article.image_url ?? null,
+              });
+              setCreateSheetVisible(true);
+            }}
           />
         </ErrorBoundary>
       </NewsScreenShell>
@@ -119,7 +132,11 @@ export default function NewsScreen({ route }: { route?: any }) {
       {isAdmin ? (
         <CreateNewsSheet
           visible={createSheetVisible}
-          onClose={handleCloseCreateSheet}
+          editArticle={editArticle}
+          onClose={() => {
+            setEditArticle(null);
+            handleCloseCreateSheet();
+          }}
         />
       ) : null}
     </>

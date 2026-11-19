@@ -70,7 +70,12 @@ export const SEC_13F_FUNDS: Record<string, Sec13fMeta> = {
   '72971': company('Wells Fargo & Company', 'Wells Fargo', 'WFC'),
   '831001': company('Citigroup Inc.', 'Citigroup', 'C'),
   '2012383': company('BlackRock, Inc.', 'BlackRock', 'BLK'),
-  '1067983': company('Berkshire Hathaway Inc.', 'Berkshire Hathaway', 'BRK-B'),
+  // ברקשייר הוא תיק ההשקעות של וורן באפט — קרן (משקיעים), לא «חברה ציבורית»
+  '1067983': {
+    manager: 'Warren Buffett',
+    name: 'Berkshire Hathaway Inc',
+    entity_type: 'fund',
+  },
   '4962': company('American Express Co', 'American Express', 'AXP'),
   '5272': company('American International Group, Inc.', 'AIG', 'AIG'),
   '899051': company('The Allstate Corp', 'Allstate', 'ALL'),

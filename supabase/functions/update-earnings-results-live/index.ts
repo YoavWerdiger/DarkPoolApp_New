@@ -159,7 +159,9 @@ serve(async (req) => {
     let sourceUsed = 'none'
 
     // ה-cron רץ כל דקה בחלון; Parse (בתשלום) רק כל 3 דקות — Benzinga בכל ריצה (מהיר, השלמה)
-    const runParse = etMinute % 3 === 0
+    // Parse (בתשלום לפי שימוש) — גיבוי בלבד: כל 15 דק׳ בתוך החלון, לא בסריקה שמחוצה לו.
+    // Benzinga (מנוי) נושא את העדכון כל דקה.
+    const runParse = windowName !== 'sweep' && etMinute % 15 === 0
     // 1) Parse OpenAPI: GET update_actuals_for_today (scraper 19f29e4b)
     if (earningsApiKey && runParse) {
       const updateUrl = 'https://api.parse.bot/scraper/19f29e4b-4d7f-4a6e-9fd5-61a2a712543d/update_actuals_for_today'
@@ -257,6 +259,11 @@ serve(async (req) => {
         bzUrl.searchParams.set('token', benzingaApiKey)
         bzUrl.searchParams.set('parameters[date]', todayIso)
         bzUrl.searchParams.set('pagesize', '1000')
+        // רק מה שהשתנה ב-10 הדקות האחרונות (חפיפה מעל מרווח הקריאות) — תשובה קטנה ומהירה.
+        // בכל רבע שעה עגול — בלי הסינון, כרשת ביטחון לכל היום
+        if (etMinute % 15 !== 0) {
+          bzUrl.searchParams.set('parameters[updated]', String(Math.floor(Date.now() / 1000) - 10 * 60))
+        }
         const bzResp = await fetch(bzUrl.toString(), { headers: { Accept: 'application/json' } })
         const bzText = await bzResp.text()
         if (bzResp.ok) {

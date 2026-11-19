@@ -64,17 +64,20 @@ function parseReportTime(reportTime: string | null | undefined): string | null {
 }
 
 /**
- * חלונות דיווח לפי שעון ניו יורק (לא ישראל — מעברי שעון שונים הזיזו את החלון):
- * - BMO: 06:00–09:45 ET (רוב הדיווחים 06:00–08:30, עד פתיחת המסחר)
- * - AMC: 16:00–19:30 ET (רוב הדיווחים 16:01–16:30, מאוחרים עד ~18:00)
+ * חלונות דיווח לפי שעון ניו יורק:
+ * - BMO: 05:00–10:30 ET — כל דקה (רוב הדיווחים 06:00–08:30, מאחרים עד אחרי הפתיחה)
+ * - AMC: 16:00–21:00 ET — כל דקה (רוב הדיווחים 16:01–16:30, מאוחרים עד ~20:00)
+ * - sweep: 10:30–16:00 ו-21:00–23:00 ET — כל 15 דק׳, כדי שדיווח שנפל מחוץ לחלון לא יחכה ללילה
  */
 function isWithinEarningsReleaseWindow(etHour: number, etMinute: number): {
   inWindow: boolean;
-  windowName: 'bmo' | 'amc' | null;
+  windowName: 'bmo' | 'amc' | 'sweep' | null;
 } {
   const mins = etHour * 60 + etMinute;
-  if (mins >= 6 * 60 && mins < 9 * 60 + 45) return { inWindow: true, windowName: 'bmo' };
-  if (mins >= 16 * 60 && mins < 19 * 60 + 30) return { inWindow: true, windowName: 'amc' };
+  if (mins >= 5 * 60 && mins < 10 * 60 + 30) return { inWindow: true, windowName: 'bmo' };
+  if (mins >= 16 * 60 && mins < 21 * 60) return { inWindow: true, windowName: 'amc' };
+  const sweepHours = (mins >= 10 * 60 + 30 && mins < 16 * 60) || (mins >= 21 * 60 && mins < 23 * 60);
+  if (sweepHours && etMinute % 15 === 0) return { inWindow: true, windowName: 'sweep' };
   return { inWindow: false, windowName: null };
 }
 
@@ -121,8 +124,9 @@ serve(async (req) => {
           current_time_israel: israelTimeStr,
           et_weekday: etWeekday,
           release_windows: {
-            bmo: '06:00-09:45 ET',
-            amc: '16:00-19:30 ET',
+            bmo: '05:00-10:30 ET (every minute)',
+            amc: '16:00-21:00 ET (every minute)',
+            sweep: '10:30-16:00, 21:00-23:00 ET (every 15 min)',
           },
           updated_count: 0
         }),

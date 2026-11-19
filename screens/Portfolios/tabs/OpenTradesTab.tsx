@@ -70,6 +70,8 @@ import {
 // סכומים עם פסיקי אלפים (QA 9.4): פורמט בהקלדה, פענוח על המספר הנקי
 import { formatThousandsInput, parseFormattedNumber } from '../../../utils/numberInput';
 import { EmptyState } from '../../../components/ui/EmptyState';
+import { APP_TYPE } from '../../../components/ui/appType';
+import { FloatingLabelField, FieldGroupLabel } from '../../../components/ui/FloatingLabelField';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 /** גובה תוכן שיט הסגירה האחרון — הפתיחה הבאה עולה ישר בגובה הנכון */
@@ -459,15 +461,29 @@ export default function OpenTradesTab({
           flexDirection: 'row',
           gap: 8,
         },
+        qtyChip: {
+          flex: 1,
+          height: 40,
+          borderRadius: 20,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: tokens.colors.background.tertiary,
+        },
+        qtyChipText: {
+          ...APP_TYPE.cardSubtitle,
+          fontWeight: '600',
+          color: tokens.colors.text.primary,
+        },
+        // אותו גובה ורדיוס כמו FloatingLabelField (60 / 26)
         datePill: {
           ...formFieldShellStyle({ tokens, focused: false }),
           flex: 1,
           flexDirection: 'row',
           justifyContent: 'center',
           gap: 8,
-          borderRadius: tokens.borderRadius.search,
-          paddingHorizontal: 16,
-          minHeight: 52,
+          borderRadius: 26,
+          paddingHorizontal: 18,
+          minHeight: 60,
         },
         datePillText: {
           ...formFieldInputStyle(tokens),
@@ -638,36 +654,31 @@ export default function OpenTradesTab({
                 </View>
               </View>
 
-              <View style={styles.sheetInputBlock}>
-                <Text style={styles.sheetLabel}>{i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s24')}</Text>
-                <View style={styles.sheetInputWrap}>
+              {/* שדות בטופו של הטפסים — תווית צפה בתוך השדה */}
+              <FloatingLabelField
+                label={i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s24')}
+                hint="0.00"
+                value={exitPriceText}
+                onChangeText={(v) => setExitPriceText(formatThousandsInput(v))}
+                keyboardType="decimal-pad"
+                ltr
+                trailing={
                   <Text style={styles.sheetInputPrefix}>
                     {closingTrade.currency === 'USD' ? '$' : closingTrade.currency}
                   </Text>
-                  <TextInput
-                    value={exitPriceText}
-                    onChangeText={(v) => setExitPriceText(formatThousandsInput(v))}
-                    placeholder="0.00"
-                    placeholderTextColor={formFieldPlaceholderColor(tokens)}
-                    keyboardType="decimal-pad"
-                    style={styles.sheetInput}
-                  />
-                </View>
-              </View>
+                }
+              />
 
               <View style={styles.sheetInputBlock}>
-                <Text style={styles.sheetLabel}>{i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s32')}</Text>
+                <FloatingLabelField
+                  label={i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s32')}
+                  hint={String(closingTrade.quantity)}
+                  value={closeQtyText}
+                  onChangeText={(v) => setCloseQtyText(formatThousandsInput(v))}
+                  keyboardType="decimal-pad"
+                  ltr
+                />
                 <View style={styles.qtyRow}>
-                  <View style={[styles.sheetInputWrap, styles.qtyInputWrap]}>
-                    <TextInput
-                      value={closeQtyText}
-                      onChangeText={(v) => setCloseQtyText(formatThousandsInput(v))}
-                      placeholder={String(closingTrade.quantity)}
-                      placeholderTextColor={formFieldPlaceholderColor(tokens)}
-                      keyboardType="decimal-pad"
-                      style={styles.sheetInput}
-                    />
-                  </View>
                   {[
                     { key: 'half', label: i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s34'), qty: closingTrade.quantity / 2 },
                     { key: 'all', label: i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s33'), qty: closingTrade.quantity },
@@ -677,14 +688,14 @@ export default function OpenTradesTab({
                     return (
                       <TouchableOpacity
                         key={chip.key}
-                        style={[styles.datePill, active && { borderColor: tokens.colors.primary.main }]}
+                        style={[styles.qtyChip, active && { backgroundColor: tokens.colors.primary.lightCta }]}
                         activeOpacity={0.8}
                         onPress={() => {
                           void HapticFeedback.selection();
                           setCloseQtyText(val);
                         }}
                       >
-                        <Text style={styles.datePillText}>{chip.label}</Text>
+                        <Text style={[styles.qtyChipText, active && { color: tokens.colors.text.inverse }]}>{chip.label}</Text>
                       </TouchableOpacity>
                     );
                   })}
@@ -702,7 +713,7 @@ export default function OpenTradesTab({
               </View>
 
               <View style={styles.sheetInputBlock}>
-                <Text style={styles.sheetLabel}>{i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s25')}</Text>
+                <FieldGroupLabel>{i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s25')}</FieldGroupLabel>
                 <View style={styles.dateRow}>
                   <TouchableOpacity
                     style={styles.datePill}

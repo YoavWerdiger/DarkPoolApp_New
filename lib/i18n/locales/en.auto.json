@@ -1245,7 +1245,9 @@
     "s51": "Me",
     "s52": "Search chats and messages",
     "s53": "Search chats",
-    "s54": "Type a group name or text from a message"
+    "s54": "Type a group name or text from a message",
+    "prem1": "Premium members only",
+    "prem2": "Premium"
   },
   "screens__Portfolios__PortfolioDetailScreen": {
     "s1": "Error",
@@ -3901,7 +3903,13 @@
   },
   "components__chat__JoinGroupBottomSheet": {
     "s1": "Joining…",
-    "s2": "Join group"
+    "s2": "Join group",
+    "p1": "Exclusive to Premium members",
+    "p2": "Join Premium",
+    "p3": "Access to every community and trading group",
+    "p4": "Every course in the Academy",
+    "p5": "Talk with traders in real time",
+    "p6": "Cancel anytime"
   },
   "components__chat__ForwardMessageModal": {
     "s1": "Group",

@@ -660,6 +660,18 @@ export default function ChatGroupsListScreen() {
   };
 
   // Filter groups - פיצול ל-2 sections: הקבוצות שלי + קבוצות זמינות להצטרפות
+  /** קבוצת פרימיום בלבד — למשתמש חינמי מוצגת נעולה ומפנה להצטרפות לפרימיום */
+  const isPremiumLockedGroup = useCallback(
+    (g: GroupWithMembership) => {
+      if (isPremiumUser || isGlobalAdmin || g.is_member) return false;
+      const s = (g as any).settings as { is_public?: boolean; allowed_tiers?: string[] } | undefined;
+      if (s?.is_public === false) return false;
+      const tiers = Array.isArray(s?.allowed_tiers) ? s!.allowed_tiers : null;
+      return !!tiers && tiers.length > 0 && !tiers.includes('free') && tiers.includes('premium');
+    },
+    [isPremiumUser, isGlobalAdmin],
+  );
+
   const { myFilteredGroups, joinableFilteredGroups, myAnnouncementCount } = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     const matchesQuery = (g: GroupWithMembership) => {
@@ -684,8 +696,9 @@ export default function ChatGroupsListScreen() {
     };
 
     const my = allGroups.filter(g => g.is_member && matchesQuery(g));
+    // משתמש חינמי רואה גם את קבוצות הפרימיום (נעולות) — מתחת לקבוצות הפתוחות לו
     const joinable = allGroups.filter(
-      g => !g.is_member && isJoinablePublic(g) && matchesQuery(g)
+      g => !g.is_member && (isJoinablePublic(g) || isPremiumLockedGroup(g)) && matchesQuery(g)
     );
 
     let myFiltered = my;
@@ -723,9 +736,12 @@ export default function ChatGroupsListScreen() {
     // Joinable מוצגות רק בטאב 'all' — 'unread'/'mentions' לא רלוונטיות
     const joinableSorted =
       activeTab === 'all'
-        ? [...joinable].sort((a, b) =>
-            (a.name || '').localeCompare(b.name || '', 'he')
-          )
+        ? [...joinable].sort((a, b) => {
+            const la = isPremiumLockedGroup(a) ? 1 : 0;
+            const lb = isPremiumLockedGroup(b) ? 1 : 0;
+            if (la !== lb) return la - lb;
+            return (a.name || '').localeCompare(b.name || '', 'he');
+          })
         : [];
 
     return {
@@ -733,7 +749,7 @@ export default function ChatGroupsListScreen() {
       joinableFilteredGroups: joinableSorted,
       myAnnouncementCount: announcements.length,
     };
-  }, [allGroups, searchQuery, activeTab, isGlobalAdmin, isPremiumUser, pinnedMap]);
+  }, [allGroups, searchQuery, activeTab, isGlobalAdmin, isPremiumUser, pinnedMap, isPremiumLockedGroup]);
 
   // רשימה מאוחדת לצורכי חיפוש-שיט וספירות empty-state
   const filteredGroups = useMemo(
@@ -1374,6 +1390,7 @@ export default function ChatGroupsListScreen() {
         (item.avatar_url ? { uri: item.avatar_url } : null);
       const imageUri = avatarUri(imageSource);
       const hasImageError = imageUri ? imageErrorsRef.current.has(imageUri) : false;
+      const locked = isPremiumLockedGroup(item);
 
       return (
         <View key={`joinable-wrapper-${item.id}`}>
@@ -1409,9 +1426,26 @@ export default function ChatGroupsListScreen() {
                   {chatGroupDisplayName(item.name)}
                 </Text>
               </View>
-              <Text style={styles.joinableSubtitle} numberOfLines={1}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s35')}</Text>
+              <Text style={styles.joinableSubtitle} numberOfLines={1}>
+                {locked
+                  ? i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.prem1')
+                  : i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s35')}
+              </Text>
             </View>
 
+            {locked ? (
+              // נעולה — תגית Premium זהובה; לחיצה פותחת את שיט הפרימיום
+              <TouchableOpacity
+                style={styles.premiumPill}
+                onPress={() => openJoinSheet(item)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                activeOpacity={0.75}
+                accessibilityRole="button"
+              >
+                <Ionicons name="lock-closed" size={11} color="#FFFFFF" />
+                <Text style={styles.premiumPillText}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.prem2')}</Text>
+              </TouchableOpacity>
+            ) : (
             <TouchableOpacity
               style={styles.joinablePill}
               onPress={() => openJoinSheet(item)}
@@ -1422,13 +1456,14 @@ export default function ChatGroupsListScreen() {
             >
               <Text style={styles.joinablePillText}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s37')}</Text>
             </TouchableOpacity>
+            )}
           </TouchableOpacity>
 
           {!isLastInSection ? <View style={styles.rowSeparator} /> : null}
         </View>
       );
     },
-    [styles, tokens, handleGroupPress, openJoinSheet, imageErrorCount, isDarkMode]
+    [styles, tokens, handleGroupPress, openJoinSheet, imageErrorCount, isDarkMode, isPremiumLockedGroup]
   );
 
   const renderSectionHeader = useCallback(
@@ -1835,6 +1870,11 @@ export default function ChatGroupsListScreen() {
         onJoin={() => joinGroupSheet.group && handleJoinGroup(joinGroupSheet.group)}
         group={joinGroupSheet.group}
         isJoining={isJoining}
+        premiumLocked={!!joinGroupSheet.group && isPremiumLockedGroup(joinGroupSheet.group)}
+        onUpgrade={() => {
+          setJoinGroupSheet({ visible: false, group: null });
+          (navigation as any).navigate('Profile', { screen: 'SubscriptionPlans' });
+        }}
       />
 
       {/* Create Group Sheet — admins only */}
@@ -2321,6 +2361,24 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   joinablePillText: {
     ...APP_TYPE.caption,
     color: tokens.colors.primary.main,
+  },
+  premiumPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    backgroundColor: '#C7950F',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    minHeight: 28,
+    marginRight: 4,
+    alignSelf: 'center',
+  },
+  premiumPillText: {
+    ...APP_TYPE.caption,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 
   /* ── Empty state ── */

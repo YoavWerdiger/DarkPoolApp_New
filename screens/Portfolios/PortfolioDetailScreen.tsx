@@ -99,6 +99,8 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<PortfolioDetailTab>('overview');
   const [historyHasTrades, setHistoryHasTrades] = useState(false);
+  // פוזיציה שנבחרה מהסקירה — מוצגת ראשונה ומודגשת בטאב הפוזיציות
+  const [focusSymbol, setFocusSymbol] = useState<string | null>(null);
   const [portfolioActionsOpen, setPortfolioActionsOpen] = useState(false);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
   /** מפתח שמשתנה בכל פעם שנסגרת פוזיציה — מאלץ את OverviewTab לרענן מדדים/סדרת שווי */
@@ -463,6 +465,10 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
                 userInitial={viewerInitial}
                 chartRefreshKey={chartRefreshKey}
                 onLiveSummaryUpdate={handleLiveSummaryUpdate}
+                onOpenPosition={(symbol) => {
+                  setFocusSymbol(symbol);
+                  setActiveTab('open_trades');
+                }}
               />
             )}
             {activeTab === 'open_trades' && portfolio && (
@@ -475,6 +481,8 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
                 }}
                 readOnly={!canAddTransaction}
                 refreshKey={dataVersion}
+                focusSymbol={focusSymbol}
+                onFocusConsumed={() => setFocusSymbol(null)}
               />
             )}
             {activeTab === 'calendar' && portfolio && (

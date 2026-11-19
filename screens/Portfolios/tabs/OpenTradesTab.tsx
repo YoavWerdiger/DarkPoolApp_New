@@ -85,6 +85,9 @@ interface Props {
   readOnly?: boolean;
   /** מפתח שמשתנה כל פעם שהמסך האב מרענן נתונים — גורם לטעינה מחדש של הטריידים */
   refreshKey?: number;
+  /** הגיע מלחיצה בסקירה — הפוזיציה עולה ראשונה ומודגשת לרגע */
+  focusSymbol?: string | null;
+  onFocusConsumed?: () => void;
 }
 
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'PortfolioDetail'>;
@@ -93,6 +96,8 @@ export default function OpenTradesTab({
   portfolioId,
   holdings,
   onChanged,
+  focusSymbol,
+  onFocusConsumed,
   readOnly = false,
   refreshKey,
 }: Props) {
@@ -535,6 +540,24 @@ export default function OpenTradesTab({
     [tokens, insets.bottom]
   );
 
+  // פוזיציה שנבחרה בסקירה: ראשונה ברשימה ומודגשת לשתי שניות
+  const [highlightSymbol, setHighlightSymbol] = useState<string | null>(null);
+  useEffect(() => {
+    if (!focusSymbol || loading) return;
+    setHighlightSymbol(focusSymbol);
+    onFocusConsumed?.();
+    const id = setTimeout(() => setHighlightSymbol(null), 2000);
+    return () => clearTimeout(id);
+  }, [focusSymbol, loading, onFocusConsumed]);
+  const [pinnedSymbol, setPinnedSymbol] = useState<string | null>(null);
+  useEffect(() => {
+    if (focusSymbol) setPinnedSymbol(focusSymbol);
+  }, [focusSymbol]);
+  const orderedTrades = useMemo(() => {
+    if (!pinnedSymbol) return trades;
+    return [...trades.filter((t) => t.symbol === pinnedSymbol), ...trades.filter((t) => t.symbol !== pinnedSymbol)];
+  }, [trades, pinnedSymbol]);
+
   if (loading) {
     return (
       <View style={styles.loading}>
@@ -557,9 +580,10 @@ export default function OpenTradesTab({
     <View style={styles.root}>
       {/* כרטיס לכל פוזיציה (במקום טבלה) — סגירה ושיתוף מובנים */}
       <View style={styles.cardsList}>
-        {trades.map((t) => (
+        {orderedTrades.map((t) => (
           <PositionCard
             key={t.id}
+            highlighted={highlightSymbol === t.symbol}
             trade={t}
             lastPrice={priceMap[t.symbol]}
             readOnly={readOnly}

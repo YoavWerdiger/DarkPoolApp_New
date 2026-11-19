@@ -30,13 +30,15 @@ type Props = {
   onDelete?: (trade: Trade) => void;
   onShare?: (trade: Trade) => void;
   onEdit?: (trade: Trade) => void;
+  /** הגיע מהסקירה — מסגרת בצבע ה-CTA לרגע */
+  highlighted?: boolean;
 };
 
 function formatQty(qty: number): string {
   return Number.isInteger(qty) ? String(qty) : formatNumber(qty, 4);
 }
 
-export function PositionCard({ trade: t, lastPrice, readOnly, onClose, onDelete, onShare, onEdit }: Props) {
+export function PositionCard({ trade: t, lastPrice, readOnly, onClose, onDelete, onShare, onEdit, highlighted }: Props) {
   const tokens = useDesignTokens();
   const isLong = t.direction === 'long';
   const sideColor = isLong ? tokens.colors.primary.main : tokens.colors.text.danger;
@@ -83,7 +85,12 @@ export function PositionCard({ trade: t, lastPrice, readOnly, onClose, onDelete,
       accessibilityRole={canEdit ? 'button' : undefined}
       accessibilityLabel={canEdit ? i18n.t(`${T}.s7`, { v0: t.symbol }) : undefined}
     >
-      <UICard variant="soft" padding="md" style={styles.card} contentContainerStyle={styles.content}>
+      <UICard
+        variant="soft"
+        padding="md"
+        style={[styles.card, highlighted && { borderWidth: 2, borderColor: tokens.colors.primary.lightCta }]}
+        contentContainerStyle={styles.content}
+      >
         {/* ראש: לוגו, סימבול, כמות + כיוון | שווי שוק ותגית P&L | מחיקה */}
         <View style={styles.head}>
           <TickerLogo symbol={t.symbol} size={40} />

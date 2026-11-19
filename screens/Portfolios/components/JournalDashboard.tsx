@@ -10,7 +10,7 @@ import i18n from '../../../lib/i18n';
  * הכל מנתונים שהסקירה כבר טוענת (פוזיציות + מחירים חיים, עסקאות סגורות) — בלי קריאות שרת נוספות.
  */
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ArrowLeftRight, PieChart, Scale, TrendingDown, TrendingUp, Wallet, type LucideIcon } from 'lucide-react-native';
 import UICard from '../../../components/ui/UICard';
@@ -40,7 +40,16 @@ const toneColor = (v: number, t: Tokens) =>
   v > 0 ? t.colors.primary.main : v < 0 ? t.colors.text.danger : t.colors.text.secondary;
 
 /* ── פוזיציות פתוחות ── */
-export function JournalOpenPositionsCard({ holdings, currency }: { holdings: PortfolioHolding[]; currency: string }) {
+export function JournalOpenPositionsCard({
+  holdings,
+  currency,
+  onPressPosition,
+}: {
+  holdings: PortfolioHolding[];
+  currency: string;
+  /** לחיצה על שורה → הפוזיציה בטאב הפוזיציות */
+  onPressPosition?: (symbol: string) => void;
+}) {
   const t = useDesignTokens();
   const s = useMemo(() => createStyles(t), [t]);
   const { rows, alloc } = useMemo(() => {
@@ -81,14 +90,21 @@ export function JournalOpenPositionsCard({ holdings, currency }: { holdings: Por
       <Panel s={s}>
         {rows.map((h, i) => (
           <React.Fragment key={h.symbol}>
-            <HoldingsListRow
-              ticker={h.symbol}
-              allocationLabel={`${alloc[i].allocation_pct.toFixed(1)}%`}
-              valueLabel={money(h.value, currency)}
-              returnLabel={formatPercent(h.unrealized_gain_pct)}
-              returnPct={h.unrealized_gain_pct}
-              colorByTicker={colorByTicker}
-            />
+            <TouchableOpacity
+              activeOpacity={onPressPosition ? 0.7 : 1}
+              disabled={!onPressPosition}
+              onPress={() => onPressPosition?.(h.symbol)}
+              accessibilityRole={onPressPosition ? 'button' : undefined}
+            >
+              <HoldingsListRow
+                ticker={h.symbol}
+                allocationLabel={`${alloc[i].allocation_pct.toFixed(1)}%`}
+                valueLabel={money(h.value, currency)}
+                returnLabel={formatPercent(h.unrealized_gain_pct)}
+                returnPct={h.unrealized_gain_pct}
+                colorByTicker={colorByTicker}
+              />
+            </TouchableOpacity>
             {i < rows.length - 1 ? <View style={s.divider} /> : null}
           </React.Fragment>
         ))}

@@ -89,6 +89,8 @@ interface Props {
   chartRefreshKey?: number;
   /** עדכון header חי: שווי + שינוי יומי מפוזיציות פתוחות */
   onLiveSummaryUpdate?: (patch: Partial<PortfolioSummary>) => void;
+  /** לחיצה על פוזיציה פתוחה → טאב הפוזיציות */
+  onOpenPosition?: (symbol: string) => void;
 }
 
 const GROUP_BY_OPTIONS = DISTRIBUTION_GROUP_BY_OPTIONS;
@@ -129,6 +131,7 @@ export default function OverviewTab({
   userInitial,
   chartRefreshKey,
   onLiveSummaryUpdate,
+  onOpenPosition,
 }: Props) {
   const tokens = useDesignTokens();
   const [groupBy, setGroupBy] = useState<DistributionGroupBy>('symbol');
@@ -1051,7 +1054,7 @@ export default function OverviewTab({
       {/* לוח בקרה: פוזיציות חיות, עסקאות אחרונות, מה עובד */}
       {tradesLoaded ? (
         <Animated.View entering={CONTENT_FADE}>
-          <JournalOpenPositionsCard holdings={openTradeHoldings} currency={portfolio.currency} />
+          <JournalOpenPositionsCard holdings={openTradeHoldings} currency={portfolio.currency} onPressPosition={onOpenPosition} />
           <JournalRecentTradesCard trades={closedTrades} currency={portfolio.currency} />
           <JournalStatsCard trades={closedTrades} currency={portfolio.currency} />
         </Animated.View>

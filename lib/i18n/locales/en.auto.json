@@ -5309,6 +5309,10 @@
   },
   "screens__Portfolios__components__PositionCard": {
     "s1": "Last price",
-    "s2": "Share"
+    "s2": "Share",
+    "s3": "Market value",
+    "s4": "{{v0}} shares",
+    "s5": "Entry price",
+    "s6": "Opened"
   }
 }

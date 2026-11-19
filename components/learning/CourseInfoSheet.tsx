@@ -157,20 +157,15 @@ function CourseInfoBody({
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         {meta.length > 0 ? <Text style={styles.meta}>{meta.join(' · ')}</Text> : null}
 
+        {/* בלי כותרות «למי הקורס מתאים» / «על הקורס» — רק הטקסט, מיושר לימין */}
         {audience ? (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>
-              {i18n.t('auto.components__learning__CourseInfoSheet.s3')}
-            </Text>
             <Text style={styles.body}>{audience}</Text>
           </View>
         ) : null}
 
         {about ? (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>
-              {i18n.t('auto.components__learning__CourseInfoSheet.s4')}
-            </Text>
             <Text style={styles.body}>{about}</Text>
           </View>
         ) : null}

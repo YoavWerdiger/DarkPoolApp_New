@@ -85,6 +85,8 @@ export default function NewsScreen({ route }: { route?: any }) {
 
   const handleOpenCreateSheet = useCallback(() => {
     void HapticFeedback.impactLight();
+    // כתבה חדשה — בלי שאריות מעריכה קודמת
+    setEditArticle(null);
     setCreateSheetVisible(true);
   }, []);
 

@@ -10,7 +10,7 @@ import { TEXT_DIR } from '../../lib/i18n/language';
 // שולח Push לכל מי שמנוי על התראות חדשות.
 // ============================================
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
   Linking,
@@ -102,6 +102,13 @@ export default function CreateNewsSheet({ visible, onClose, onCreated, editArtic
     setErrorMessage(null);
     setStatusMessage(null);
   }, []);
+
+  // כל פתיחה לכתבה חדשה מתחילה נקייה — בלי שאריות מכתבה קודמת / עריכה
+  const wasVisibleRef = useRef(false);
+  useEffect(() => {
+    if (visible && !wasVisibleRef.current && !editArticle) reset();
+    wasVisibleRef.current = visible;
+  }, [visible, editArticle, reset]);
 
   const handleClose = useCallback(() => {
     if (isBusy) return;
@@ -211,6 +218,8 @@ export default function CreateNewsSheet({ visible, onClose, onCreated, editArtic
       setTimeout(() => {
         if (animatedClose) animatedClose();
         else onClose();
+        // השיט נסגר — מנקים מיד, שהפתיחה הבאה תהיה ריקה
+        reset();
       }, 700);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : i18n.t('auto.screens__News__CreateNewsSheet.s9');
@@ -233,6 +242,7 @@ export default function CreateNewsSheet({ visible, onClose, onCreated, editArtic
     onClose,
     onCreated,
     editArticle,
+    reset,
   ]);
 
   const placeholderColor = DesignTokens.colors.text.tertiary;

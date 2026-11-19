@@ -286,7 +286,8 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
           const h = e.nativeEvent.layout.height;
           if (h > 0) setTitleBlockH((prev) => (prev === h ? prev : h));
         }}
-        style={titleTextStyle}
+        // בלי תמונה כפתור הסגירה (14 + 36) יושב בפינה — הכותרת לא נכנסת מתחתיו
+        style={[titleTextStyle, !article.image_url && { paddingRight: Math.max(0, 14 + 36 + 8 - detailPad) }]}
       >
         {titleText}
       </Text>

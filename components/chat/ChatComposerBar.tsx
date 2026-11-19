@@ -9,8 +9,7 @@ import {
   type StyleProp,
   type ViewStyle,
   type TextStyle,
-  type TextInputProps,
-} from 'react-native';
+  type TextInputProps, TouchableOpacity } from 'react-native';
 import { APP_TYPE } from '../ui/appType';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../ui/UICard';
@@ -124,18 +123,18 @@ export default function ChatComposerBar({
       {trailing !== undefined ? (
         trailing
       ) : (
-        <Pressable
+        // סגנון סטטי (לא פונקציה) — css-interop מפיל לפעמים style כפונקציה ב-Pressable,
+        // ואז הכפתור נשאר בלי רקע וגודל (רק אייקון דחוס)
+        <TouchableOpacity
           onPress={onSend}
           disabled={sendDisabled}
-          style={({ pressed }) => [
-            styles.sendButton,
-            pressed && !sendDisabled ? { opacity: 0.82 } : null,
-          ]}
+          activeOpacity={0.82}
+          style={styles.sendButton}
           accessibilityRole="button"
           accessibilityLabel={i18n.t('auto.components__chat__ChatComposerBar.s1')}
         >
           <Ionicons name="arrow-up" size={24} color="#fff" />
-        </Pressable>
+        </TouchableOpacity>
       )}
     </View>
     </ScrollView>

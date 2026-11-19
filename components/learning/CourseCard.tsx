@@ -88,7 +88,8 @@ export const CourseCard: React.FC<CourseCardProps> = ({
 
   const canContinue = hasAccess ?? !!course.enrollment;
   const { progressPct } = getCourseLessonStats(course);
-  const subtitle = getAcademyCourseSubtitle(course);
+  // מקף עברי (־) נופל לפונט חלופי ב-iOS ומגביה את השורה — מקף רגיל
+  const subtitle = getAcademyCourseSubtitle(course).replace(/\u05BE/g, '-');
   const accent = getAcademyCourseAccentColor(
     course as CourseWithProgress & { price?: number },
     T.colors.primary.main

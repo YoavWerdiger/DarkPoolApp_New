@@ -148,21 +148,18 @@ export function chartSampleGapMs(period: PerformancePeriod): number {
   switch (period) {
     case '1D':
       return MS.min5;
-    // 1W: ברי 15 דקות (~130 נקודות); 1M: ברי שעה (~150)
     case '1W':
-      return 15 * 60_000;
-    // רזולוציה מינימלית; המרווח בפועל נגזר מאורך הטווח (CHART_TARGET_POINTS)
+      return 30 * 60_000;
     case '1M':
-      return 15 * 60_000;
-    case '3M':
       return MS.hour;
+    case '3M':
+      return 3 * MS.hour;
     case 'YTD':
     case '1Y':
       return MS.day;
-    // יומי גם בטווחים ארוכים — קו «חי» עם כל התנודות (שבועי החליק את הגרף)
     case '5Y':
     case 'All':
-      return MS.day;
+      return MS.week;
     default:
       return MS.day;
   }
@@ -186,7 +183,7 @@ export const CHART_TARGET_POINTS = 150;
 export function sampleChartSeriesForPeriod(
   series: ChartPoint[],
   period: PerformancePeriod,
-  maxPoints = CHART_TARGET_POINTS
+  maxPoints = CHART_DISPLAY_MAX_POINTS
 ): ChartPoint[] {
   const sorted = sortSeries(series);
   if (sorted.length <= 2) return sorted;
@@ -219,9 +216,21 @@ export function sampleChartSeriesForPeriod(
       );
   if (base.length < 2) return sorted.slice(-2);
 
-  // 3) יחס שווה בכל הטווחים: אותו מספר נקודות (CHART_TARGET_POINTS) — דגימה אחידה על ציר זמן-המסחר
-  //    (הגרף מציב נקודות במרווח שווה), כך ש-1W, 1M, 3M ו-1Y באותה צפיפות
-  return base.length > maxPoints ? downsampleChartSeries(base, maxPoints) : base;
+  // 3) מרווח קבוע לכל טווח: 1D 5 דק׳, 1W 30 דק׳, 1M שעה, 3M 3 שעות, YTD/1Y יום, 5Y/All שבוע.
+  //    קצוות ונקודות עם הפקדה/משיכה נשמרים תמיד.
+  const gapMs = intraday ? chartSampleGapMs(period) : Math.max(MS.day, chartSampleGapMs(period));
+  const out: ChartPoint[] = [];
+  let lastKept = -Infinity;
+  for (let i = 0; i < base.length; i++) {
+    const p = base[i];
+    const t = chartPointMs(p.date);
+    const isEdge = i === 0 || i === base.length - 1;
+    if (isEdge || (p.external_flow ?? 0) !== 0 || t - lastKept >= gapMs) {
+      out.push(p);
+      lastKept = t;
+    }
+  }
+  return out.length > maxPoints ? downsampleChartSeries(out, maxPoints) : out;
 }
 
 /** האם יש מספיק היסטוריה לתקופה */

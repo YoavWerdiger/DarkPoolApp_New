@@ -33,6 +33,10 @@ const company = (name: string, display: string, ticker: string): Sec13fMeta => (
 
 /** קרנות שנקראות מה-SEC (Quiver לא מחזיר להן אחזקות) + חברות ציבוריות שמגישות 13F-HR */
 export const SEC_13F_FUNDS: Record<string, Sec13fMeta> = {
+  '1079114': {
+    manager: 'David Einhorn',
+    name: 'Greenlight Capital, Inc.',
+  },
   '1647251': {
     manager: 'Chris Hohn',
     name: 'TCI Fund Management',
@@ -47,6 +51,18 @@ export const SEC_13F_FUNDS: Record<string, Sec13fMeta> = {
   '1065521': company('SoftBank Group Corp.', 'SoftBank', 'SFTBY'),
   '1577552': company('Alibaba Group Holding Ltd', 'Alibaba', 'BABA'),
   '1110646': company('NetEase, Inc.', 'NetEase', 'NTES'),
+  // עוד חברות ציבוריות שמגישות 13F (טכנולוגיה / ביטוח והחזקות / פארמה) — מי שלא מגישה פשוט לא תציג אחזקות
+  '1108524': company('Salesforce, Inc.', 'Salesforce', 'CRM'),
+  '804328': company('QUALCOMM Inc', 'Qualcomm', 'QCOM'),
+  '1096343': company('Markel Group Inc.', 'Markel', 'MKL'),
+  '60086': company('Loews Corp', 'Loews', 'L'),
+  '915191': company('Fairfax Financial Holdings Ltd', 'Fairfax', 'FRFHF'),
+  '896159': company('Chubb Ltd', 'Chubb', 'CB'),
+  '80661': company('Progressive Corp', 'Progressive', 'PGR'),
+  '20286': company('Cincinnati Financial Corp', 'Cincinnati Financial', 'CINF'),
+  '11544': company('W. R. Berkley Corp', 'W. R. Berkley', 'WRB'),
+  '1042046': company('American Financial Group, Inc.', 'American Financial', 'AFG'),
+  '59478': company('Eli Lilly and Co', 'Eli Lilly', 'LLY'),
   '1652044': company('Alphabet Inc.', 'Alphabet', 'GOOGL'),
   '1543151': company('Uber Technologies, Inc.', 'Uber', 'UBER'),
   '1018724': company('Amazon.com, Inc.', 'Amazon', 'AMZN'),

@@ -173,7 +173,7 @@ async function listReportedFundBooks(limit: number): Promise<ExplorePerson[]> {
 const COMPANY_SIZE_ORDER = [
   // ברקשייר — תיק של וורן באפט, מוצג במשקיעים ולא בחברות
   // טכנולוגיה קודם (שמגישות 13F): Mag 7 שמגישות, ואחריהן ענקיות טק נוספות
-  'NVDA', 'GOOGL', 'AMZN', 'AMD', 'INTC', 'CSCO', 'UBER', 'SFTBY', 'BABA', 'NTES', 'JPM', 'WMT', 'JNJ', 'BAC', 'CVX', 'MRK', 'GE', 'WFC', 'MS', 'AXP', 'GS', 'BLK', 'C', 'PFE', 'GILD', 'REGN', 'AIG', 'MET', 'TRV', 'ALL', 'PRU', 'AFL', 'CVS',
+  'NVDA', 'GOOGL', 'AMZN', 'AMD', 'INTC', 'CSCO', 'UBER', 'SFTBY', 'BABA', 'NTES', 'CRM', 'QCOM', 'JPM', 'WMT', 'JNJ', 'BAC', 'CVX', 'MRK', 'GE', 'WFC', 'MS', 'AXP', 'GS', 'BLK', 'C', 'PFE', 'GILD', 'REGN', 'AIG', 'MET', 'TRV', 'ALL', 'PRU', 'AFL', 'CVS', 'LLY', 'CB', 'PGR', 'MKL', 'L', 'FRFHF', 'CINF', 'WRB', 'AFG',
 ];
 
 /** חברות ציבוריות שמגישות 13F — לפי גודל החברה (COMPANY_SIZE_ORDER); אווטאר = לוגו הטיקר */

@@ -13,7 +13,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bell, CreditCard, KeyRound, LifeBuoy, Users, MessagesSquare, GraduationCap } from 'lucide-react-native';
 import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
-import { SettingsActionRow } from '../../components/profile/ProfileSettingsUI';
+import { SettingsActionRow, SettingsSwitchRow } from '../../components/profile/ProfileSettingsUI';
+import { getNewsAutomationActive, setNewsAutomationActive } from '../../services/admin/newsAutomationService';
+import { legacyAlert } from '../../utils/appDialog';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
 import {
@@ -124,6 +126,26 @@ export default function AdminDashboardScreen({ navigation }: any) {
   const series = stats?.growthSeries ?? [];
   const totalUsers = stats?.totals?.users ?? 0;
 
+  const [newsAuto, setNewsAuto] = useState<boolean | null>(null);
+  const [newsAutoBusy, setNewsAutoBusy] = useState(false);
+  useEffect(() => {
+    void getNewsAutomationActive().then(setNewsAuto, () => setNewsAuto(null));
+  }, []);
+  const toggleNewsAuto = async (next: boolean) => {
+    void HapticFeedback.selection();
+    const prev = newsAuto;
+    setNewsAuto(next);
+    setNewsAutoBusy(true);
+    try {
+      setNewsAuto(await setNewsAutomationActive(next));
+    } catch {
+      setNewsAuto(prev);
+      legacyAlert(i18n.t('auto.screens__Admin__AdminDashboardScreen.auto3'));
+    } finally {
+      setNewsAutoBusy(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       {header}
@@ -181,6 +203,21 @@ export default function AdminDashboardScreen({ navigation }: any) {
               <View style={styles.chartPlaceholder} />
             )}
           </View>
+        </AdminSurface>
+
+        <AdminSectionLabel>{i18n.t('auto.screens__Admin__AdminDashboardScreen.auto1')}</AdminSectionLabel>
+        <AdminSurface>
+          <SettingsSwitchRow
+            title={i18n.t('auto.screens__Admin__AdminDashboardScreen.auto2')}
+            value={newsAuto === true}
+            loading={newsAuto === null}
+            disabled={newsAutoBusy}
+            onValueChange={(v) => void toggleNewsAuto(v)}
+            showDivider={false}
+          />
+          <Text style={[styles.metricSubtitle, { color: tokens.colors.text.secondary, paddingHorizontal: 16, paddingBottom: 12 }]}>
+            {i18n.t('auto.screens__Admin__AdminDashboardScreen.auto4')}
+          </Text>
         </AdminSurface>
 
         <AdminSurface>

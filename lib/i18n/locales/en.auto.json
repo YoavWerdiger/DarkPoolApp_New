@@ -2386,7 +2386,11 @@
     "s11": "Communication & support",
     "s12": "Send push",
     "s13": "Support tickets",
-    "s14": "Manage the Academy"
+    "s14": "Manage the Academy",
+    "auto1": "Automations",
+    "auto2": "Automatic news (n8n)",
+    "auto3": "Could not update the automation",
+    "auto4": "When off, new items from Discord are not added to the app."
   },
   "screens__Admin__AdminPaymentsScreen": {
     "s1": "All",

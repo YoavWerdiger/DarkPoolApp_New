@@ -33,20 +33,18 @@ describe('profileFollowBar', () => {
   });
 
   it('keeps follow dock in layout flow (not absolute over scroll content)', () => {
-    const src = readFileSync(
-      join(__dirname, '../../screens/DarkPool/PersonPortfolioProfileScreen.tsx'),
-      'utf8',
-    );
+    const src = // הסגנונות הועברו ל-personPortfolioProfileStyles.ts (פיצול הקובץ, פריט 52)
+  readFileSync(join(__dirname, '../../screens/DarkPool/PersonPortfolioProfileScreen.tsx'), 'utf8') +
+  readFileSync(join(__dirname, '../../screens/DarkPool/personPortfolioProfileStyles.ts'), 'utf8');
     expect(src).toMatch(/Animated\.ScrollView[\s\S]*style=\{\[styles\.flex/);
     // הוסר: עיצוב פרופיל המשקיע שונה (Soft UI)
     expect(src).toMatch(/followDock:\s*\{[\s\S]*?paddingTop:\s*PROFILE_FOLLOW_DOCK_GAP/);
   });
 
   it('follow dock uses opaque navChrome face (not transparent UICard shell)', () => {
-    const src = readFileSync(
-      join(__dirname, '../../screens/DarkPool/PersonPortfolioProfileScreen.tsx'),
-      'utf8',
-    );
+    const src = // הסגנונות הועברו ל-personPortfolioProfileStyles.ts (פיצול הקובץ, פריט 52)
+  readFileSync(join(__dirname, '../../screens/DarkPool/PersonPortfolioProfileScreen.tsx'), 'utf8') +
+  readFileSync(join(__dirname, '../../screens/DarkPool/personPortfolioProfileStyles.ts'), 'utf8');
     expect(src).toMatch(
       /const followDock =[\s\S]*chromeSurfaceCardStyle\(tokens,/,
     );

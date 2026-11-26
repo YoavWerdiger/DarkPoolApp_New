@@ -6,10 +6,9 @@ const rowSrc = readFileSync(
   'utf8'
 );
 
-const profileSrc = readFileSync(
-  join(__dirname, '../../screens/DarkPool/PersonPortfolioProfileScreen.tsx'),
-  'utf8'
-);
+const profileSrc = // הסגנונות הועברו ל-personPortfolioProfileStyles.ts (פיצול הקובץ, פריט 52)
+  readFileSync(join(__dirname, '../../screens/DarkPool/PersonPortfolioProfileScreen.tsx'), 'utf8') +
+  readFileSync(join(__dirname, '../../screens/DarkPool/personPortfolioProfileStyles.ts'), 'utf8');
 
 /**
  * RTL visual contract:

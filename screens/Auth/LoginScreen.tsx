@@ -36,6 +36,7 @@ import { PasswordVisibilityToggle } from '../../components/ui/PasswordVisibility
 // The logo goes after the words, in reading order: left of Hebrew/Arabic text, right of English.
 // UIButton places it by source order, which the layout flips only when RTL is actually active
 // (it isn't in Expo Go), so take both into account.
+const K = 'auto.screens__Auth__LoginScreen.';
 const ICON_AFTER_TEXT: 'left' | 'right' =
   isRtlLanguage(getStoredLanguage()) === I18nManager.isRTL ? 'right' : 'left';
 
@@ -123,7 +124,7 @@ export default function LoginScreen({ navigation }: any) {
   const { isDarkMode } = useTheme();
   const [email, setEmail]               = useState('');
   const [password, setPassword]         = useState('');
-  const [rememberMe, setRememberMe]     = useState(false);
+  const rememberMe = true; // keeps the email for next time; no checkbox
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
   const [appleAvailable, setAppleAvailable] = useState(false);
@@ -180,7 +181,6 @@ export default function LoginScreen({ navigation }: any) {
       const savedRemember = await AsyncStorage.getItem('remember_me');
       if (savedRemember === 'true' && savedEmail) {
         setEmail(savedEmail);
-        setRememberMe(true);
       }
     } catch {}
   };
@@ -355,22 +355,27 @@ export default function LoginScreen({ navigation }: any) {
                 </>
               ) : (
                 <View style={styles.form}>
-                  {/* The welcome logo as a still header — the form continues the welcome screen, calmly */}
-                  <View style={styles.formLogoWrap}>
-                    <Image
-                      source={isDarkMode ? { uri: WELCOME_LOGO_URI } : WELCOME_LOGO_LIGHT}
-                      style={{ width: width * 0.34, height: width * 0.34 }}
-                      contentFit="contain"
-                    />
-                  </View>
+                  {/* Back where you came from, not a text link at the bottom */}
+                  <TouchableOpacity
+                    onPress={() => {
+                      void HapticFeedback.impactLight();
+                      setShowForm(false);
+                    }}
+                    hitSlop={12}
+                    style={styles.backBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel={i18n.t(K + 'back')}
+                  >
+                    <Ionicons name={I18nManager.isRTL ? 'chevron-forward' : 'chevron-back'} size={24} color={colors.text.primary} />
+                  </TouchableOpacity>
 
                   <View style={styles.titleBlock}>
-                    <Text style={[appFlowTitleStyle, { color: colors.text.primary }]}>{i18n.t('auto.screens__Auth__LoginScreen.s7')}</Text>
-                    <Text style={[appFlowSubtitleStyle, { color: colors.text.secondary }]}>{i18n.t('auto.screens__Auth__LoginScreen.s8')}</Text>
+                    <Text style={[appFlowTitleStyle, { color: colors.text.primary }]}>{i18n.t(K + 'formTitle')}</Text>
+                    <Text style={[appFlowSubtitleStyle, { color: colors.text.secondary }]}>{i18n.t(K + 'formSub')}</Text>
                   </View>
 
                   <Field
-                    label={i18n.t('auto.screens__Auth__LoginScreen.s9')}
+                    label={i18n.t(K + 's9')}
                     value={email}
                     onChangeText={setEmail}
                     placeholder="you@example.com"
@@ -379,49 +384,20 @@ export default function LoginScreen({ navigation }: any) {
                   />
 
                   <Field
-                    label={i18n.t('auto.screens__Auth__LoginScreen.s10')}
+                    label={i18n.t(K + 's10')}
                     value={password}
                     onChangeText={setPassword}
-                    placeholder={i18n.t('auto.screens__Auth__LoginScreen.s11')}
+                    placeholder=""
                     secureTextEntry
                     tokens={tokens}
                   />
 
-                  {/* זכור אותי (ימין) · שכחת סיסמה (שמאל) */}
-                  <View style={styles.optionsRow}>
-                    <TouchableOpacity
-                      onPress={() => {
-                        void HapticFeedback.selection();
-                        setRememberMe(!rememberMe);
-                      }}
-                      activeOpacity={0.7}
-                      style={styles.rememberBtn}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ checked: rememberMe }}
-                    >
-                      <View
-                        style={[
-                          styles.checkbox,
-                          {
-                            borderColor: rememberMe ? colors.text.primary : colors.text.tertiary,
-                            backgroundColor: rememberMe ? colors.text.primary : 'transparent',
-                          },
-                        ]}
-                      >
-                        {rememberMe ? (
-                          <Ionicons name="checkmark" size={13} color={colors.text.inverse} />
-                        ) : null}
-                      </View>
-                      <Text style={[styles.optionText, { color: colors.text.secondary }]}>{i18n.t('auto.screens__Auth__LoginScreen.s12')}</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity onPress={handleForgotPassword} activeOpacity={0.7} hitSlop={8}>
-                      <Text style={[styles.optionText, styles.linkText, { color: colors.text.primary }]}>{i18n.t('auto.screens__Auth__LoginScreen.s13')}</Text>
-                    </TouchableOpacity>
-                  </View>
+                  <TouchableOpacity onPress={handleForgotPassword} activeOpacity={0.7} hitSlop={8} style={styles.forgot}>
+                    <Text style={[styles.quietLinkText, { color: colors.text.secondary }]}>{i18n.t(K + 's13')}</Text>
+                  </TouchableOpacity>
 
                   <UIButton
-                    title={i18n.t('auto.screens__Auth__LoginScreen.s14')}
+                    title={i18n.t(K + 'signInBtn')}
                     variant="primary"
                     size="lg"
                     fullWidth
@@ -430,29 +406,13 @@ export default function LoginScreen({ navigation }: any) {
                     onPress={() => void handleSignIn()}
                   />
 
-                  {/* Email sign-in only — Apple / Google are on the welcome screen */}
                   <TouchableOpacity
                     onPress={() => navigation.navigate('Register')}
                     hitSlop={10}
                     style={styles.emailLink}
                     accessibilityRole="button"
                   >
-                    <Text style={[appCaptionStyle, styles.emailLinkText, { color: colors.text.secondary }]}>
-                      {i18n.t('auto.screens__Auth__LoginScreen.s17')}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <Text style={[appCaptionStyle, styles.footer, { color: colors.text.tertiary }]}>{i18n.t('auto.screens__Auth__LoginScreen.s18')}</Text>
-
-                  <TouchableOpacity
-                    onPress={() => {
-                      void HapticFeedback.impactLight();
-                      setShowForm(false);
-                    }}
-                    activeOpacity={0.7}
-                    style={styles.backLink}
-                  >
-                    <Text style={[styles.optionText, { color: colors.text.secondary }]}>{i18n.t('auto.screens__Auth__LoginScreen.s19')}</Text>
+                    <Text style={[styles.quietLinkText, { color: colors.text.secondary }]}>{i18n.t(K + 'noAccount')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -483,45 +443,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  quietLinkText: { fontSize: 15, fontWeight: '500' },
+  backBtn: { alignSelf: 'flex-start', width: 44, height: 44, justifyContent: 'center', marginBottom: 8 },
+  forgot: { alignSelf: 'flex-end', marginTop: -4, marginBottom: 20 },
   buttonStack: {
     gap: APP_LAYOUT.stackGapTight,
   },
   form: {
     width: '100%',
   },
-  formLogoWrap: { alignItems: 'center', marginBottom: APP_LAYOUT.componentGap },
   titleBlock: {
     marginBottom: APP_LAYOUT.sectionGap / 2 + 4,
-  },
-  optionsRow: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: APP_LAYOUT.stackGapSmall / 2,
-    marginBottom: APP_LAYOUT.sectionGap / 2 + 4,
-  },
-  rememberBtn: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: APP_LAYOUT.stackGapSmall,
-    paddingVertical: 4,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  optionText: {
-    fontSize: APP_TYPE.cardBody.fontSize,
-    lineHeight: APP_TYPE.cardBody.lineHeight,
-    fontWeight: APP_TYPE.cardBody.fontWeight,
-    writingDirection: TEXT_DIR,
-  },
-  linkText: {
-    fontWeight: APP_TYPE.cardTitle.fontWeight,
   },
   dividerTight: { marginVertical: 6 },
   emailLink: { alignSelf: 'center', paddingVertical: 6, marginTop: 4 },
@@ -541,14 +473,5 @@ const styles = StyleSheet.create({
   dividerText: {
     marginHorizontal: APP_LAYOUT.stackGapTight,
     textAlign: 'center',
-  },
-  footer: {
-    textAlign: 'center',
-    marginTop: APP_LAYOUT.sectionGap / 2 + 4,
-  },
-  backLink: {
-    alignItems: 'center',
-    marginTop: APP_LAYOUT.componentGap,
-    paddingVertical: 4,
   },
 });

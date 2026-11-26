@@ -517,7 +517,12 @@
     "s19": "חזרה למסך ברוכים הבאים",
     "appleSignIn": "התחבר עם Apple",
     "orSignInWith": "או התחברות באמצעות",
-    "emailSignInLink": "יש לך חשבון עם אימייל? כניסה"
+    "emailSignInLink": "יש לך חשבון עם אימייל? כניסה",
+    "formTitle": "כניסה",
+    "formSub": "עם האימייל שנרשמת איתו",
+    "signInBtn": "כניסה",
+    "noAccount": "אין לך חשבון? הרשמה",
+    "back": "חזרה"
   },
   "screens__Payment__CheckoutScreen": {
     "s1": "שגיאה",

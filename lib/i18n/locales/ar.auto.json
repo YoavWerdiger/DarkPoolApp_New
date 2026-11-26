@@ -517,7 +517,12 @@
     "s19": "العودة إلى شاشة الترحيب",
     "appleSignIn": "تسجيل الدخول باستخدام Apple",
     "orSignInWith": "أو تسجيل الدخول باستخدام",
-    "emailSignInLink": "لديك حساب بالبريد؟ تسجيل الدخول"
+    "emailSignInLink": "لديك حساب بالبريد؟ تسجيل الدخول",
+    "formTitle": "تسجيل الدخول",
+    "formSub": "بالبريد الذي سجلت به",
+    "signInBtn": "تسجيل الدخول",
+    "noAccount": "ليس لديك حساب؟ سجّل",
+    "back": "رجوع"
   },
   "screens__Payment__CheckoutScreen": {
     "s1": "خطأ",

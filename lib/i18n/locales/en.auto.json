@@ -860,7 +860,12 @@
     "s19": "Back to the welcome screen",
     "appleSignIn": "Sign in with Apple",
     "orSignInWith": "Or sign in with",
-    "emailSignInLink": "Have an email account? Sign in"
+    "emailSignInLink": "Have an email account? Sign in",
+    "formTitle": "Sign in",
+    "formSub": "With the email you signed up with",
+    "signInBtn": "Sign in",
+    "noAccount": "No account? Sign up",
+    "back": "Back"
   },
   "screens__Payment__CheckoutScreen": {
     "s1": "Error",

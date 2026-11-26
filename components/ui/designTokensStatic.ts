@@ -111,6 +111,35 @@ const darkColors = {
       border: 'rgba(255, 255, 255, 0)',
     },
   },
+
+  /**
+   * פלטה סמנטית נעולה (פריט 45) — כל צבע טקסט עובר 4.5:1 מול הקנבס ומול הכרטיס.
+   * gain / loss רק לשינויי מחיר ותמיד עם ▲▼ או +/− (לא צבע לבד). success / danger לסטטוסים, לא למחירים.
+   */
+  market: {
+    gain: '#00C805',
+    loss: '#EF4444',
+    /** מסחר מורחב (Pre / After) */
+    extended: '#A78BFA',
+    flat: SoftUI.textSecondary as string,
+  },
+  status: {
+    success: '#6EE7A0',
+    danger: '#F87171',
+    warning: SoftUI.warning as string,
+    info: SoftUI.accentBlue as string,
+  },
+  /** סולם אפור — 0 = הקנבס, 7 = טקסט ראשי */
+  neutral: {
+    0: SoftUI.canvas as string,
+    1: SoftUI.surface1 as string,
+    2: SoftUI.surface2 as string,
+    3: SoftUI.surface3 as string,
+    4: SoftUI.surfaceHover as string,
+    5: SoftUI.textMuted as string,
+    6: SoftUI.textSecondary as string,
+    7: SoftUI.textPrimary as string,
+  },
 };
 
 /** קנבס מסך במצב בהיר */
@@ -226,6 +255,29 @@ const lightColors = {
       border: 'rgba(0, 0, 0, 0.06)',
     },
   },
+
+  market: {
+    gain: '#007A35',
+    loss: '#C62828',
+    extended: '#7C3AED',
+    flat: 'rgba(0, 0, 0, 0.65)',
+  },
+  status: {
+    success: '#166534',
+    danger: '#B91C1C',
+    warning: '#8A5A00',
+    info: '#3B5BDB',
+  },
+  neutral: {
+    0: LIGHT_CANVAS as string,
+    1: LIGHT_CARD as string,
+    2: '#EAE7E5',
+    3: '#DAD6D3',
+    4: '#B9B4B0',
+    5: '#767676',
+    6: '#5F5B62',
+    7: LIGHT_TEXT_PRIMARY as string,
+  },
 };
 
 // Static semantic colors (theme-independent)
@@ -236,6 +288,17 @@ const staticColors = {
   info: { main: SoftUI.accentBlue },
   overlay: 'rgba(0,0,0,0.6)',
   backdrop: 'rgba(0,0,0,0.4)',
+  /** כרום מעל תמונה / מצלמה / סטורי — קבוע בשתי ערכות הנושא (המדיה עצמה כהה) */
+  onMedia: {
+    text: '#FFFFFF',
+    textMuted: 'rgba(255, 255, 255, 0.72)',
+    control: 'rgba(255, 255, 255, 0.18)',
+    controlStrong: 'rgba(255, 255, 255, 0.28)',
+    scrimSoft: 'rgba(0, 0, 0, 0.25)',
+    scrim: 'rgba(0, 0, 0, 0.45)',
+    scrimStrong: 'rgba(0, 0, 0, 0.7)',
+    base: '#000000',
+  },
 };
 
 // Static tokens (theme-independent)

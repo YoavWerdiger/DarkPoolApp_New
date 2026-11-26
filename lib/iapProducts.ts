@@ -6,7 +6,9 @@ import { Platform } from 'react-native';
  *
  * חייב להתאים ל-IAP_PRODUCTS ב-supabase/functions/_shared/iap.ts ולמוצרים שהוקמו בחנויות.
  */
-export const IAP_ENABLED = Platform.OS === 'ios' || Platform.OS === 'android';
+// Off for now: purchases go through CardCom (redirect) on every platform.
+// Apple caps the ILS price below the course price and has no installments. Flip back to enable IAP.
+export const IAP_ENABLED = false && (Platform.OS === 'ios' || Platform.OS === 'android');
 
 export const IAP_SUBSCRIPTION_SKUS: Record<string, string> = {
   monthly: 'com.darkpool.app.sub.monthly',

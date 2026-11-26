@@ -152,21 +152,29 @@ export default function JoinGroupBottomSheet({
       borderWidth: 3,
       borderColor: DesignTokens.colors.background.primary,
     },
+    // A quiet line under the name, lock after the words (row follows UI_DIR on the container)
     premiumTag: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      height: 26,
-      paddingHorizontal: 10,
-      borderRadius: 13,
-      backgroundColor: `${PREMIUM_GOLD}24`,
-      marginBottom: APP_LAYOUT.stackGapSmall,
+      marginTop: 6,
     },
     premiumTagText: {
-      fontSize: 12,
-      lineHeight: 16,
+      fontSize: 14,
+      lineHeight: 20,
       fontWeight: '600',
       color: PREMIUM_GOLD,
+    },
+    premiumPerks: {
+      alignSelf: 'stretch',
+      gap: 14,
+      marginTop: APP_LAYOUT.componentGap + 8,
+      paddingHorizontal: 4,
+    },
+    premiumPerkRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
     },
     perks: {
       alignSelf: 'stretch',
@@ -262,23 +270,18 @@ export default function JoinGroupBottomSheet({
             <Ionicons name="people" size={36} color={DesignTokens.colors.text.primary} />
           </View>
         )}
-        {premiumLocked ? (
-          <View style={styles.lockBadge}>
-            <Ionicons name="lock-closed" size={12} color={DesignTokens.colors.text.inverse} />
-          </View>
-        ) : null}
       </View>
-
-      {premiumLocked ? (
-        <View style={styles.premiumTag}>
-          <Ionicons name="star" size={12} color={PREMIUM_GOLD} />
-          <Text style={styles.premiumTagText}>{i18n.t('auto.components__chat__JoinGroupBottomSheet.p1')}</Text>
-        </View>
-      ) : null}
 
       <Text style={styles.groupName} numberOfLines={2}>
         {chatGroupDisplayName(group.name)}
       </Text>
+
+      {premiumLocked ? (
+        <View style={styles.premiumTag}>
+          <Text style={styles.premiumTagText}>{i18n.t('auto.components__chat__JoinGroupBottomSheet.p1')}</Text>
+          <Ionicons name="lock-closed" size={12} color={PREMIUM_GOLD} />
+        </View>
+      ) : null}
 
 
       {/* חברים / הודעות — שהשיט לא ירגיש ריק כשאין תיאור */}
@@ -314,10 +317,10 @@ export default function JoinGroupBottomSheet({
       {premiumLocked ? (
         <>
           {/* מה מקבלים עם Premium — ערך מוחשי לפני הכפתור */}
-          <View style={styles.perks}>
-            {(['p3', 'p4', 'p5'] as const).map((k, i, arr) => (
-              <View key={k} style={[styles.perkRow, i < arr.length - 1 && styles.perkDivider]}>
-                <Ionicons name="checkmark-circle" size={20} color={PREMIUM_GOLD} />
+          <View style={styles.premiumPerks}>
+            {(['p3', 'p4', 'p5'] as const).map((k) => (
+              <View key={k} style={styles.premiumPerkRow}>
+                <Ionicons name="checkmark" size={18} color={PREMIUM_GOLD} />
                 <Text style={styles.perkText}>{i18n.t(`auto.components__chat__JoinGroupBottomSheet.${k}`)}</Text>
               </View>
             ))}
@@ -328,6 +331,8 @@ export default function JoinGroupBottomSheet({
               variant="primary"
               size="lg"
               fullWidth
+              style={{ backgroundColor: PREMIUM_GOLD }}
+              textStyle={{ color: '#1A1918' }}
               onPress={() => onUpgrade?.()}
             />
             <Text style={styles.footnote}>{i18n.t('auto.components__chat__JoinGroupBottomSheet.p6')}</Text>

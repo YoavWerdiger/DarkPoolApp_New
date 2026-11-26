@@ -61,6 +61,7 @@ import {
   journalRtlRoot,
 } from '../Journal/journalLayout';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
+import InvestmentDisclaimer from '../components/legal/InvestmentDisclaimer';
 
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'PortfolioDetail'>;
 type Route = RouteProp<PortfoliosStackParamList, 'PortfolioDetail'>;
@@ -516,6 +517,7 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
               </View>
             )}
           </View>
+          <InvestmentDisclaimer />
         </ScrollView>
 <RefreshRing ring={refreshRing} />
       </SafeAreaView>

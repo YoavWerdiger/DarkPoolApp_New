@@ -79,6 +79,7 @@ function SetupStep({ label, state }: { label: string; state: 'wait' | 'active' |
   );
 }
 import { mediaService } from '../../services/mediaService';
+import InvestmentDisclaimer from '../../components/legal/InvestmentDisclaimer';
 
 const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
   const { data, resetData } = useRegistration();
@@ -297,6 +298,8 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
       showBack={false}
       showClose={false}
       footer={
+        <View>
+        <InvestmentDisclaimer compact={false} style={{ paddingTop: 0, paddingBottom: 12, paddingHorizontal: 0 }} />
         <CashAppButton
           title={done ? i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s21') : i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s22')}
           variant="primary"
@@ -308,6 +311,7 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
           loading={loading}
           disabled={loading || !done}
         />
+        </View>
       }
     >
       <View style={styles.centered}>

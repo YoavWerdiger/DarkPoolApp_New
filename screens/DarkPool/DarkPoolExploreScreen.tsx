@@ -95,6 +95,7 @@ import {
   prefetchPersonPortfolio,
 } from '../../services/darkpool/prefetchPersonPortfolio';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
+import InvestmentDisclaimer from '../../components/legal/InvestmentDisclaimer';
 
 // v2: כולל חברי קונגרס פעילים — מפתח חדש כדי שלא יוגש מטמון ישן של המאוצרים בלבד
 const EXPLORE_GRID_KEY = appQueryKeys.exploreGridProfiles;
@@ -676,6 +677,7 @@ export default function DarkPoolExploreScreen() {
             ) : (
               <Text style={styles.noResults}>{i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s10')}</Text>
             )}
+            <InvestmentDisclaimer />
           </ScrollView>
         </View>
       </BottomSheet>

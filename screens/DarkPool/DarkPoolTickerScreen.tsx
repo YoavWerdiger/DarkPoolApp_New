@@ -88,6 +88,7 @@ import {
   darkPoolRtlContent,
   darkPoolTransparentFill,
 } from './darkPoolLayout';
+import InvestmentDisclaimer from '../components/legal/InvestmentDisclaimer';
 
 type Nav = NativeStackNavigationProp<DarkPoolStackParamList, 'DarkPoolTicker'>;
 type RP = RouteProp<DarkPoolStackParamList, 'DarkPoolTicker'>;
@@ -718,6 +719,7 @@ export default function DarkPoolTickerScreen() {
               <Text style={styles.emptyBody}>{feedEmpty.body}</Text>
             </UICard>
           )}
+          <InvestmentDisclaimer />
         </ScrollView>
       </SafeAreaView>
     </ScreenChrome>

@@ -46,6 +46,7 @@ import {
   settingsCaptionType,
 } from '../../components/profile/settingsType';
 import { isolateNumericRuns } from '../DarkPool/utils/bidi';
+import InvestmentDisclaimer from '../components/legal/InvestmentDisclaimer';
 
 interface SettingItem {
   id: string;
@@ -351,6 +352,7 @@ export default function SettingsScreen({ navigation }: any) {
               </Text>
             </View>
           </View>
+          <InvestmentDisclaimer />
         </ScrollView>
       </RNSafeAreaView>
     </View>

@@ -73,6 +73,7 @@ import { useDrawerSwipeGuard } from '../../hooks/useDrawerSwipeGuard';
 import { RtlHorizontalScroll } from '../../components/ui/RtlHorizontalScroll';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 import { EmptyState } from '../../components/ui/EmptyState';
+import InvestmentDisclaimer from '../../components/legal/InvestmentDisclaimer';
 
 const FEED_INITIAL_RENDER = 8;
 const FEED_MAX_BATCH = 6;
@@ -340,6 +341,7 @@ export default function DarkPoolHomeScreen() {
           keyExtractor={keyExtractor}
           renderItem={renderItem}
           ListHeaderComponent={listHeader}
+          ListFooterComponent={<InvestmentDisclaimer />}
           ListEmptyComponent={listEmpty}
           style={darkPoolTransparentFill}
           contentContainerStyle={styles.scroll}

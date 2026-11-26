@@ -204,6 +204,7 @@ import {
   profileRecentToTradeDetail,
 } from './utils/tradeDetailParams';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
+import InvestmentDisclaimer from '../components/legal/InvestmentDisclaimer';
 
 const HERO_HEIGHT_RATIO = 0.42;
 
@@ -1967,6 +1968,7 @@ export function PersonPortfolioProfileScreen({
           ) : null}
           </View>
           </Animated.View>
+          <InvestmentDisclaimer />
         </Animated.ScrollView>
 <RefreshRing ring={refreshRing} />
         {heroBackdrop}

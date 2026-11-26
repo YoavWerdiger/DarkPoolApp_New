@@ -46,6 +46,7 @@ import {
   hasTradeDetailPayload,
 } from './utils/tradeDetailParams';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
+import InvestmentDisclaimer from '../../components/legal/InvestmentDisclaimer';
 
 export default function DarkPoolFollowingScreen() {
   const refreshRing = useRefreshRing();
@@ -299,6 +300,7 @@ export default function DarkPoolFollowingScreen() {
               <UIButton title={i18n.t('auto.screens__DarkPool__DarkPoolFollowingScreen.s7')} variant="primary" onPress={goExplore} />
             </View>
           )}
+          <InvestmentDisclaimer />
         </ScrollView>
 <RefreshRing ring={refreshRing} />
       </SafeAreaView>

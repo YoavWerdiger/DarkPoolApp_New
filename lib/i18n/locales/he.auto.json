@@ -522,7 +522,9 @@
     "formSub": "עם האימייל שנרשמת איתו",
     "signInBtn": "כניסה",
     "noAccount": "אין לך חשבון? הרשמה",
-    "back": "חזרה"
+    "back": "חזרה",
+    "appleContinue": "המשך עם Apple",
+    "googleContinue": "המשך עם Google"
   },
   "screens__Payment__CheckoutScreen": {
     "s1": "שגיאה",

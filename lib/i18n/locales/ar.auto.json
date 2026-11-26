@@ -522,7 +522,9 @@
     "formSub": "بالبريد الذي سجلت به",
     "signInBtn": "تسجيل الدخول",
     "noAccount": "ليس لديك حساب؟ سجّل",
-    "back": "رجوع"
+    "back": "رجوع",
+    "appleContinue": "المتابعة باستخدام Apple",
+    "googleContinue": "المتابعة باستخدام Google"
   },
   "screens__Payment__CheckoutScreen": {
     "s1": "خطأ",

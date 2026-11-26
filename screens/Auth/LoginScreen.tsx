@@ -249,150 +249,49 @@ export default function LoginScreen({ navigation }: any) {
             <ScrollView
               contentContainerStyle={[
                 styles.scroll,
-                showForm ? styles.scrollForm : styles.scrollWelcome,
+                styles.scrollWelcome,
               ]}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              {!showForm ? (
-                <>
-                  <View style={styles.logoWrap}>
-                    <Image
-                      source={isDarkMode ? { uri: WELCOME_LOGO_URI } : WELCOME_LOGO_LIGHT}
-                      style={{ width: width * 0.78, height: width * 0.78 }}
-                      contentFit="contain"
-                    />
-                  </View>
+              <View style={styles.logoWrap}>
+                <Image
+                  source={isDarkMode ? { uri: WELCOME_LOGO_URI } : WELCOME_LOGO_LIGHT}
+                  style={{ width: width * 0.78, height: width * 0.78 }}
+                  contentFit="contain"
+                />
+              </View>
 
-                  {/* Welcome: one main CTA, then "or" and the two quick sign-ins right here — no detour to the form */}
-                  <View style={styles.buttonStack}>
-                    <UIButton
-                      title={i18n.t('auto.screens__Auth__LoginScreen.s5')}
-                      variant="primary"
-                      size="lg"
-                      fullWidth
-                      onPress={() => navigation.navigate('Register')}
-                    />
-
-                    <View style={[styles.dividerRow, styles.dividerTight]}>
-                      <View style={[styles.dividerLine, { backgroundColor: colors.border.divider }]} />
-                      <Text style={[appCaptionStyle, styles.dividerText, { color: colors.text.tertiary }]}>{i18n.t('auto.screens__Auth__LoginScreen.orSignInWith')}</Text>
-                      <View style={[styles.dividerLine, { backgroundColor: colors.border.divider }]} />
-                    </View>
-
-                    {/* Apple and Google side by side, half the width each — brand names fit, and neither outranks the other */}
-                    <View style={styles.socialRow}>
-                      {appleAvailable ? (
-                        <View style={styles.socialCell}>
-                          <UIButton
-                            title="Apple"
-                            variant="secondary"
-                            size="lg"
-                            icon="logo-apple"
-                            iconPosition={ICON_AFTER_TEXT}
-                            fullWidth
-                            loading={appleLoading}
-                            disabled={isLoading || appleLoading}
-                            style={{ borderRadius: tokens.borderRadius.full }}
-                            onPress={() => void handleAppleSignIn()}
-                          />
-                        </View>
-                      ) : null}
-                      <View style={styles.socialCell}>
-                        <UIButton
-                          title="Google"
-                          variant="secondary"
-                          size="lg"
-                          icon="logo-google"
-                          iconPosition={ICON_AFTER_TEXT}
-                          fullWidth
-                          loading={googleLoading}
-                          disabled={isLoading || googleLoading}
-                          style={{ borderRadius: tokens.borderRadius.full }}
-                          onPress={() => void handleGoogleSignIn()}
-                        />
-                      </View>
-                    </View>
-
-                    {/* Email accounts: a quiet link, not a third big button */}
-                    <TouchableOpacity
-                      onPress={() => {
-                        void HapticFeedback.selection();
-                        setShowForm(true);
-                      }}
-                      hitSlop={10}
-                      style={styles.emailLink}
-                      accessibilityRole="button"
-                    >
-                      <Text style={[appCaptionStyle, styles.emailLinkText, { color: colors.text.secondary }]}>
-                        {i18n.t('auto.screens__Auth__LoginScreen.emailSignInLink')}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </>
-              ) : (
-                <View style={styles.form}>
-                  {/* Back where you came from, not a text link at the bottom */}
-                  <TouchableOpacity
-                    onPress={() => {
-                      void HapticFeedback.impactLight();
-                      setShowForm(false);
-                    }}
-                    hitSlop={12}
-                    style={styles.backBtn}
-                    accessibilityRole="button"
-                    accessibilityLabel={i18n.t(K + 'back')}
-                  >
-                    <Ionicons name={I18nManager.isRTL ? 'chevron-forward' : 'chevron-back'} size={24} color={colors.text.primary} />
-                  </TouchableOpacity>
-
-                  <View style={styles.titleBlock}>
-                    <Text style={[appFlowTitleStyle, { color: colors.text.primary }]}>{i18n.t(K + 'formTitle')}</Text>
-                    <Text style={[appFlowSubtitleStyle, { color: colors.text.secondary }]}>{i18n.t(K + 'formSub')}</Text>
-                  </View>
-
-                  <Field
-                    label={i18n.t(K + 's9')}
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="you@example.com"
-                    keyboardType="email-address"
-                    tokens={tokens}
-                  />
-
-                  <Field
-                    label={i18n.t(K + 's10')}
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholder=""
-                    secureTextEntry
-                    tokens={tokens}
-                  />
-
-                  <TouchableOpacity onPress={handleForgotPassword} activeOpacity={0.7} hitSlop={8} style={styles.forgot}>
-                    <Text style={[appCaptionStyle, styles.emailLinkText, { color: colors.text.secondary }]}>{i18n.t(K + 's13')}</Text>
-                  </TouchableOpacity>
-
+              {/* One way in for everyone: Apple or Google, new or returning — sign-up continues into the questionnaire */}
+              <View style={styles.buttonStack}>
+                {appleAvailable ? (
                   <UIButton
-                    title={i18n.t(K + 'signInBtn')}
-                    variant="primary"
+                    title={i18n.t(K + 'appleContinue')}
+                    variant="secondary"
                     size="lg"
+                    icon="logo-apple"
+                    iconPosition={ICON_AFTER_TEXT}
                     fullWidth
-                    loading={isLoading}
-                    disabled={isLoading}
-                    onPress={() => void handleSignIn()}
+                    loading={appleLoading}
+                    disabled={isLoading || appleLoading}
+                    style={{ borderRadius: tokens.borderRadius.full }}
+                    onPress={() => void handleAppleSignIn()}
                   />
-
-                  <TouchableOpacity
-                    onPress={() => navigation.navigate('Register')}
-                    hitSlop={10}
-                    style={styles.emailLink}
-                    accessibilityRole="button"
-                  >
-                    <Text style={[appCaptionStyle, styles.emailLinkText, { color: colors.text.secondary }]}>{i18n.t(K + 'noAccount')}</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
+                ) : null}
+                <UIButton
+                  title={i18n.t(K + 'googleContinue')}
+                  variant="secondary"
+                  size="lg"
+                  icon="logo-google"
+                  iconPosition={ICON_AFTER_TEXT}
+                  fullWidth
+                  loading={googleLoading}
+                  disabled={isLoading || googleLoading}
+                  style={{ borderRadius: tokens.borderRadius.full }}
+                  onPress={() => void handleGoogleSignIn()}
+                />
+                <Text style={[appCaptionStyle, styles.terms, { color: colors.text.tertiary }]}>{i18n.t(K + 's18')}</Text>
+              </View>
             </ScrollView>
           </SafeAreaView>
         </View>
@@ -426,6 +325,7 @@ const styles = StyleSheet.create({
   // Each cell takes half the row; the button fills it (fullWidth) and centres its content
   socialCell: { flex: 1 },
   dividerTight: { marginVertical: 6 },
+  terms: { textAlign: 'center', marginTop: 4 },
   buttonStack: {
     gap: APP_LAYOUT.stackGapTight,
   },

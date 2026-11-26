@@ -865,7 +865,9 @@
     "formSub": "With the email you signed up with",
     "signInBtn": "Sign in",
     "noAccount": "No account? Sign up",
-    "back": "Back"
+    "back": "Back",
+    "appleContinue": "Continue with Apple",
+    "googleContinue": "Continue with Google"
   },
   "screens__Payment__CheckoutScreen": {
     "s1": "Error",

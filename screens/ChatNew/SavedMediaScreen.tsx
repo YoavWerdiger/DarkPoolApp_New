@@ -28,6 +28,10 @@ import { ChatScreenShell, ChatSubScreenHeader } from '../../components/chat/Chat
 import { logger } from '../../utils/logger';
 import { settingsRowType, settingsMetaType } from '../../components/profile/settingsType';
 import { noteError } from '../../utils/silentError';
+import StaticDesignTokens from '../../components/ui/DesignTokens';
+
+/** כרום מעל מדיה — טוקנים קבועים (פריט 44) */
+const M = StaticDesignTokens.colors.onMedia;
 
 interface SavedMediaItem {
   id: string;
@@ -153,7 +157,7 @@ export default function SavedMediaScreen() {
       />
       {item.type === 'video' && (
         <View style={styles.videoBadge}>
-          <Ionicons name="play" size={16} color="#fff" />
+          <Ionicons name="play" size={16} color={M.text} />
         </View>
       )}
     </TouchableOpacity>
@@ -188,7 +192,7 @@ export default function SavedMediaScreen() {
         <Modal visible={!!selectedMedia} transparent animationType="fade" onRequestClose={handleCloseModal}>
           <View style={styles.modalOverlay}>
             <TouchableOpacity style={styles.modalClose} onPress={handleCloseModal}>
-              <Ionicons name="close" size={28} color="#fff" />
+              <Ionicons name="close" size={28} color={M.text} />
             </TouchableOpacity>
             {selectedMedia?.type === 'video' ? (
               <Video

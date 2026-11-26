@@ -18,7 +18,11 @@ import type { ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-const ICON = '#FFFFFF';
+import StaticDesignTokens from '../../components/ui/DesignTokens';
+
+/** כרום מעל מדיה — טוקנים קבועים (פריט 44) */
+const M = StaticDesignTokens.colors.onMedia;
+const ICON = M.text;
 /** תמונה בהירה בולעת אייקונים לבנים — הדעיכה והעיגול נותנים ניגוד בלי פס אטום. */
 const SCRIM_TOP = ['rgba(0,0,0,0.55)', 'rgba(0,0,0,0)'] as const;
 const SCRIM_BOTTOM = ['rgba(0,0,0,0)', 'rgba(0,0,0,0.6)'] as const;
@@ -214,7 +218,7 @@ const styles = StyleSheet.create({
     elevation: 20,
   },
   blurFallback: {
-    backgroundColor: '#000',
+    backgroundColor: M.base,
   },
   blurDim: {
     // הטשטוש צריך להיראות — רק החשכה קלה לקריאות הכפתורים

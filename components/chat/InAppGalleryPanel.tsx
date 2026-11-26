@@ -27,6 +27,10 @@ import {
 } from '../../lib/mediaRecentsCache';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { openAppSettings } from '../../lib/cameraSession';
+import StaticDesignTokens from '../../components/ui/DesignTokens';
+
+/** כרום מעל מדיה — טוקנים קבועים (פריט 44) */
+const M = StaticDesignTokens.colors.onMedia;
 
 const COLS = 4;
 const GAP = 2;
@@ -149,7 +153,7 @@ export function InAppGalleryPanel({ visible, onClose, onPick }: Props) {
     <Animated.View style={[styles.root, { paddingTop: insets.top }, slide]}>
       <View style={styles.header}>
         <Pressable onPress={onClose} style={styles.circleBtn} accessibilityRole="button" accessibilityLabel={i18n.t('auto.components__chat__InAppGalleryPanel.s1')}>
-          <Ionicons name="chevron-down" size={24} color="#fff" />
+          <Ionicons name="chevron-down" size={24} color={M.text} />
         </Pressable>
         <Text style={styles.title}>{i18n.t('auto.components__chat__InAppGalleryPanel.s2')}</Text>
         <View style={styles.circleSpacer} />
@@ -164,7 +168,7 @@ export function InAppGalleryPanel({ visible, onClose, onPick }: Props) {
         </View>
       ) : loading && assets.length === 0 ? (
         <View style={styles.center}>
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={M.text} />
         </View>
       ) : (
         <FlatList
@@ -196,7 +200,7 @@ export function InAppGalleryPanel({ visible, onClose, onPick }: Props) {
               />
               {item.mediaType === 'video' ? (
                 <View style={styles.videoBadge} pointerEvents="none">
-                  <Ionicons name="videocam" size={12} color="#fff" />
+                  <Ionicons name="videocam" size={12} color={M.text} />
                   <Text style={styles.videoText}>{formatDuration(item.duration)}</Text>
                 </View>
               ) : null}
@@ -206,7 +210,7 @@ export function InAppGalleryPanel({ visible, onClose, onPick }: Props) {
       )}
       {resolving ? (
         <View style={styles.resolving} pointerEvents="auto">
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={M.text} />
           <Text style={styles.message}>{i18n.t('auto.components__chat__InAppGalleryPanel.s7')}</Text>
         </View>
       ) : null}
@@ -222,7 +226,7 @@ function formatDuration(sec: number): string {
 const styles = StyleSheet.create({
   root: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: '#000',
+    backgroundColor: M.base,
     zIndex: 50,
     // מעל שכבות הכרום של המצלמה (באנדרואיד הסדר לפי elevation)
     elevation: 60,
@@ -249,7 +253,7 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     textAlign: 'center',
-    color: '#fff',
+    color: M.text,
     fontSize: APP_TYPE.sectionTitle.fontSize,
     lineHeight: APP_TYPE.sectionTitle.lineHeight,
     fontWeight: APP_TYPE.sectionTitle.fontWeight,
@@ -282,7 +286,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.16)',
   },
   settingsBtnText: {
-    color: '#fff',
+    color: M.text,
     fontSize: APP_TYPE.cardTitle.fontSize,
     fontWeight: APP_TYPE.cardTitle.fontWeight,
   },
@@ -299,7 +303,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.55)',
   },
   videoText: {
-    color: '#fff',
+    color: M.text,
     fontSize: APP_TYPE.caption.fontSize,
     fontVariant: ['tabular-nums'],
   },

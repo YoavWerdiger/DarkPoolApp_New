@@ -36,6 +36,10 @@ import {
 import { isolateNumericRuns } from '../DarkPool/utils/bidi';
 import { logger } from '../../utils/logger';
 import { EmptyState } from '../../components/ui/EmptyState';
+import StaticDesignTokens from '../../components/ui/DesignTokens';
+
+/** כרום מעל מדיה — טוקנים קבועים (פריט 44) */
+const M = StaticDesignTokens.colors.onMedia;
 
 type MediaFilter = 'all' | 'image' | 'video';
 
@@ -258,7 +262,7 @@ export default function GroupMediaGalleryScreen() {
       )}
       {item.type === 'video' && (
         <View style={[styles.videoBadge, videoBadgeCorner]}>
-          <Ionicons name="play" size={12} color="#FFFFFF" />
+          <Ionicons name="play" size={12} color={M.text} />
         </View>
       )}
     </TouchableOpacity>

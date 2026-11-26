@@ -36,6 +36,10 @@ import { useDesignTokens } from '../ui/DesignTokens';
 import { useMediaZoomGestures } from './useMediaZoomGestures';
 import { MediaBlurBackdrop, MediaViewerChrome } from './MediaViewerChrome';
 import { silent } from '../../utils/silentError';
+import StaticDesignTokens from '../../components/ui/DesignTokens';
+
+/** כרום מעל מדיה — טוקנים קבועים (פריט 44) */
+const M = StaticDesignTokens.colors.onMedia;
 
 export interface MediaGalleryItem {
   id: string;
@@ -569,7 +573,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   videoPage: {
-    backgroundColor: '#000',
+    backgroundColor: M.base,
   },
   container: {
     flex: 1,
@@ -604,7 +608,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.3)',
   },
   mediaErrorRetryText: {
-    color: '#fff',
+    color: M.text,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -699,7 +703,7 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     backgroundColor: COLORS.text,
     marginLeft: -7,
-    shadowColor: '#000',
+    shadowColor: M.base,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.3,
     shadowRadius: 2,

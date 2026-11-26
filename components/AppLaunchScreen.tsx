@@ -24,6 +24,7 @@ import { useTheme } from '../context/ThemeContext';
  * ה-splash של המערכת לא יודע איזו ערכה נבחרה; משתמשי דארק מקבלים דעיכה רכה לכהה.
  */
 const SPLASH_BG = '#F4F2F1';
+const SPLASH_BG_DARK = '#000000';
 const COMP_W = 300;
 const COMP_H = 600;
 /** מרכז פס ההתקדמות ביחס למרכז המסך (תחתית הסלוגן בקומפוזיציה 387 → +40) */
@@ -42,7 +43,7 @@ const LOGO_LIGHT = require('../assets/launch/launch-logo-light.json');
 
 void SplashScreen.preventAutoHideAsync().catch(() => {});
 // רשת ביטחון: אם מסך הפתיחה לא עלה (קריסה לפני mount) — לא להשאיר splash תקוע
-setTimeout(() => void SplashScreen.hideAsync().catch(() => {}), 8000);
+setTimeout(() => void SplashScreen.hideAsync().catch(() => {}), 3000);
 
 type Props = {
   /** Auth + בדיקת ביומטריה הסתיימו */
@@ -119,7 +120,7 @@ export function AppLaunchScreen({ ready, onRevealApp, onFinish }: Props) {
       accessibilityLabel={i18n.t('auto.components__AppLaunchScreen.s1')}
     >
       <Animated.View
-        style={[StyleSheet.absoluteFill, { backgroundColor: SPLASH_BG }, veilStyle]}
+        style={[StyleSheet.absoluteFill, { backgroundColor: isDarkMode ? SPLASH_BG_DARK : SPLASH_BG }, veilStyle]}
         pointerEvents="none"
       />
 

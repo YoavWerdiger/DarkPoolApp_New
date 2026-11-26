@@ -16,6 +16,7 @@ import { supabase } from './supabase';
 import { logger } from '../utils/logger';
 import { IAP_ENABLED, IAP_ONE_TIME_SKUS, IAP_SUBSCRIPTION_SKUS, planForSku, skuForPlan } from '../lib/iapProducts';
 import { track } from '../lib/analytics';
+import { silent } from '../utils/silentError';
 
 export type IapVerifyResult = {
   ok: boolean;
@@ -242,7 +243,7 @@ export async function restorePurchases(): Promise<{ restored: number; error?: st
       const res = await verifyOnServer(p);
       if (res.ok && res.entitled) restored += 1;
       if (res.error === 'owned_by_other_account') owned = true;
-      if (res.ok) await finishTransaction({ purchase: p, isConsumable: false }).catch(() => {});
+      if (res.ok) await finishTransaction({ purchase: p, isConsumable: false }).catch(silent('iapService'));
     }
   } catch (e) {
     logger.error(TAG, 'restorePurchases failed', e);

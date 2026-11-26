@@ -14,6 +14,7 @@ import {
   isCacheableMediaPath,
 } from '../../lib/mediaFileCache';
 import { prefetchAudioUris } from '../../lib/expoAvSafe';
+import { silent } from '../../utils/silentError';
 
 const BUCKET = 'chat-media';
 const TAG = 'ChatSignedMedia';
@@ -276,8 +277,8 @@ async function prefetchImageUris(urls: string[]): Promise<void> {
     await Promise.all(
       batch.map((uri) =>
         Promise.all([
-          ExpoImage.prefetch(uri, { cachePolicy: 'memory-disk' }).catch(() => {}),
-          RNImage.prefetch(uri).catch(() => {}),
+          ExpoImage.prefetch(uri, { cachePolicy: 'memory-disk' }).catch(silent('chatSignedMediaUrl')),
+          RNImage.prefetch(uri).catch(silent('chatSignedMediaUrl')),
         ]),
       ),
     );

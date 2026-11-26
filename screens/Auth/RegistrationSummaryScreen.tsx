@@ -82,6 +82,7 @@ function SetupStep({ label, state }: { label: string; state: 'wait' | 'active' |
 import { mediaService } from '../../services/mediaService';
 import InvestmentDisclaimer from '../../components/legal/InvestmentDisclaimer';
 import { track } from '../../lib/analytics';
+import { noteError } from '../../utils/silentError';
 
 const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
   const { data, resetData } = useRegistration();
@@ -194,7 +195,9 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
           await AsyncStorage.removeItem('saved_password');
           await AsyncStorage.removeItem('remember_me');
           await AsyncStorage.setItem('explicit_logout', 'true');
-        } catch {}
+        } catch (e) {
+          noteError('RegistrationSummaryScreen', e);
+        }
 
         if (currentUser) await signOut();
 
@@ -240,7 +243,9 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
           setLoading(false);
           try {
             await AsyncStorage.removeItem('explicit_logout');
-          } catch {}
+          } catch (e) {
+            noteError('RegistrationSummaryScreen', e);
+          }
           const fresh = await AuthService.getUserProfile(user.id);
           track('signup_completed', { method: data.isGoogleSignUp ? 'oauth' : 'email' });
           setUser(fresh || { ...user, registration_completed: true });
@@ -255,7 +260,9 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
           setLoading(false);
           try {
             await AsyncStorage.setItem('explicit_logout', 'true');
-          } catch {}
+          } catch (e) {
+            noteError('RegistrationSummaryScreen', e);
+          }
           await signOut(true);
           if (resetData) resetData();
 

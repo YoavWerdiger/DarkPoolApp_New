@@ -18,6 +18,7 @@ import {
   safeRegistrationBack,
   useRegistrationExitOptional,
 } from '../../hooks/useExitRegistration';
+import { noteError } from '../../utils/silentError';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -38,7 +39,9 @@ const RegistrationEmailScreen = ({ navigation }: { navigation: any }) => {
         navigation.navigate('ForgotPassword', params);
         return;
       }
-    } catch {}
+    } catch (e) {
+      noteError('RegistrationEmailScreen', e);
+    }
     navigation.navigate('Auth', { screen: 'ForgotPassword', params });
   };
   const [loading, setLoading] = useState(false);

@@ -27,6 +27,7 @@ import { useAuth } from '../../context/AuthContext';
 import { ChatScreenShell, ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import { logger } from '../../utils/logger';
 import { settingsRowType, settingsMetaType } from '../../components/profile/settingsType';
+import { noteError } from '../../utils/silentError';
 
 interface SavedMediaItem {
   id: string;
@@ -55,7 +56,9 @@ export default function SavedMediaScreen() {
       try {
         await videoRef.current.stopAsync();
         await videoRef.current.unloadAsync();
-      } catch {}
+      } catch (e) {
+        noteError('SavedMediaScreen', e);
+      }
     }
     setSelectedMedia(null);
   }, []);

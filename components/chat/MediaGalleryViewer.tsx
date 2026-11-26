@@ -35,6 +35,7 @@ import { chatPalette as COLORS } from './chatDesignTokens';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { useMediaZoomGestures } from './useMediaZoomGestures';
 import { MediaBlurBackdrop, MediaViewerChrome } from './MediaViewerChrome';
+import { silent } from '../../utils/silentError';
 
 export interface MediaGalleryItem {
   id: string;
@@ -217,14 +218,14 @@ export default function MediaGalleryViewer({
     setVideoError(false);
     positionShared.value = 0;
     if (videoRef.current) {
-      videoRef.current.pauseAsync().catch(() => {});
+      videoRef.current.pauseAsync().catch(silent('MediaGalleryViewer'));
     }
   }, [currentIndex, visible]);
 
   useEffect(() => {
     if (!visible && videoRef.current) {
-      videoRef.current.stopAsync().catch(() => {});
-      videoRef.current.unloadAsync().catch(() => {});
+      videoRef.current.stopAsync().catch(silent('MediaGalleryViewer'));
+      videoRef.current.unloadAsync().catch(silent('MediaGalleryViewer'));
       setIsPlaying(false);
     }
   }, [visible]);

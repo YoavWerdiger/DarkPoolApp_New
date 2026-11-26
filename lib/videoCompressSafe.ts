@@ -11,6 +11,7 @@
 import { NativeModules, Platform, TurboModuleRegistry } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { logger } from '../utils/logger';
+import { silent } from '../utils/silentError';
 
 const MAX_LONG_EDGE = 1920;
 const TARGET_BITRATE = 5_000_000;
@@ -176,7 +177,7 @@ async function compressNow(
         'VideoCompress',
         `skip: output not smaller (${originalSize} -> ${outSize})`,
       );
-      void FileSystem.deleteAsync(outUri, { idempotent: true }).catch(() => {});
+      void FileSystem.deleteAsync(outUri, { idempotent: true }).catch(silent('videoCompressSafe'));
       return { ...original, width, height };
     }
 
@@ -203,5 +204,5 @@ async function compressNow(
 /** ניקוי קובץ דחוס זמני אחרי העלאה (רק אם נוצר על ידינו) */
 export function discardCompressedVideo(result: CompressedVideo): void {
   if (!result.compressed) return;
-  void FileSystem.deleteAsync(result.uri, { idempotent: true }).catch(() => {});
+  void FileSystem.deleteAsync(result.uri, { idempotent: true }).catch(silent('videoCompressSafe'));
 }

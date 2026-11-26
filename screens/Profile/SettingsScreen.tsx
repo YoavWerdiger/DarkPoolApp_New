@@ -47,6 +47,7 @@ import {
 } from '../../components/profile/settingsType';
 import { isolateNumericRuns } from '../DarkPool/utils/bidi';
 import InvestmentDisclaimer from '../../components/legal/InvestmentDisclaimer';
+import { silent } from '../../utils/silentError';
 
 interface SettingItem {
   id: string;
@@ -102,7 +103,7 @@ export default function SettingsScreen({ navigation }: any) {
         text: t(`settings.languageNames.${next}`),
         onPress: () => {
           // appSettings (AsyncStorage) מכיר רק he/en — מקור האמת הוא SecureStore דרך changeLanguage
-          if (next !== 'ar') void saveAppSettings({ language: next }).catch(() => {});
+          if (next !== 'ar') void saveAppSettings({ language: next }).catch(silent('SettingsScreen'));
           void changeLanguage(next);
         },
       })),

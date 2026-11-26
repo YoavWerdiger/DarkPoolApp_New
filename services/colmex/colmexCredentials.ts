@@ -18,6 +18,7 @@
 
 import * as SecureStore from 'expo-secure-store';
 import type { ColmexSession } from './colmexTypes';
+import { silent } from '../../utils/silentError';
 
 // --------------------------------------------------------------------------
 // Storage keys
@@ -53,7 +54,7 @@ export async function getColmexUsername(): Promise<string | null> {
 
 /** מוחק סיסמה שנשמרה במכשיר בגרסאות ישנות (נקרא בהפעלה). */
 export async function purgeLegacyColmexPassword(): Promise<void> {
-  await SecureStore.deleteItemAsync(KEY_PASSWORD, SECURE_OPTIONS).catch(() => {});
+  await SecureStore.deleteItemAsync(KEY_PASSWORD, SECURE_OPTIONS).catch(silent('colmexCredentials'));
 }
 
 /**

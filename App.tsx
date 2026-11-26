@@ -57,6 +57,7 @@ import { clearShareTargets } from './lib/shareTargets';
 import { DeviceConflictScreen } from './components/DeviceConflictScreen';
 import { checkActiveDevice, installDeviceClaimOnSignIn, subscribeActiveDevice } from './services/deviceSession';
 import { track } from './lib/analytics';
+import { silent } from './utils/silentError';
 // מסכים לא-פעילים (כל ה-stacks ב-Drawer נשארים טעונים) מוקפאים ולא מתרנדרים ברקע —
 // משחרר את ה-JS thread ומשפר משמעותית את חלקות הניווט והאינטראקציות.
 enableScreens(true);
@@ -203,7 +204,7 @@ function AppContent() {
       });
       if (result.success) {
         setBiometricLocked(false);
-        void AsyncStorage.setItem(BIOMETRIC_SESSION_KEY, String(Date.now())).catch(() => {});
+        void AsyncStorage.setItem(BIOMETRIC_SESSION_KEY, String(Date.now())).catch(silent('App'));
       }
     } catch {
       /* נשאר נעול — כפתור «פתח» בתוך מסך הנעילה */
@@ -262,7 +263,7 @@ function AppContent() {
       if (nextState === 'background') {
         backgroundAtRef.current = Date.now();
         // הסשן נמדד מהיציאה — נשמר גם אם המערכת תהרוג את האפליקציה ברקע
-        void AsyncStorage.setItem(BIOMETRIC_SESSION_KEY, String(Date.now())).catch(() => {});
+        void AsyncStorage.setItem(BIOMETRIC_SESSION_KEY, String(Date.now())).catch(silent('App'));
         void NotificationService.syncPermissionOnResume();
         // נועלים כבר ביציאה — בלי הבזק תוכן בחזרה / ב-app switcher
         if (await isBiometricEnabled()) setBiometricLocked(true);

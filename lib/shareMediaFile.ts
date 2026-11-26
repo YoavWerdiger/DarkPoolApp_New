@@ -3,6 +3,7 @@ import * as Sharing from 'expo-sharing';
 import { Platform, Share } from 'react-native';
 import { getChatMediaDisplayUri } from '../services/chat/chatSignedMediaUrl';
 import { logger } from '../utils/logger';
+import { silent } from '../utils/silentError';
 
 /**
  * שיתוף מדיה החוצה כקובץ אמיתי (PNG/JPG/MP4/M4A/PDF…) — לא כקישור ל-bucket.
@@ -140,7 +141,7 @@ async function resolveLocalFile(
   const tmp = `${SHARE_DIR}${name}_${stamp}.part`;
   const res = await FileSystem.downloadAsync(remote, tmp);
   if (res.status < 200 || res.status >= 300) {
-    await FileSystem.deleteAsync(tmp, { idempotent: true }).catch(() => {});
+    await FileSystem.deleteAsync(tmp, { idempotent: true }).catch(silent('shareMediaFile'));
     return null;
   }
   const ext =

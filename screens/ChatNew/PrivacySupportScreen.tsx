@@ -19,6 +19,7 @@ import {
   settingsRowType,
   settingsCaptionType,
 } from '../../components/profile/settingsType';
+import { silent } from '../../utils/silentError';
 
 export default function PrivacySupportScreen() {
   const navigation = useNavigation();
@@ -143,7 +144,7 @@ export default function PrivacySupportScreen() {
                 <Text>Icons by </Text>
                 <Text 
                   style={{ color: DesignTokens.colors.primary.main }}
-                  onPress={() => Linking.openURL('https://lordicon.com/').catch(() => {})}
+                  onPress={() => Linking.openURL('https://lordicon.com/').catch(silent('PrivacySupportScreen'))}
                 >
                   Lordicon.com
                 </Text>

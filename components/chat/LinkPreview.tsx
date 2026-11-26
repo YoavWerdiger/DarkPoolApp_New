@@ -14,6 +14,7 @@ import { openBrowserAsync } from '../../lib/expoWebBrowserSafe';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { APP_TYPE } from '../ui/appType';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { silent } from '../../utils/silentError';
 
 // ----------- URL utils -----------
 
@@ -127,7 +128,7 @@ export default function LinkPreview({ url, isMe, onLongPress }: LinkPreviewProps
     <Pressable
       onPress={() => {
         void HapticFeedback.selection();
-        openBrowserAsync(url).catch(() => {});
+        openBrowserAsync(url).catch(silent('LinkPreview'));
       }}
       onLongPress={onLongPress}
       delayLongPress={350}

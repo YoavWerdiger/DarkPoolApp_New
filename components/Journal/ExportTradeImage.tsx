@@ -45,6 +45,7 @@ import {
   type YahooHistoryRange,
 } from '../../services/portfolios/portfolioPriceFeed';
 import type { ViewInstance } from 'react-native';
+import { silent } from '../../utils/silentError';
 
 /** נתונים מינימליים לכרטיס שיתוף ויזואלי */
 export type ExportableTrade = {
@@ -333,7 +334,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
       .then((raw) => {
         if (raw) setOptions({ ...DEFAULT_SHARE_OPTIONS, ...JSON.parse(raw) });
       })
-      .catch(() => {});
+      .catch(silent('ExportTradeImage'));
   }, []);
 
   /** חייב להישאר לפחות רווח או תשואה — אחרת אין מה לשתף */
@@ -341,7 +342,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
     setOptions((prev) => {
       const next = { ...prev, [key]: value };
       if (!next.showPnl && !next.showReturn) return prev;
-      AsyncStorage.setItem(SHARE_OPTIONS_KEY, JSON.stringify(next)).catch(() => {});
+      AsyncStorage.setItem(SHARE_OPTIONS_KEY, JSON.stringify(next)).catch(silent('ExportTradeImage'));
       return next;
     });
   }, []);
@@ -388,7 +389,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
       .then((path) => {
         if (!cancelled) setPricePath(path);
       })
-      .catch(() => {})
+      .catch(silent('ExportTradeImage'))
       .finally(() => {
         if (!cancelled) {
           clearTimeout(timeout);

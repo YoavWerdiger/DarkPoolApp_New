@@ -16,6 +16,7 @@ import {
   loadNotificationPrefs,
   shouldDeliverNotification,
 } from '../lib/notificationPrefs';
+import { noteError } from '../utils/silentError';
 
 Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
@@ -38,7 +39,9 @@ Notifications.setNotificationHandler({
             shouldShowList: false,
           };
         }
-      } catch {}
+      } catch (e) {
+        noteError('notificationService', e);
+      }
     }
 
     let shouldPlaySound = true;
@@ -52,7 +55,9 @@ Notifications.setNotificationHandler({
         shouldShow = false;
       }
       if (prefs.sound === false) shouldPlaySound = false;
-    } catch {}
+    } catch (e) {
+      noteError('notificationService', e);
+    }
     if (!shouldShow) {
       return {
         shouldShowAlert: false,

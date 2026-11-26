@@ -86,6 +86,7 @@ import { persistQueryCache } from '../lib/queryPersist';
 import { schedulePrefetchChatMessages } from '../services/appPrefetch';
 import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
+import { silent } from '../utils/silentError';
 // Audio import removed — notification sound is not yet implemented (no mp3 asset in repo)
 
 const MAX_OFFLINE_RETRY_ATTEMPTS = 5;
@@ -763,7 +764,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }
       return [incoming, ...prev];
     });
-    Haptics.selectionAsync().catch(() => {});
+    Haptics.selectionAsync().catch(silent('ChatContext'));
   }, [dropPendingOutbound]);
 
   /** מוסיף הודעה חדשה ל-thread הפעיל — ציור מיידי, העשרה ברקע. */
@@ -1994,7 +1995,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
         // שגיאה רגילה – סמן על האופטימיסטי ואפשר retry
         logger.error('ChatContext', `Error sending message: ${errMsg || error?.code || 'Unknown'}`);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(silent('ChatContext'));
         setMessages(prev => prev.map(m =>
           m.id === tempId ? { ...m, is_sending: false, send_error: errMsg || i18n.t('auto.context__ChatContext.s9') } : m
         ));

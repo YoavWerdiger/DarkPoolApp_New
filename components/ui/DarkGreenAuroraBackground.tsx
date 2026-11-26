@@ -18,6 +18,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
+import { silent } from '../../utils/silentError';
 
 /**
  * צבעים שנדגמו ממסך האייפון בתקציר הציבורי של Figma Make
@@ -129,7 +130,7 @@ export const DarkGreenAuroraBackground = memo(function DarkGreenAuroraBackground
       .then((value) => {
         if (alive) setReduceMotion(value);
       })
-      .catch(() => {});
+      .catch(silent('DarkGreenAuroraBackground'));
     const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
     return () => {
       alive = false;

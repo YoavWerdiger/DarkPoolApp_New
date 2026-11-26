@@ -25,6 +25,7 @@ import {
   isAuroraPaused,
   subscribeAuroraRuntime,
 } from './auroraRuntime';
+import { silent } from '../../utils/silentError';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -242,7 +243,7 @@ export const GradientBackground = memo(function GradientBackground({
       .then((value) => {
         if (alive) setReduceMotion(value);
       })
-      .catch(() => {});
+      .catch(silent('GradientBackground'));
     const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
     return () => {
       alive = false;

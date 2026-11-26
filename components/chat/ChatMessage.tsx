@@ -65,6 +65,7 @@ import { GlassChip } from '../ui/GlassChip';
 import { APP_TYPE, appPhysicalRightText } from '../ui/appType';
 import { UserNameRow, badgeSizeForLineHeight } from '../ui/badges/UserBadges';
 import { isUsableChatDisplayName } from '../../lib/chatMessageIdentity';
+import { silent } from '../../utils/silentError';
 
 /** יחס תמונה בבועה — טווח רחב (פנורמי עד 2:1, אנכי עד 0.6) */
 const clampBubbleAspect = (a: number) => Math.min(2, Math.max(0.6, a || 0.9));
@@ -173,7 +174,7 @@ const renderTextWithMentions = (
           style={[baseStyle, linkStyle]}
           onPress={() => {
             void HapticFeedback.selection();
-            openBrowserAsync(url).catch(() => {});
+            openBrowserAsync(url).catch(silent('ChatMessage'));
           }}
           // לונג-פרס על קישור — עדיין תפריט ההודעה (לא נבלע ע״י ה-Text)
           onLongPress={onLinkLongPress}
@@ -1833,7 +1834,7 @@ function AudioPlayer({
       allowsRecordingIOS: false,
       staysActiveInBackground: false,
       shouldDuckAndroid: true,
-    }).catch(() => {});
+    }).catch(silent('ChatMessage'));
   }, []);
 
   useEffect(() => {

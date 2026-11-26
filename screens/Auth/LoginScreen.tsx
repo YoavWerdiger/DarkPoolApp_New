@@ -32,6 +32,7 @@ import {
   formFieldShellStyle,
 } from '../../components/ui/formControl';
 import { PasswordVisibilityToggle } from '../../components/ui/PasswordVisibilityToggle';
+import { noteError } from '../../utils/silentError';
 
 // The logo goes after the words, in reading order: left of Hebrew/Arabic text, right of English.
 // UIButton places it by source order, which the layout flips only when RTL is actually active
@@ -161,7 +162,9 @@ export default function LoginScreen({ navigation }: any) {
       if (savedRemember === 'true' && savedEmail) {
         setEmail(savedEmail);
       }
-    } catch {}
+    } catch (e) {
+      noteError('LoginScreen', e);
+    }
   };
 
   const saveCredentials = async (e: string, remember: boolean) => {
@@ -173,7 +176,9 @@ export default function LoginScreen({ navigation }: any) {
         await AsyncStorage.removeItem('saved_email');
         await AsyncStorage.removeItem('remember_me');
       }
-    } catch {}
+    } catch (e) {
+      noteError('LoginScreen', e);
+    }
   };
 
   const handleSignIn = async () => {

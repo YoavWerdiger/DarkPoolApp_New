@@ -3,6 +3,7 @@ import { Linking } from 'react-native';
 import { showAppDialog } from '../../utils/appDialog';
 import { acceptUgcTerms, hasAcceptedUgcTerms } from '../../services/moderationService';
 import { supabase } from '../../services/supabase';
+import { silent } from '../../utils/silentError';
 
 const accepted = new Set<string>();
 const storageKey = (uid: string) => `ugc_terms_accepted:${uid}`;
@@ -27,7 +28,7 @@ export async function ensureUgcTermsAccepted(): Promise<boolean> {
   }
   if (await hasAcceptedUgcTerms()) {
     accepted.add(uid);
-    void AsyncStorage.setItem(storageKey(uid), '1').catch(() => {});
+    void AsyncStorage.setItem(storageKey(uid), '1').catch(silent('ugcTermsGate'));
     return true;
   }
 
@@ -42,7 +43,7 @@ export async function ensureUgcTermsAccepted(): Promise<boolean> {
       buttons: [{ text: 'אני מסכים' }, { text: 'קריאת תנאי השימוש' }, { text: 'לא עכשיו', style: 'cancel' }],
     });
     if (choice === 1) {
-      await Linking.openURL('https://darkpool.site/terms').catch(() => {});
+      await Linking.openURL('https://darkpool.site/terms').catch(silent('ugcTermsGate'));
       continue;
     }
     if (choice !== 0) return false;
@@ -51,7 +52,7 @@ export async function ensureUgcTermsAccepted(): Promise<boolean> {
   const ok = await acceptUgcTerms();
   if (ok) {
     accepted.add(uid);
-    void AsyncStorage.setItem(storageKey(uid), '1').catch(() => {});
+    void AsyncStorage.setItem(storageKey(uid), '1').catch(silent('ugcTermsGate'));
   }
   return ok;
 }

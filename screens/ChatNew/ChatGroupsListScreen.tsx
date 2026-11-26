@@ -91,6 +91,7 @@ import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/Refr
 import { EmptyState } from '../../components/ui/EmptyState';
 import { maybeAskForPushPermission } from '../../components/notifications/pushPrimer';
 import type { ScrollViewInstance, TextInputInstance } from 'react-native';
+import { silent } from '../../utils/silentError';
 
 // RTL is configured once inside the component via useEffect (not at module level)
 
@@ -287,7 +288,7 @@ export default function ChatGroupsListScreen() {
     if (!ids.length) return;
     void prefetchStoriesForUsers(ids, (uri) => {
       // לקאש של expo-image — הצופה מציג דרכו
-      ExpoImage.prefetch(uri, 'memory-disk').catch(() => {});
+      ExpoImage.prefetch(uri, 'memory-disk').catch(silent('ChatGroupsListScreen'));
     });
   }, [usersWithStories]);
   const storiesScrollRef = useRef<ScrollViewInstance>(null);

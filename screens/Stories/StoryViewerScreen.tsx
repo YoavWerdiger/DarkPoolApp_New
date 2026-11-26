@@ -85,6 +85,7 @@ import {
 } from '../../components/stories/StoryChrome';
 import { StoryViewersSheet } from '../../components/stories/StoryViewersSheet';
 import { openContentActionsOverModal } from '../../components/moderation/contentActions';
+import { silent } from '../../utils/silentError';
 
 /** 'forward' = לכיוון אינדקס נמוך (קדימה בשורה), 'back' = אינדקס גבוה */
 type Dir = 'forward' | 'back';
@@ -100,7 +101,7 @@ const SWITCH_MS = 320;
 function prefetchStoryImage(story: UserStory | undefined) {
   const url = story?.media_type === 'image' ? story.media_url : null;
   if (!url || !url.startsWith('http')) return;
-  ExpoImage.prefetch(url, 'memory').catch(() => {});
+  ExpoImage.prefetch(url, 'memory').catch(silent('StoryViewerScreen'));
 }
 
 const isPendingStoryId = (id: string | null | undefined) => !!id && id.startsWith('pending-');
@@ -461,7 +462,7 @@ function StoryViewerScreenInner() {
   // סימון כנצפה — גם בסטורי שלי (כדי שהטבעת תתעדכן); אני מסונן מרשימת הצופים
   useEffect(() => {
     if (!storyId || !user?.id || isPendingStoryId(storyId)) return;
-    markStoryViewed(storyId, user.id).catch(() => {});
+    markStoryViewed(storyId, user.id).catch(silent('StoryViewerScreen'));
   }, [storyId, user?.id]);
 
   /* ── ריאקציות ── */
@@ -479,7 +480,7 @@ function StoryViewerScreenInner() {
     let cancelled = false;
     getMyStoryReaction(storyId, user.id).then((r) => {
       if (!cancelled) setMyReaction(r?.emoji || null);
-    }).catch(() => {});
+    }).catch(silent('StoryViewerScreen'));
     return () => { cancelled = true; };
   }, [storyId, user?.id, isOwnStory]);
 
@@ -489,7 +490,7 @@ function StoryViewerScreenInner() {
 
   const handleReactionPress = useCallback((emoji: string, index: number) => {
     if (!storyId || !user?.id || isOwnStory) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(silent('StoryViewerScreen'));
     const slotWidth = barWidth / STORY_REACTION_EMOJIS.length;
     const startX = slotWidth * (index + 0.5) - barWidth / 2;
     const id = ++flyingIdRef.current;
@@ -498,7 +499,7 @@ function StoryViewerScreenInner() {
     reactToStory(storyId, user.id, emoji)
       .then((err) => {
         if (err) logger.debug('StoryViewerScreen', `reactToStory: ${err}`);
-        else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(silent('StoryViewerScreen'));
       })
       .catch((e) => logger.debug('StoryViewerScreen', 'reactToStory exception', e));
   }, [storyId, user?.id, isOwnStory, barWidth]);
@@ -531,7 +532,7 @@ function StoryViewerScreenInner() {
 
   const openViewersSheet = useCallback(() => {
     if (!storyId || !isOwnStory || isPendingStoryId(storyId)) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(silent('StoryViewerScreen'));
     setViewersTab('viewers');
     setViewersSheetOpen(true);
     void loadViewersAndReactions(storyId);
@@ -589,7 +590,7 @@ function StoryViewerScreenInner() {
   const dragY = useSharedValue(0);
 
   const requestClose = useCallback(() => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(silent('StoryViewerScreen'));
     close();
   }, [close]);
 
@@ -604,7 +605,7 @@ function StoryViewerScreenInner() {
   }, []);
 
   const swipeHaptic = useCallback(() => {
-    void Haptics.selectionAsync().catch(() => {});
+    void Haptics.selectionAsync().catch(silent('StoryViewerScreen'));
     setSwitching(true);
   }, []);
 

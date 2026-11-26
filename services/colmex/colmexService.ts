@@ -50,6 +50,7 @@ import {
   saveColmexSession,
   clearAllColmexLocal,
 } from './colmexCredentials';
+import { silent } from '../../utils/silentError';
 
 // --------------------------------------------------------------------------
 // Auth — connect / disconnect
@@ -84,7 +85,7 @@ export async function colmexConnect(
 ): Promise<ColmexConnectResult> {
   const result = await _connectColmex({ username, password, environment });
   // שמירת username בלבד מקומית (לנוחות UI)
-  await saveColmexUsername(username).catch(() => {});
+  await saveColmexUsername(username).catch(silent('colmexService'));
   return {
     connectionId: result.connectionId,
     accounts: result.accounts,
@@ -106,7 +107,7 @@ export async function colmexLinkAccount(
     triggerSync: true,
   });
   // שמירת session stub (expiresAt ייקבע בsync הבא)
-  await saveColmexSession({ accessToken: '', refreshToken: null, expiresAt: Date.now() + 3600_000 }).catch(() => {});
+  await saveColmexSession({ accessToken: '', refreshToken: null, expiresAt: Date.now() + 3600_000 }).catch(silent('colmexService'));
   return { portfolioId: res.portfolioId };
 }
 
@@ -116,7 +117,7 @@ export async function colmexLinkAccount(
  */
 export async function colmexDisconnect(connectionId: string): Promise<void> {
   await disconnectBroker({ connectionId, purge: false });
-  await clearAllColmexLocal().catch(() => {});
+  await clearAllColmexLocal().catch(silent('colmexService'));
 }
 
 // --------------------------------------------------------------------------

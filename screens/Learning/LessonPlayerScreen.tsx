@@ -28,6 +28,7 @@ import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNa
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { useAuth } from '../../context/AuthContext';
 import { learningProgressService } from '../../services/learningProgressService';
+import { silent } from '../../utils/silentError';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -79,7 +80,7 @@ export const LessonPlayerScreen: React.FC = () => {
     if (cid) {
       learningProgressService.getUserNotes(user.id, cid, lessonId)
         .then(n => { if (n?.notes_content) setNotes(n.notes_content); })
-        .catch(() => {});
+        .catch(silent('LessonPlayerScreen'));
     }
     // Load last saved position for resume
     learningProgressService.getUserProgress(user.id, cid || '', lessonId)
@@ -88,13 +89,13 @@ export const LessonPlayerScreen: React.FC = () => {
           setResumePosition(p.last_position_seconds);
         }
       })
-      .catch(() => {});
+      .catch(silent('LessonPlayerScreen'));
   }, [allowHeavy, user?.id, lessonId, courseId, lesson]);
 
   // Seek to resume position after video loads
   useEffect(() => {
     if (resumePosition !== null && videoRef.current) {
-      videoRef.current.setPositionAsync(resumePosition * 1000).catch(() => {});
+      videoRef.current.setPositionAsync(resumePosition * 1000).catch(silent('LessonPlayerScreen'));
       setProgress(resumePosition);
       setResumePosition(null);
     }
@@ -134,7 +135,7 @@ export const LessonPlayerScreen: React.FC = () => {
   const changeSpeed = useCallback((speed: PlaybackSpeed) => {
     setPlaybackSpeed(speed);
     setShowSpeedPicker(false);
-    videoRef.current?.setRateAsync(speed, true).catch(() => {});
+    videoRef.current?.setRateAsync(speed, true).catch(silent('LessonPlayerScreen'));
   }, []);
 
   const formatTime = (seconds: number) => {
@@ -151,7 +152,7 @@ export const LessonPlayerScreen: React.FC = () => {
       if (duration > 0) {
         setLessonProgress(Math.round((positionSeconds / duration) * 100));
       }
-    }).catch(() => {});
+    }).catch(silent('LessonPlayerScreen'));
   }, [duration]);
 
   const handleTimelinePress = useCallback((evt: { nativeEvent: { locationX: number } }) => {

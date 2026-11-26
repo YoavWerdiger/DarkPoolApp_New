@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState, Platform } from 'react-native';
 import Constants from 'expo-constants';
+import { silent } from '../utils/silentError';
 
 /**
  * אנליטיקס (PostHog דרך HTTP — בלי ספרייה native). פעיל רק כש-EXPO_PUBLIC_POSTHOG_KEY מוגדר;
@@ -99,7 +100,7 @@ export function identify(userId: string): void {
 
 export function resetAnalytics(): void {
   distinctId = null;
-  void AsyncStorage.removeItem(ANON_KEY).catch(() => {});
+  void AsyncStorage.removeItem(ANON_KEY).catch(silent('analytics'));
 }
 
 if (ENABLED) {

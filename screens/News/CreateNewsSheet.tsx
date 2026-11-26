@@ -38,6 +38,7 @@ import { mediaService } from '../../services/mediaService';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { APP_TYPE, appFormFieldLabelStyle } from '../../components/ui/appType';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { silent } from '../../utils/silentError';
 
 export type EditableNews = {
   id: string;
@@ -126,7 +127,7 @@ export default function CreateNewsSheet({ visible, onClose, onCreated, editArtic
       if (!allowed) {
         if (!permission.canAskAgain) {
           setErrorMessage(i18n.t('auto.screens__News__CreateNewsSheet.s1'));
-          await Linking.openSettings().catch(() => {});
+          await Linking.openSettings().catch(silent('CreateNewsSheet'));
         } else {
           setErrorMessage(i18n.t('auto.screens__News__CreateNewsSheet.s2'));
         }

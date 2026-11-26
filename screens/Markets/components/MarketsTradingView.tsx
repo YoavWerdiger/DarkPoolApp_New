@@ -4,6 +4,7 @@ import { ActivityIndicator } from '../../../components/ui/AppSpinner';
 import { WebView } from 'react-native-webview';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { UI_CARD_RADIUS } from '../marketsLayout';
+import { noteError } from '../../../utils/silentError';
 
 type Props = {
   html: string;
@@ -67,7 +68,9 @@ const BLOCK_ANCHOR_NAV_JS = `
         e.stopPropagation();
       }
     }, true);
-  } catch (_) {}
+  } catch (e) {
+    noteError('MarketsTradingView', e);
+  }
   true;
 })();
 `;

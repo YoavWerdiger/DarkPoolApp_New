@@ -19,6 +19,7 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 import { legacyAlert } from '../../utils/appDialog';
 import { ONBOARDING_STEPS, ONBOARDING_TOTAL_STEPS } from '../../constants/onboardingFlow';
 import { safeRegistrationBack } from '../../hooks/useExitRegistration';
+import { silent } from '../../utils/silentError';
 
 const PREVIEW_SIZE = 280;
 const AVATAR = 180;
@@ -30,8 +31,8 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    requestGalleryPermission().catch(() => {});
-    ImagePicker.requestCameraPermissionsAsync().catch(() => {});
+    requestGalleryPermission().catch(silent('RegistrationProfileImageScreen'));
+    ImagePicker.requestCameraPermissionsAsync().catch(silent('RegistrationProfileImageScreen'));
   }, []);
 
   // Remount אחרי סיסמה — ProfileImage יכול להיות initialRoute בלי היסטוריה

@@ -28,6 +28,7 @@ import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navig
 import { HapticFeedback, triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 import type { PortfoliosStackParamList } from '../../navigation/PortfoliosStack';
 import { journalRtlRoot } from '../Journal/journalLayout';
+import { silent } from '../../utils/silentError';
 
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'PortfoliosHub'>;
 type Route = RouteProp<PortfoliosStackParamList, 'PortfoliosHub'>;
@@ -63,7 +64,7 @@ export default function PortfoliosHubScreen() {
 
   const selectPortfolio = useCallback((portfolioId: string) => {
     setSelectedId(portfolioId);
-    AsyncStorage.setItem(LAST_PORTFOLIO_KEY, portfolioId).catch(() => {});
+    AsyncStorage.setItem(LAST_PORTFOLIO_KEY, portfolioId).catch(silent('PortfoliosHubScreen'));
     const cur = getJournalPortfolioList();
     if (cur) saveJournalPortfolioList(cur.portfolios, portfolioId);
   }, []);

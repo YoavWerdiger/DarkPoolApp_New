@@ -44,6 +44,7 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { FlashList } from '@shopify/flash-list';
+import { silent } from '../../utils/silentError';
 // Fear & Greed מוצג בטאב "עיקרי מדדים" בלבד
 
 const NEWS_DETAIL_IMAGE_HEIGHT = 240;
@@ -168,7 +169,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
       const timer = setTimeout(() => {
         LikedArticlesService.getArticleLikeCount(articleId).then(count => {
           setLikeCount(count);
-        }).catch(() => {});
+        }).catch(silent('BreakingNewsTab'));
       }, SHEET_OPEN_MS);
       return () => clearTimeout(timer);
     } else {
@@ -388,7 +389,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
             onLike(article);
             LikedArticlesService.getArticleLikeCount(article.id)
               .then((count) => setLikeCount(count))
-              .catch(() => {});
+              .catch(silent('BreakingNewsTab'));
           }}
           activeOpacity={0.7}
         >

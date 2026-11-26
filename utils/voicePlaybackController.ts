@@ -1,3 +1,4 @@
+import { silent } from '../utils/silentError';
 // ============================================
 // Voice Playback Controller — ניגון יחיד (WhatsApp-style)
 // ============================================
@@ -15,7 +16,7 @@ export function claimVoicePlayback(id: string, onStop: StopHandler): void {
     const prevStop = activeStop;
     activeId = id;
     activeStop = onStop;
-    void Promise.resolve(prevStop()).catch(() => {});
+    void Promise.resolve(prevStop()).catch(silent('voicePlaybackController'));
     return;
   }
   activeId = id;

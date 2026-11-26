@@ -44,6 +44,7 @@ import { settingsButtonLabelStyle, settingsMetaType } from '../../components/pro
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import { restoreAndroidSoftInputIfUnlocked } from '../../components/chat/androidChatKeyboard';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { silent } from '../../utils/silentError';
 
 type Gender = 'male' | 'female' | '';
 
@@ -101,7 +102,7 @@ export default function EditProfileScreen({ navigation }: any) {
   }, [user]);
 
   useEffect(() => {
-    requestGalleryPermission().catch(() => {});
+    requestGalleryPermission().catch(silent('EditProfileScreen'));
   }, []);
 
   const loadUserData = async () => {

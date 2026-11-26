@@ -54,6 +54,7 @@ import { chatPalette } from './chatDesignTokens';
 import { useCaptureCameraMode } from '../../hooks/useCaptureCameraMode';
 import { ensureUgcTermsAccepted } from '../moderation/ugcTermsGate';
 import type { TextInputInstance, ViewInstance } from 'react-native';
+import { silent } from '../../utils/silentError';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const GALLERY_THUMB = 52;
@@ -240,13 +241,13 @@ function DraggableText({
   const wasHovering = useSharedValue(0);
 
   const triggerHapticImpact = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(silent('AddStoryFullScreen'));
   };
   const triggerHapticSelection = () => {
-    Haptics.selectionAsync().catch(() => {});
+    Haptics.selectionAsync().catch(silent('AddStoryFullScreen'));
   };
   const triggerHapticSuccess = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(silent('AddStoryFullScreen'));
   };
 
   const notifyDragStart = () => {
@@ -1180,7 +1181,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
   const DISMISS_VELOCITY = 1600;
 
   const triggerCloseHaptic = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(silent('AddStoryFullScreen'));
   };
 
   const handleDismissClose = useCallback(() => {

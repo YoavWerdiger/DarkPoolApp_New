@@ -12,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { useTheme } from '../context/ThemeContext';
+import { silent } from '../utils/silentError';
 
 /**
  * מסך פתיחה מינימלי — Lottie (assets/launch, נבנה ע"י scripts/build-launch-lottie.py).
@@ -41,9 +42,9 @@ const EASE = Easing.bezier(0.4, 0, 0.2, 1);
 const LOGO_DARK = require('../assets/launch/launch-logo-dark.json');
 const LOGO_LIGHT = require('../assets/launch/launch-logo-light.json');
 
-void SplashScreen.preventAutoHideAsync().catch(() => {});
+void SplashScreen.preventAutoHideAsync().catch(silent('AppLaunchScreen'));
 // רשת ביטחון: אם מסך הפתיחה לא עלה (קריסה לפני mount) — לא להשאיר splash תקוע
-setTimeout(() => void SplashScreen.hideAsync().catch(() => {}), 3000);
+setTimeout(() => void SplashScreen.hideAsync().catch(silent('AppLaunchScreen')), 3000);
 
 type Props = {
   /** Auth + בדיקת ביומטריה הסתיימו */
@@ -67,14 +68,14 @@ export function AppLaunchScreen({ ready, onRevealApp, onFinish }: Props) {
   const exit = useSharedValue(0);
 
   useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion).catch(() => {});
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion).catch(silent('AppLaunchScreen'));
   }, []);
 
   const onLayout = () => {
     if (started.current) return;
     started.current = true;
     // הפריים הראשון זהה ל-splash — רק עכשיו מסירים אותו
-    void SplashScreen.hideAsync().catch(() => {});
+    void SplashScreen.hideAsync().catch(silent('AppLaunchScreen'));
 
     themeIn.value = withDelay(120, withTiming(1, { duration: 480, easing: EASE }));
     dots.value = withDelay(700, withTiming(1, { duration: 260, easing: EASE }));

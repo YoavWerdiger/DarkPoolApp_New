@@ -12,6 +12,7 @@ import * as Crypto from 'expo-crypto';
 import { logger } from '../utils/logger';
 import { SUPABASE_URL } from '../config/publicEnv';
 import { mediaService } from './mediaService';
+import { silent } from '../utils/silentError';
 
 /**
  * כותב את שורת ה-public.users של המשתמש עצמו: UPDATE, ואם לא נגעה בשורה —
@@ -1700,7 +1701,7 @@ export class AuthService {
         .trim();
       if (fullName && !data.user.user_metadata?.full_name) {
         // Apple שולחת את השם רק פעם אחת — שומרים אותו ב-metadata
-        await supabase.auth.updateUser({ data: { full_name: fullName } }).catch(() => {});
+        await supabase.auth.updateUser({ data: { full_name: fullName } }).catch(silent('authService'));
       }
       return await this.finishOAuthSignIn(data.user, fullName || null);
     } catch (error: any) {

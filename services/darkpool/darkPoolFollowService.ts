@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase';
+import { silent } from '../../utils/silentError';
 
 const KEY = '@darkpool/followed_investors_v1';
 
@@ -140,7 +141,7 @@ export async function unfollowInvestor(person: FollowedInvestor): Promise<void> 
   const list = await readLocal();
   const next = list.filter((x) => !(x.id === person.id && x.kind === person.kind));
   await writeLocal(next);
-  void persistCloud(person, false).catch(() => {});
+  void persistCloud(person, false).catch(silent('darkPoolFollowService'));
   notifyFollowChanged(next);
 }
 

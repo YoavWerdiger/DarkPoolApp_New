@@ -5,6 +5,7 @@ import { chatGroupDisplayName, groupChatIcon } from '../assets/chatGroups/groupC
 import { canPostInGroup } from '../utils/canSendInAdminOnlyChat';
 import { logger } from '../utils/logger';
 import type { ChatGroup } from '../types/chat.types';
+import { silent } from '../utils/silentError';
 
 /** כמה קבוצות לזרוע בהצעות של גיליון השיתוף */
 export const SHARE_TARGET_SEED_COUNT = 6;
@@ -51,7 +52,7 @@ async function iconFileUri(group: TargetGroup, isDark: boolean): Promise<string 
       const dest = `${dir}${group.id}.img`;
       const info = await FileSystem.getInfoAsync(dest);
       if (!info.exists) {
-        await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => {});
+        await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(silent('shareTargets'));
         await FileSystem.downloadAsync(group.avatar_url, dest);
       }
       return dest;
@@ -95,12 +96,12 @@ export function seedShareTargets(userId: string, groups: TargetGroup[], isDark: 
 
 export function removeShareTarget(groupId: string) {
   lastDonatedAt.delete(groupId);
-  void ShareTargets?.remove(groupId).catch(() => {});
+  void ShareTargets?.remove(groupId).catch(silent('shareTargets'));
 }
 
 /** התנתקות — לא להשאיר קבוצות של משתמש קודם בגיליון השיתוף. */
 export function clearShareTargets() {
   seededForUser = null;
   lastDonatedAt.clear();
-  void ShareTargets?.removeAll().catch(() => {});
+  void ShareTargets?.removeAll().catch(silent('shareTargets'));
 }

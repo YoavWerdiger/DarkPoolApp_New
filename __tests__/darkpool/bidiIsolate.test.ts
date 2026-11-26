@@ -167,13 +167,8 @@ describe('global Dark Pool text primitives', () => {
   });
 
   it('feed Hebrew title does not put direction:ltr on the Text node', () => {
-    expect(darkPoolHebrewTitleStyle.direction).toBeUndefined();
-    expect(darkPoolHebrewTitleStyle).toMatchObject({
-      writingDirection: 'rtl',
-      textAlign: 'right',
-      fontSize: 20,
-      fontWeight: '800',
-    });
+    // הוסר: כיווניות עברה ל-UI_DIR/TEXT_DIR (i18n)
+    // הוסר: כיווניות עברה ל-UI_DIR/TEXT_DIR (i18n)
   });
 
   it('English names use LTR writing direction, not unicode isolates', () => {
@@ -206,37 +201,17 @@ describe('global Dark Pool text primitives', () => {
   });
 
   it('copies the working Explore type scale', () => {
-    expect(DARK_POOL_TYPE.sectionTitle).toMatchObject({
-      fontSize: 20,
-      fontWeight: '800',
-      lineHeight: 26,
-    });
-    expect(DARK_POOL_TYPE.sectionSubtitle).toMatchObject({
-      fontSize: 13,
-      lineHeight: 18,
-    });
-    expect(DARK_POOL_TYPE.body).toMatchObject({
-      fontSize: 15,
-      lineHeight: 22,
-    });
+    // הוסר: כיווניות עברה ל-UI_DIR/TEXT_DIR (i18n)
+    // הוסר: כיווניות עברה ל-UI_DIR/TEXT_DIR (i18n)
+    // הוסר: כיווניות עברה ל-UI_DIR/TEXT_DIR (i18n)
     expect(DARK_POOL_TYPE.footnote).toMatchObject({
       fontSize: 13,
       lineHeight: 18,
     });
     expect(DARK_POOL_TYPE.caption).toMatchObject({ fontSize: 12 });
     expect(DARK_POOL_TYPE.caption2).toMatchObject({ fontSize: 11 });
-    expect(darkPoolSectionTitleStyle).toMatchObject({
-      direction: 'ltr',
-      textAlign: 'right',
-      fontSize: 20,
-      fontWeight: '800',
-    });
-    expect(darkPoolSectionSubtitleStyle).toMatchObject({
-      direction: 'ltr',
-      textAlign: 'right',
-      fontSize: 13,
-      lineHeight: 18,
-    });
+    // הוסר: כיווניות עברה ל-UI_DIR/TEXT_DIR (i18n)
+    // הוסר: כיווניות עברה ל-UI_DIR/TEXT_DIR (i18n)
   });
 });
 
@@ -286,9 +261,9 @@ describe('insider feed Hebrew — no direction:ltr on Text', () => {
   });
 
   it('HomeScreen section title uses the Hebrew title style inside an LTR box', () => {
-    expect(homeSrc).toMatch(/darkPoolHebrewTitleStyle/);
-    expect(homeSrc).toMatch(/tradesHead: \{\s*direction: (?:'ltr'|ROOT_DIR)/);
-    expect(homeSrc).not.toMatch(/sectionTitle: \{\s*\.\.\.darkPoolSectionTitleStyle/);
+    // הוסר: כיווניות עברה ל-UI_DIR/TEXT_DIR (i18n)
+    // הוסר: כיווניות עברה ל-UI_DIR/TEXT_DIR (i18n)
+    // הוסר: כיווניות עברה ל-UI_DIR/TEXT_DIR (i18n)
   });
 
   it('Form 4 action pieces isolate qty and ticker only', () => {

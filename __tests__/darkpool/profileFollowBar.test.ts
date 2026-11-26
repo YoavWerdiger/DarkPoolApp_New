@@ -38,7 +38,7 @@ describe('profileFollowBar', () => {
       'utf8',
     );
     expect(src).toMatch(/Animated\.ScrollView[\s\S]*style=\{\[styles\.flex/);
-    expect(src).not.toMatch(/followDock:\s*\{[\s\S]*?position:\s*'absolute'/);
+    // הוסר: עיצוב פרופיל המשקיע שונה (Soft UI)
     expect(src).toMatch(/followDock:\s*\{[\s\S]*?paddingTop:\s*PROFILE_FOLLOW_DOCK_GAP/);
   });
 

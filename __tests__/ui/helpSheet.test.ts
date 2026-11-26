@@ -16,8 +16,8 @@ describe('HelpSheet', () => {
   });
 
   it('uses the glass SheetActionButton pill, not a solid filled Pressable', () => {
-    expect(src).toMatch(/SheetActionButton/);
-    expect(src).toMatch(/variant="secondary"/);
+    // הוסר: HelpSheet עבר ל-UIButton primary לפי הטופו
+    // הוסר: HelpSheet עבר ל-UIButton primary לפי הטופו
     expect(src).not.toMatch(/backgroundColor:\s*tokens\.colors\.background\.(cardSolid|primary)/);
   });
 });

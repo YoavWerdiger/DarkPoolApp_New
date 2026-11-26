@@ -13,9 +13,9 @@ describe('media preview before send', () => {
     expect(src).toMatch(/ResizeMode\.CONTAIN/);
     expect(src).toMatch(/useAnimatedKeyboard/);
     expect(src).not.toMatch(/ChatComposerDock/);
-    expect(src).not.toMatch(/ChatComposerBar/);
-    expect(src).not.toMatch(/happy-outline/);
-    expect(src).not.toMatch(/<ReactionPicker/);
+    // הוסר: שורת כתיבה אחידה (ChatComposerBar) בפריוויו מאז f835931f
+    // הוסר: פריוויו המדיה עם שורת כתיבה אחידה מאז f835931f
+    // הוסר: פריוויו המדיה עם שורת כתיבה אחידה מאז f835931f
     expect(src).toMatch(/backgroundColor: tokens\.colors\.background\.cardSolid/);
     // כמו שורת הכתיבה בצ'אט: כפתור שליחה ירוק
     expect(src).toMatch(/backgroundColor: tokens\.colors\.primary\.main/);

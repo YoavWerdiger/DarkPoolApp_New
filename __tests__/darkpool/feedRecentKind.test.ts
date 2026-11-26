@@ -68,7 +68,7 @@ describe('feed recent-kind chips', () => {
 
   it('does not embed investor search on Explore', () => {
     expect(exploreSrc).not.toMatch(/useInvestorSearch/);
-    expect(exploreSrc).not.toMatch(/TextInput/);
+    // הוסר: חיפוש לפי שם נוסף לחקור ב-07064665
   });
 
   it('opens Dark Pool on the Explore tab, not Feed', () => {

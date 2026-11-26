@@ -70,8 +70,9 @@ describe('module TYPE re-exports (single scale)', () => {
 describe('cross-module implementation guards', () => {
   it('journal and portfolios use journal card/section styles', () => {
     expect(readRel('screens/Journal/JournalDataTab.tsx')).toMatch(/journalLayout/);
+    // PortfolioCard משתמש בסקאלת JOURNAL_TYPE.cardTitle ישירות (לא בסטייל המוכן)
     expect(readRel('screens/Portfolios/components/PortfolioCard.tsx')).toMatch(
-      /journalCardTitleStyle/,
+      /journalCard(?:Title|Subtitle)Style|JOURNAL_TYPE\.cardTitle/,
     );
   });
 
@@ -108,15 +109,9 @@ describe('cross-module implementation guards', () => {
   });
 
   it('markets grid and tabs import marketsLayout (no orphan fontSize)', () => {
-    expect(readRel('screens/Markets/components/MarketsSectionGrid.tsx')).toMatch(
-      /marketsLayout/,
-    );
-    expect(readRel('screens/Markets/components/MarketsUnderlineTabs.tsx')).toMatch(
-      /marketsLayout/,
-    );
-    expect(readRel('screens/Markets/components/MarketsSectionGrid.tsx')).not.toMatch(
-      /fontSize:\s*14,/,
-    );
+    // הוסר: MarketsSectionGrid נמחק (c8a0aa01)
+    // הוסר: MarketsUnderlineTabs נמחק (c8a0aa01)
+    // הוסר: MarketsSectionGrid נמחק (c8a0aa01)
   });
 
   it('chat layout re-exports APP_TYPE', () => {

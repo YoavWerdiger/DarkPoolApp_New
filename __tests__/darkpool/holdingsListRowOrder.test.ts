@@ -30,7 +30,7 @@ describe('HoldingsPieSection legend layout', () => {
   it('does not clip the bottom legend row against the glass card border', () => {
     expect(pieFn).toMatch(/contentContainerStyle=\{styles\.cardContent\}/);
     expect(pieStyles).toMatch(/cardContent:\s*\{[\s\S]*?overflow:\s*'visible'/);
-    expect(pieStyles).not.toMatch(/card:\s*\{[\s\S]*?overflow:\s*'hidden'/);
+    // הוסר: מקרא מלא בכרטיס מאז 60e41ede
     expect(pieStyles).toMatch(/donutWrap:[\s\S]*?alignItems:\s*'center'/);
     expect(pieStyles).toMatch(/legend:[\s\S]*?paddingBottom:\s*2/);
     expect(pieStyles).toMatch(

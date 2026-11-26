@@ -268,7 +268,8 @@ export default function PlanPicker({
               <>
                 <View style={styles.priceRow}>
                   <Text style={[styles.priceBig, { color: tokens.colors.text.primary }]}>
-                    {storePrices[activePremium.id]?.displayPrice ?? '—'}
+                    {/* Until the store answers (or in Expo Go, where there's no store), the plan's own price — same steps as Apple */}
+                    {storePrices[activePremium.id]?.displayPrice ?? `₪${activePremium.price.toLocaleString(appLocale())}`}
                   </Text>
                   <Text style={[styles.priceUnit, { color: tokens.colors.text.secondary }]}>{formatPlanPeriod(activePremium.period)}</Text>
                 </View>

@@ -858,7 +858,8 @@
     "s17": "Create a new account",
     "s18": "By signing in you agree to the Terms of Use and Privacy Policy",
     "s19": "Back to the welcome screen",
-    "appleSignIn": "Sign in with Apple"
+    "appleSignIn": "Sign in with Apple",
+    "orSignInWith": "Or sign in with"
   },
   "screens__Payment__CheckoutScreen": {
     "s1": "Error",

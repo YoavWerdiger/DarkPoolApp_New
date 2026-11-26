@@ -299,36 +299,42 @@ export default function LoginScreen({ navigation }: any) {
 
                     <View style={styles.dividerRow}>
                       <View style={[styles.dividerLine, { backgroundColor: colors.border.divider }]} />
-                      <Text style={[appCaptionStyle, styles.dividerText, { color: colors.text.tertiary }]}>{i18n.t('auto.screens__Auth__LoginScreen.s15')}</Text>
+                      <Text style={[appCaptionStyle, styles.dividerText, { color: colors.text.tertiary }]}>{i18n.t('auto.screens__Auth__LoginScreen.orSignInWith')}</Text>
                       <View style={[styles.dividerLine, { backgroundColor: colors.border.divider }]} />
                     </View>
 
                     {/* Apple and Google side by side, half the width each — brand names fit, and neither outranks the other */}
                     <View style={styles.socialRow}>
                       {appleAvailable ? (
+                        <View style={styles.socialCell}>
+                          <UIButton
+                            title="Apple"
+                            variant="secondary"
+                            size="lg"
+                            icon="logo-apple"
+                            iconPosition={ICON_AFTER_TEXT}
+                            fullWidth
+                            loading={appleLoading}
+                            disabled={isLoading || appleLoading}
+                            style={{ borderRadius: tokens.borderRadius.full }}
+                            onPress={() => void handleAppleSignIn()}
+                          />
+                        </View>
+                      ) : null}
+                      <View style={styles.socialCell}>
                         <UIButton
-                          title="Apple"
+                          title="Google"
                           variant="secondary"
                           size="lg"
-                          icon="logo-apple"
+                          icon="logo-google"
                           iconPosition={ICON_AFTER_TEXT}
-                          loading={appleLoading}
-                          disabled={isLoading || appleLoading}
-                          style={{ flex: 1, borderRadius: tokens.borderRadius.full }}
-                          onPress={() => void handleAppleSignIn()}
+                          fullWidth
+                          loading={googleLoading}
+                          disabled={isLoading || googleLoading}
+                          style={{ borderRadius: tokens.borderRadius.full }}
+                          onPress={() => void handleGoogleSignIn()}
                         />
-                      ) : null}
-                      <UIButton
-                        title="Google"
-                        variant="secondary"
-                        size="lg"
-                        icon="logo-google"
-                        iconPosition={ICON_AFTER_TEXT}
-                        loading={googleLoading}
-                        disabled={isLoading || googleLoading}
-                        style={{ flex: 1, borderRadius: tokens.borderRadius.full }}
-                        onPress={() => void handleGoogleSignIn()}
-                      />
+                      </View>
                     </View>
 
                     {/* Email accounts still have their way in */}
@@ -535,6 +541,8 @@ const styles = StyleSheet.create({
     fontWeight: APP_TYPE.cardTitle.fontWeight,
   },
   socialRow: { flexDirection: 'row', gap: 12, alignSelf: 'stretch' },
+  // Each cell takes half the row; the button fills it (fullWidth) and centres its content
+  socialCell: { flex: 1 },
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',

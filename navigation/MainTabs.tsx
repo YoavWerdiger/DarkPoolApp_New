@@ -33,9 +33,6 @@ import DarkPoolStack from './DarkPoolStack';
 import WatchlistScreen from '../screens/Watchlist/WatchlistScreen';
 import MarketsHeatmapScreen from '../screens/Markets/MarketsHeatmapScreen';
 import ChatStack from './ChatStack';
-import HomeScreen from '../screens/Home/HomeScreen';
-import MainTabBar, { MAIN_TAB_BAR_HEIGHT, useMainTabBarState } from './MainTabBar';
-import FirstRunTips from './FirstRunTips';
 import LearningStack from './LearningStack';
 import {
   MAIN_DRAWER_NAVIGATOR_ID,
@@ -436,16 +433,12 @@ export default function MainTabs() {
   const drawerPosition = getMainDrawerPosition();
   const tokens = useDesignTokens();
   const drawerFill = tokens.colors.background.cardSolid;
-  const insets = useSafeAreaInsets();
-  const tabBar = useMainTabBarState();
-  // כשהסרגל מוצג — הסצנה מתקצרת כדי שתוכן / כפתורים צפים לא יוסתרו מתחתיו
-  const tabBarSpace = tabBar.visible ? MAIN_TAB_BAR_HEIGHT + Math.max(insets.bottom, 8) : 0;
 
   return (
     <View style={{ flex: 1, backgroundColor: SCREEN_BG }}>
       <Drawer.Navigator
         id={MAIN_DRAWER_NAVIGATOR_ID}
-        initialRouteName="Home"
+        initialRouteName="Chat"
         drawerContent={(p) => <CustomDrawerContent {...p} />}
         // פיתוח בלבד: EXPO_PUBLIC_DEV_DRAWER_OPEN=1 — המגירה פתוחה בהפעלה (לצילומי סימולטור)
         defaultStatus={__DEV__ && process.env.EXPO_PUBLIC_DEV_DRAWER_OPEN ? 'open' : 'closed'}
@@ -468,12 +461,11 @@ export default function MainTabs() {
             width: DRAWER_WIDTH,
             backgroundColor: drawerFill,
           },
-          sceneStyle: { backgroundColor: SCREEN_BG, paddingBottom: tabBarSpace },
+          sceneStyle: { backgroundColor: SCREEN_BG },
           // enableFreeze(true) ב-App — משאירים הקפאה ב-blur כדי שמסכי Drawer כבדים
           // (צ'אט/realtime) לא ימשיכו לרנדר ברקע וייגנבו את ה-JS thread בניווט.
         }}
       >
-        <Drawer.Screen name="Home" component={HomeScreen} options={{ title: 'בית' }} />
         <Drawer.Screen name="Chat" component={ChatStack} options={{ title: i18n.t('drawer.chat') }} />
         <Drawer.Screen name="Courses" component={LearningStack} options={{ title: i18n.t('drawer.courses') }} />
         {/* Journal stack kept registered for backward-compat deep links, hidden from drawer menu. */}
@@ -529,8 +521,6 @@ export default function MainTabs() {
           }}
         />
       </Drawer.Navigator>
-      {tabBar.visible ? <MainTabBar activeKey={tabBar.activeKey} /> : null}
-      {tabBar.visible && tabBar.activeKey === 'home' ? <FirstRunTips bottomOffset={tabBarSpace} /> : null}
     </View>
   );
 }

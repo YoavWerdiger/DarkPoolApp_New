@@ -10,7 +10,6 @@ import { AdminEmptyState, AdminFilterChip } from '../../components/admin';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { adminCaption, adminCardSubtitle, adminCardTitle, adminHebrewText } from '../../components/admin/adminType';
 import { supabase } from '../../services/supabase';
-import { deleteCommunityPost, deleteCommunityPostReply } from '../../services/tweetsService';
 import { REPORT_REASONS } from '../../services/moderationService';
 import { showAppAlert, showAppDialog } from '../../utils/appDialog';
 import { HapticFeedback } from '../../utils/hapticFeedback';
@@ -91,24 +90,24 @@ export default function AdminReportsScreen({ navigation }: any) {
   };
 
   const act = async (row: ReportRow) => {
-    const canDelete = row.target_type === 'post' || row.target_type === 'post_reply';
+    // משתמש — אין תוכן אחד להסיר; שאר הסוגים נמחקים בשרת (admin_remove_reported_content)
+    const canRemove = row.target_type !== 'user';
     const choice = await showAppDialog({
       title: TYPE_LABEL[row.target_type] ?? row.target_type,
       message: row.content_snapshot || undefined,
       buttons: [
-        ...(canDelete ? [{ text: 'מחיקת התוכן וסימון כטופל', style: 'destructive' as const }] : []),
+        ...(canRemove ? [{ text: 'הסרת התוכן וסימון כטופל', style: 'destructive' as const }] : []),
         { text: 'סימון כטופל' },
         { text: 'דחיית הדיווח' },
         { text: 'ביטול', style: 'cancel' as const },
       ],
     });
     if (choice == null) return;
-    const idx = canDelete ? choice : choice + 1;
+    const idx = canRemove ? choice : choice + 1;
     try {
       if (idx === 0) {
-        if (row.target_type === 'post') await deleteCommunityPost(row.target_id);
-        else await deleteCommunityPostReply(row.target_id);
-        await setStatus(row, 'actioned');
+        const { error } = await supabase.rpc('admin_remove_reported_content', { p_report_id: row.id });
+        if (error) throw error;
       } else if (idx === 1) await setStatus(row, 'actioned');
       else if (idx === 2) await setStatus(row, 'dismissed');
       else return;

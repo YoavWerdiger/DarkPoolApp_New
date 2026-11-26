@@ -727,6 +727,8 @@ function ChatInputImpl({
       legacyAlert(i18n.t('auto.components__chat__ChatInput.s2'), i18n.t('auto.components__chat__ChatInput.s5'));
       return;
     }
+    // כללי הקהילה גם לפני תמונה / וידאו ראשונים (Apple 1.2)
+    if (!(await ensureUgcTermsAccepted())) return;
 
     const MAX_SIZE: Record<string, number> = {
       image: 10 * 1024 * 1024,
@@ -2015,6 +2017,7 @@ function ChatInputImpl({
 
   // שליחת ההקלטה
   const sendRecordedAudio = async () => {
+    if (!(await ensureUgcTermsAccepted())) return;
     if (!recordedAudioUri || !user) return;
 
     const tempId = makeLocalId();

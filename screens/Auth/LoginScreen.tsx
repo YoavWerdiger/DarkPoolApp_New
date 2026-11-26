@@ -2,7 +2,8 @@ import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Dimensions, Keyboard, Image, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, ScrollView, Animated, Easing, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Dimensions, Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, ScrollView, Animated, Easing, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
@@ -274,7 +275,7 @@ export default function LoginScreen({ navigation }: any) {
                       <Image
                         source={isDarkMode ? { uri: WELCOME_LOGO_URI } : WELCOME_LOGO_LIGHT}
                         style={{ width: width * 0.78, height: width * 0.78 }}
-                        resizeMode="contain"
+                        contentFit="contain"
                       />
                     </Animated.View>
                   </View>

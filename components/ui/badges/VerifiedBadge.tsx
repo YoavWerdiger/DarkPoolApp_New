@@ -1,6 +1,6 @@
 import i18n from '../../../lib/i18n';
 import React from 'react';
-import { Image } from 'react-native';
+import { Image } from 'expo-image';
 
 // וי כחול «משתמש מאומת» (icons8 64 חתוך לחותם עצמו, 47×47 — בלי השוליים השקופים שהקטינו אותו)
 const VERIFIED = require('../../../assets/badges/verified.png');
@@ -15,7 +15,7 @@ export function VerifiedBadge({ size = 16 }: Props) {
     <Image
       source={VERIFIED}
       style={{ width: size, height: size }}
-      resizeMode="contain"
+      contentFit="contain"
       accessibilityLabel={i18n.t('auto.components__ui__badges__VerifiedBadge.s1')}
     />
   );

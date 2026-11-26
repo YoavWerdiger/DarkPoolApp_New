@@ -9,7 +9,8 @@ import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
 
 import React, { useRef, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Pressable, Image, Keyboard } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Pressable, Keyboard } from 'react-native';
+import { Image } from 'expo-image';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import * as ImagePicker from 'expo-image-picker';
 import { getGalleryPermission, requestGalleryPermission } from '../../utils/galleryPermission';

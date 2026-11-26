@@ -4,7 +4,8 @@ import i18n from '../../lib/i18n';
  * וכניסה לעריכת קורס ושיעוריו (AdminCourseEdit).
  */
 import React, { useCallback, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { RefreshControl } from '../../components/ui/AppRefreshControl';
 import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { SafeAreaView } from 'react-native-safe-area-context';

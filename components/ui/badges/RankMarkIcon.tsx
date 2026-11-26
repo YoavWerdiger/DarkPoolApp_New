@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image } from 'react-native';
+import { Image } from 'expo-image';
 import { useDesignTokens } from '../DesignTokens';
 import { useTheme } from '../../../context/ThemeContext';
 import { rankColor, type RankMetal } from './userRank';
@@ -28,7 +28,7 @@ export function RankMarkIcon({ metal, size = 16 }: Props) {
     <Image
       source={MARK}
       style={{ width: Math.round(size * RANK_MARK_ASPECT), height: size, tintColor: color }}
-      resizeMode="contain"
+      contentFit="contain"
     />
   );
 }

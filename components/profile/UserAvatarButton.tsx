@@ -1,6 +1,7 @@
 import i18n from '../../lib/i18n';
 import React, { useCallback } from 'react';
-import { Image, Pressable, Text, View, type ViewStyle } from 'react-native';
+import { Pressable, Text, View, type ViewStyle } from 'react-native';
+import { Image } from 'expo-image';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { openUserProfile } from '../../lib/openUserProfile';
 

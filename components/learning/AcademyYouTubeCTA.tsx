@@ -2,7 +2,8 @@ import { dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Linking, Platform, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Linking, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -98,7 +99,7 @@ export const AcademyYouTubeCTA: React.FC<AcademyYouTubeCTAProps> = ({
               <Image
                 source={channelAvatar}
                 style={styles.avatarImg}
-                resizeMode="cover"
+                contentFit="cover"
               />
             </View>
             <View style={styles.youtubeBadge}>

@@ -3,7 +3,8 @@ import { getJournalSnapshot, saveJournalSnapshot } from '../../../services/portf
 import { ROOT_DIR, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
@@ -977,7 +978,7 @@ export default function OverviewTab({
                   tintColor: tokens.colors.text.primary,
                   opacity: String(tokens.colors.background.primary) === LIGHT_CANVAS ? 0.045 : 0.055,
                 }}
-                resizeMode="contain"
+                contentFit="contain"
               />
             </View>
             <PortfolioValueChart

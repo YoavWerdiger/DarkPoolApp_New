@@ -29,6 +29,7 @@ import { logger } from './utils/logger';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppLaunchScreen } from './components/AppLaunchScreen';
 import ForceUpdateGate from './components/ForceUpdateGate';
+import OfflineBanner from './components/OfflineBanner';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { HapticFeedback } from './utils/hapticFeedback';
@@ -514,6 +515,7 @@ function AppContent() {
       </KeyboardProvider>
       </>
       )}
+      <OfflineBanner />
       {!launchDone && <AppLaunchScreen ready={bootReady} onRevealApp={revealApp} onFinish={finishLaunch} />}
     </View>
   );

@@ -22,33 +22,20 @@ import { TEXT_DIR } from '../../lib/i18n/language';
 
 type Opt = { label: string; value: string };
 
-/**
- * «השלם פרופיל» — שאלות ההרשמה שיצאו מהזרימה הקצרה (פריט 25), בעמוד אחד ולא חובה.
- * נשמר ב-users.intro_data (כמו בהרשמה הישנה).
- */
-export default function CompleteProfileScreen({ navigation }: { navigation: any }) {
-  const tokens = useDesignTokens();
-  const c = tokens.colors;
-  const { user, updateProfile } = useAuth();
-  const prev = (user?.intro_data ?? {}) as Record<string, unknown>;
-  const [ageRange, setAgeRange] = useState<string | null>((prev.age_range as string) || null);
-  const [experience, setExperience] = useState<string | null>((prev.experience_level as string) || null);
-  const [focus, setFocus] = useState<string | null>((prev.trading_focus as string) || null);
-  const [platforms, setPlatforms] = useState<string[]>(toTradingPlatformArray(prev.trading_platform));
-  const [portfolio, setPortfolio] = useState<string | null>((prev.portfolio_size as string) || null);
-  const [saving, setSaving] = useState(false);
-
-  const Section = ({
+function Section({
     title,
     options,
     selected,
     onToggle,
+  colors: c,
   }: {
     title: string;
     options: Opt[];
     selected: (v: string) => boolean;
     onToggle: (v: string) => void;
-  }) => (
+    colors: ReturnType<typeof useDesignTokens>['colors'];
+  }) {
+  return (
     <View style={styles.section}>
       <Text style={[styles.sectionTitle, { color: c.text.primary }]}>{title}</Text>
       <View style={styles.chips}>
@@ -75,6 +62,23 @@ export default function CompleteProfileScreen({ navigation }: { navigation: any 
       </View>
     </View>
   );
+}
+
+/**
+ * «השלם פרופיל» — שאלות ההרשמה שיצאו מהזרימה הקצרה (פריט 25), בעמוד אחד ולא חובה.
+ * נשמר ב-users.intro_data (כמו בהרשמה הישנה).
+ */
+export default function CompleteProfileScreen({ navigation }: { navigation: any }) {
+  const tokens = useDesignTokens();
+  const c = tokens.colors;
+  const { user, updateProfile } = useAuth();
+  const prev = (user?.intro_data ?? {}) as Record<string, unknown>;
+  const [ageRange, setAgeRange] = useState<string | null>((prev.age_range as string) || null);
+  const [experience, setExperience] = useState<string | null>((prev.experience_level as string) || null);
+  const [focus, setFocus] = useState<string | null>((prev.trading_focus as string) || null);
+  const [platforms, setPlatforms] = useState<string[]>(toTradingPlatformArray(prev.trading_platform));
+  const [portfolio, setPortfolio] = useState<string | null>((prev.portfolio_size as string) || null);
+  const [saving, setSaving] = useState(false);
 
   const save = async () => {
     if (!user?.id) return;
@@ -110,16 +114,17 @@ export default function CompleteProfileScreen({ navigation }: { navigation: any 
         <Text style={[styles.intro, { color: c.text.secondary }]}>
           עוזר לנו להתאים לך תוכן, קורסים והתראות. כל השאלות לא חובה.
         </Text>
-        <Section title="גיל" options={AGE_RANGE_OPTIONS} {...single(ageRange, setAgeRange)} />
-        <Section title="ניסיון במסחר" options={EXPERIENCE_LEVEL_OPTIONS} {...single(experience, setExperience)} />
-        <Section title="סגנון מסחר" options={TRADING_FOCUS_OPTIONS} {...single(focus, setFocus)} />
+        <Section colors={c} title="גיל" options={AGE_RANGE_OPTIONS} {...single(ageRange, setAgeRange)} />
+        <Section colors={c} title="ניסיון במסחר" options={EXPERIENCE_LEVEL_OPTIONS} {...single(experience, setExperience)} />
+        <Section colors={c} title="סגנון מסחר" options={TRADING_FOCUS_OPTIONS} {...single(focus, setFocus)} />
         <Section
+          colors={c}
           title="איפה אתה סוחר (אפשר כמה)"
           options={TRADING_PLATFORM_OPTIONS}
           selected={(v) => platforms.includes(v)}
           onToggle={(v) => setPlatforms((p) => (p.includes(v) ? p.filter((x) => x !== v) : [...p, v]))}
         />
-        <Section title="גודל תיק" options={PORTFOLIO_SIZE_OPTIONS} {...single(portfolio, setPortfolio)} />
+        <Section colors={c} title="גודל תיק" options={PORTFOLIO_SIZE_OPTIONS} {...single(portfolio, setPortfolio)} />
         <UIButton title="שמירה" variant="primary" size="lg" fullWidth loading={saving} onPress={() => void save()} />
       </ScrollView>
     </SafeAreaView>

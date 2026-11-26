@@ -1522,7 +1522,8 @@
     "s25": "Billing",
     "s26": "Admin",
     "s27": "Support",
-    "s28": "Account"
+    "s28": "Account",
+    "tp1": "Trading profile"
   },
   "screens__Profile__DeleteAccountScreen": {
     "s1": "Error",

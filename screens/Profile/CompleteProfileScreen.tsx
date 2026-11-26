@@ -109,10 +109,10 @@ export default function CompleteProfileScreen({ navigation }: { navigation: any 
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-      <ChatSubScreenHeader title="השלמת פרופיל" onBack={() => navigation.goBack()} />
+      <ChatSubScreenHeader title="פרופיל מסחר" onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.intro, { color: c.text.secondary }]}>
-          עוזר לנו להתאים לך תוכן, קורסים והתראות. כל השאלות לא חובה.
+          התשובות מההרשמה — אפשר לעדכן בכל רגע. עוזר לנו להתאים לך תוכן, קורסים והתראות.
         </Text>
         <Section colors={c} title="גיל" options={AGE_RANGE_OPTIONS} {...single(ageRange, setAgeRange)} />
         <Section colors={c} title="ניסיון במסחר" options={EXPERIENCE_LEVEL_OPTIONS} {...single(experience, setExperience)} />

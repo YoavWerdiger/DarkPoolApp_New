@@ -19,8 +19,7 @@ import {
   Bell,
   Trash2,
   LogOut,
-  type LucideIcon,
-} from 'lucide-react-native';
+  type LucideIcon, ChartLine } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { useRegistration } from '../../context/RegistrationContext';
@@ -93,6 +92,13 @@ export default function UserProfileScreen({ navigation }: any) {
       title: i18n.t('auto.screens__Profile__UserProfileScreen.s1'),
       icon: UserPen,
       onPress: () => navigation.navigate('EditProfile'),
+    },
+    {
+      // תשובות השאלון מההרשמה (ניסיון, סגנון, פלטפורמות...) — לעריכה
+      id: 'trading-profile',
+      title: i18n.t('auto.screens__Profile__UserProfileScreen.tp1'),
+      icon: ChartLine,
+      onPress: () => navigation.navigate('CompleteProfile'),
     },
     {
       id: 'settings',

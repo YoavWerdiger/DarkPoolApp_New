@@ -1,10 +1,11 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { withHebrew } from '../helpers/withHebrew';
 
-const tabSrc = readFileSync(
+const tabSrc = withHebrew(readFileSync(
   join(__dirname, '../../screens/Markets/tabs/MarketsHeatmapsTab.tsx'),
   'utf8'
-);
+));
 
 const toggleStart = tabSrc.indexOf('function HeatmapTabToggle');
 const toggleEnd = tabSrc.indexOf('export function MarketsHeatmapsTab');
@@ -21,13 +22,14 @@ describe('heatmap tabs', () => {
   });
 
   it('is flat and fully transparent — no glass, card, or green tint', () => {
-    expect(toggleSrc).toMatch(/backgroundColor:\s*'transparent'/);
+    // הטאבים עברו לרכיב המשותף SegmentedTabs — לא סטייל מקומי
+    expect(toggleSrc).toMatch(/<SegmentedTabs/);
     expect(toggleSrc).not.toMatch(/MarketsEmbedSwitcher/);
     expect(toggleSrc).not.toMatch(/MarketsSegmentedControl/);
     expect(toggleSrc).not.toMatch(/GlassChip/);
     expect(toggleSrc).not.toMatch(/UICard/);
     expect(toggleSrc).not.toMatch(/primary\.main/);
-    expect(toggleSrc).toMatch(/accessibilityRole="tab"/);
+    // accessibilityRole="tab" נמצא בתוך SegmentedTabs
   });
 
   it('stays pinned above the heatmap — not inside a scroll header', () => {
@@ -41,14 +43,7 @@ describe('heatmap tabs', () => {
     expect(toggleSrc).toMatch(/paddingBottom:\s*tokens\.spacing\.md/);
   });
 
-  it('uses a bottom line under the active tab', () => {
-    expect(toggleSrc).toMatch(/height:\s*2/);
-    expect(toggleSrc).toMatch(
-      /backgroundColor:\s*active \? tokens\.colors\.text\.primary : 'transparent'/
-    );
-  });
-
-  it('keeps Hebrew RTL tab order', () => {
-    expect(toggleSrc).toMatch(/flexDirection:\s*'row-reverse'/);
+  it('uses the shared SegmentedTabs (active underline + RTL order live there)', () => {
+    expect(toggleSrc).toMatch(/<SegmentedTabs/);
   });
 });

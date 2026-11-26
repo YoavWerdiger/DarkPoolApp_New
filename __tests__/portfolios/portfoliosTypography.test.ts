@@ -1,11 +1,12 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { PORTFOLIO_LAYOUT } from '../../screens/Portfolios/portfolioLayout';
+import { withHebrew } from '../helpers/withHebrew';
 
-const portfolioCardSrc = readFileSync(
+const portfolioCardSrc = withHebrew(readFileSync(
   join(__dirname, '../../screens/Portfolios/components/PortfolioCard.tsx'),
   'utf8',
-);
+));
 const overviewSrc = readFileSync(
   join(__dirname, '../../screens/Portfolios/tabs/OverviewTab.tsx'),
   'utf8',

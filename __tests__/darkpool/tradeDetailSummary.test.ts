@@ -19,6 +19,7 @@ import {
   buildInsiderTradeDetailSummary,
   buildTradeDetailFieldRows,
 } from '../../screens/DarkPool/utils/tradeDetailSummary';
+import { withHebrew } from '../helpers/withHebrew';
 
 const LRI = '\u2066';
 const PDI = '\u2069';
@@ -295,10 +296,10 @@ describe('buildTradeDetailFieldRows', () => {
 
 describe('trade detail hero render', () => {
   it('renders isolated primary/meta and passes transaction_date into the summary', () => {
-    const src = readFileSync(
+    const src = withHebrew(readFileSync(
       join(__dirname, '../../screens/DarkPool/DarkPoolTradeDetailScreen.tsx'),
       'utf8'
-    );
+    ));
     expect(src).toMatch(/summary\.primaryRender/);
     expect(src).toMatch(/summary\.metaRender/);
     expect(src).not.toMatch(/summary\.metaLine \?/);

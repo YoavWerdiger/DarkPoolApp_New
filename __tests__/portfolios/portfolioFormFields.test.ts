@@ -3,6 +3,7 @@ import { join } from 'path';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { PRODUCT_TOPOLOGY } from '../../components/ui/productTopology';
 import { PORTFOLIO_FORM } from '../../screens/Portfolios/portfolioFormLayout';
+import { withHebrew } from '../helpers/withHebrew';
 
 const root = join(__dirname, '../..');
 

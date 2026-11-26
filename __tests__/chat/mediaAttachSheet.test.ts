@@ -21,11 +21,12 @@ import {
   toggleMediaSelection,
 } from '../../lib/mediaAttachSheet';
 import { MEDIA_RECENTS_PAGE_SIZE } from '../../lib/mediaRecentsCache';
+import { withHebrew } from '../helpers/withHebrew';
 
-const sheetSrc = readFileSync(
+const sheetSrc = withHebrew(readFileSync(
   join(__dirname, '../../components/chat/MediaPickerSheet.tsx'),
   'utf8',
-);
+));
 
 describe('media attach sheet — WhatsApp open path', () => {
   it('peek shows attach actions even without photos or permission', () => {

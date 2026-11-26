@@ -6,11 +6,12 @@ import {
   matchesFeedRecentKind,
 } from '../../screens/DarkPool/utils/feedRecentKind';
 import { EXPLORE_KIND_CHIPS } from '../../screens/DarkPool/utils/exploreGrid';
+import { withHebrew } from '../helpers/withHebrew';
 
-const homeSrc = readFileSync(
+const homeSrc = withHebrew(readFileSync(
   join(__dirname, '../../screens/DarkPool/DarkPoolHomeScreen.tsx'),
   'utf8'
-);
+));
 const exploreSrc = readFileSync(
   join(__dirname, '../../screens/DarkPool/DarkPoolExploreScreen.tsx'),
   'utf8'

@@ -1,11 +1,12 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
+import { withHebrew } from '../helpers/withHebrew';
 
-const lessonRowSrc = readFileSync(
+const lessonRowSrc = withHebrew(readFileSync(
   join(__dirname, '../../components/learning/LessonRow.tsx'),
   'utf8',
-);
+));
 const courseCardSrc = readFileSync(
   join(__dirname, '../../components/learning/CourseCard.tsx'),
   'utf8',

@@ -12,19 +12,20 @@ import {
   settingsCaption2Type,
   settingsButtonLabelStyle,
 } from '../../components/profile/settingsType';
+import { withHebrew } from '../helpers/withHebrew';
 
-const groupInfoSrc = readFileSync(
+const groupInfoSrc = withHebrew(readFileSync(
   join(__dirname, '../../screens/ChatNew/ChatGroupInfoScreen.tsx'),
   'utf8',
-);
+));
 const settingsUiSrc = readFileSync(
   join(__dirname, '../../components/profile/ProfileSettingsUI.tsx'),
   'utf8',
 );
-const notificationsSrc = readFileSync(
+const notificationsSrc = withHebrew(readFileSync(
   join(__dirname, '../../screens/Profile/NotificationsScreen.tsx'),
   'utf8',
-);
+));
 const profileSrc = readFileSync(
   join(__dirname, '../../screens/Profile/UserProfileScreen.tsx'),
   'utf8',

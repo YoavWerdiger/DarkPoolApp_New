@@ -1,10 +1,11 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { withHebrew } from '../helpers/withHebrew';
 
-const feedSrc = readFileSync(
+const feedSrc = withHebrew(readFileSync(
   join(__dirname, '../../screens/Tweets/TweetsFeed.tsx'),
   'utf8'
-);
+));
 
 const toggleStart = feedSrc.indexOf('function FeedTabToggle');
 const toggleEnd = feedSrc.indexOf('export default function TweetsFeed');
@@ -16,17 +17,18 @@ describe('tweets feed tabs', () => {
       /const FEED_TABS[\s\S]*id:\s*'for_you'[\s\S]*id:\s*'following'/
     );
     expect(feedSrc).toMatch(/label:\s*'בשבילך'/);
-    expect(feedSrc).toMatch(/label:\s*'עוקבים'/);
+    expect(feedSrc).toMatch(/label:\s*'במעקב'/);
   });
 
   it('is flat and fully transparent — no glass, card, or green tint', () => {
-    expect(toggleSrc).toMatch(/backgroundColor:\s*'transparent'/);
+    // הטאבים עברו לרכיב המשותף SegmentedTabs (שקוף, קו תחתון לטאב פעיל, RTL) — לא סטייל מקומי
+    expect(toggleSrc).toMatch(/<SegmentedTabs/);
     expect(toggleSrc).not.toMatch(/MarketsEmbedSwitcher/);
     expect(toggleSrc).not.toMatch(/MarketsSegmentedControl/);
     expect(toggleSrc).not.toMatch(/GlassChip/);
     expect(toggleSrc).not.toMatch(/UICard/);
     expect(toggleSrc).not.toMatch(/primary\.main/);
-    expect(toggleSrc).toMatch(/accessibilityRole="tab"/);
+    // accessibilityRole="tab" נמצא בתוך SegmentedTabs
   });
 
   it('stays sticky above the list', () => {

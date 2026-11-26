@@ -22,6 +22,7 @@ import { clearAllColmexLocal, purgeLegacyColmexPassword } from '../services/colm
 import * as Notifications from 'expo-notifications';
 import { startIapListeners } from '../services/iapService';
 import { maybeOfferBiometricLogin } from '../utils/biometricOffer';
+import { identify } from '../lib/analytics';
 
 /** בעלים של ה-cache המקומי — אם משתמש אחר נכנס (או התנתקות אוטומטית), לא מציגים לו נתונים של הקודם */
 const CACHE_OWNER_KEY = 'app_cache_owner_v1';
@@ -185,6 +186,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     if (!user?.id) return;
     void startIapListeners();
+    identify(user.id);
   }, [user?.id]);
 
   // סיסמת Colmex לא נשמרת יותר במכשיר — מוחקים שאריות מגרסאות ישנות

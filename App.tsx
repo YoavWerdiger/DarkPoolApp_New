@@ -55,6 +55,7 @@ import { useIncomingShare } from './hooks/useIncomingShare';
 import { clearShareTargets } from './lib/shareTargets';
 import { DeviceConflictScreen } from './components/DeviceConflictScreen';
 import { checkActiveDevice, installDeviceClaimOnSignIn, subscribeActiveDevice } from './services/deviceSession';
+import { track } from './lib/analytics';
 // מסכים לא-פעילים (כל ה-stacks ב-Drawer נשארים טעונים) מוקפאים ולא מתרנדרים ברקע —
 // משחרר את ה-JS thread ומשפר משמעותית את חלקות הניווט והאינטראקציות.
 enableScreens(true);
@@ -409,6 +410,7 @@ function AppContent() {
         direction={ROOT_DIR}
         theme={navigationTheme}
         onReady={__DEV__ || process.env.EXPO_PUBLIC_DEV_ROUTES ? runDevRouteTour : undefined}
+        onStateChange={trackCurrentScreen}
       >
         <Stack.Navigator screenOptions={{
           headerShown: false,
@@ -525,6 +527,16 @@ function AppContent() {
  * פיתוח בלבד: EXPO_PUBLIC_DEV_ROUTES="Main/DarkPool;Profile/Settings" — מעבר אוטומטי בין מסכים
  * כל 12 שניות (לצילומי סימולטור בבדיקות ממשק). בלי המשתנה — לא עושה כלום.
  */
+/** אנליטיקס: צפייה במסך + שלבי ההרשמה (משפך) */
+let lastTrackedScreen: string | null = null;
+function trackCurrentScreen() {
+  const name = rootNavigationRef.isReady() ? rootNavigationRef.getCurrentRoute()?.name : undefined;
+  if (!name || name === lastTrackedScreen) return;
+  lastTrackedScreen = name;
+  track('screen_view', { screen: name });
+  if (name.startsWith('Registration')) track('signup_step', { step: name });
+}
+
 function runDevRouteTour() {
   const spec: string | undefined = process.env.EXPO_PUBLIC_DEV_ROUTES;
   if (!spec) return;

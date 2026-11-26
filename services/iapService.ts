@@ -14,6 +14,7 @@ import {
 import { supabase } from './supabase';
 import { logger } from '../utils/logger';
 import { IAP_ENABLED, IAP_ONE_TIME_SKUS, IAP_SUBSCRIPTION_SKUS, planForSku, skuForPlan } from '../lib/iapProducts';
+import { track } from '../lib/analytics';
 
 export type IapVerifyResult = {
   ok: boolean;
@@ -181,7 +182,12 @@ export async function purchasePlan(planId: string, userId: string): Promise<IapP
   }
   if (!price) return { kind: 'error', message: 'המוצר לא נמצא בחנות. נסה שוב מאוחר יותר.' };
 
-  const outcome = new Promise<IapPurchaseOutcome>((resolve) => waiters.set(target.sku, resolve));
+  track('purchase_started', { plan: planId, platform: Platform.OS });
+  const outcome = new Promise<IapPurchaseOutcome>((resolve) => waiters.set(target.sku, resolve)).then((o) => {
+    if (o.kind === 'success') track('purchase_completed', { plan: planId, platform: Platform.OS });
+    else track('purchase_failed', { plan: planId, reason: o.kind });
+    return o;
+  });
   try {
     if (target.type === 'subs') {
       await requestPurchase({

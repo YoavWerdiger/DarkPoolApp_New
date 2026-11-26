@@ -74,6 +74,7 @@ import { useFrameCallback, useSharedValue, runOnJS } from 'react-native-reanimat
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { isVideoCompressionAvailable } from '../../lib/videoCompressSafe';
 import { ensureUgcTermsAccepted } from '../moderation/ugcTermsGate';
+import { track } from '../../lib/analytics';
 
 const PREVIEW_PLAYER_ID = 'chat-input-preview';
 const MAX_CHAT_MENTIONS = 10;
@@ -569,6 +570,7 @@ function ChatInputImpl({
   const handleSend = async () => {
     if (sendInFlightRef.current) return;
     if (!(await ensureUgcTermsAccepted())) return;
+    track('message_sent');
     const messageText = text.trim();
     armKeepComposerFocus();
 

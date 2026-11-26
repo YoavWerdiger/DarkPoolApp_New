@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { rootNavigationRef } from './rootNavigationRef';
 import { useDesignTokens } from '../components/ui/DesignTokens';
 import { HapticFeedback } from '../utils/hapticFeedback';
+import { track } from '../lib/analytics';
 
 /** גובה הסרגל בלי ה-safe area התחתון — MainTabs מוסיף padding כזה לסצנות כשהסרגל מוצג */
 export const MAIN_TAB_BAR_HEIGHT = 56;
@@ -88,6 +89,7 @@ export default function MainTabBar({ activeKey }: { activeKey: string | null }) 
 
   const onPress = (tab: TabDef) => {
     void HapticFeedback.selection();
+    track('tab_opened', { tab: tab.key });
     if (!rootNavigationRef.isReady()) return;
     const nav = rootNavigationRef as unknown as { navigate: (name: string, params?: object) => void };
     if (tab.target.kind === 'root') {

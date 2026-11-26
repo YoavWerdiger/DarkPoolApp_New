@@ -3,6 +3,7 @@ import * as Notifications from 'expo-notifications';
 import { showAppDialog } from '../../utils/appDialog';
 import { NotificationService } from '../../services/notificationService';
 import { logger } from '../../utils/logger';
+import { track } from '../../lib/analytics';
 
 const KEY = 'push_primer_last_asked_v1';
 const REASK_AFTER_MS = 14 * 86_400_000;
@@ -35,8 +36,12 @@ export async function maybeAskForPushPermission(context: 'watchlist' | 'chat' | 
       message: body,
       buttons: [{ text: 'הפעלת התראות' }, { text: 'לא עכשיו', style: 'cancel' }],
     });
-    if (choice !== 0) return;
-    await NotificationService.registerDeviceToken({ prompt: true });
+    if (choice !== 0) {
+      track('push_permission', { context, result: 'primer_declined' });
+      return;
+    }
+    const ok = await NotificationService.registerDeviceToken({ prompt: true });
+    track('push_permission', { context, result: ok ? 'granted' : 'denied' });
   } catch (e) {
     logger.warn('pushPrimer', 'failed', e);
   }

@@ -22,6 +22,7 @@ import {
   LearningError
 } from '../types/learning';
 import { recordPositiveMoment } from '../utils/storeReview';
+import { track } from '../lib/analytics';
 
 export class LearningService {
   // Course queries
@@ -608,7 +609,10 @@ export class LearningService {
       });
     }
 
-    if (request.status === 'completed') void recordPositiveMoment();
+    if (request.status === 'completed') {
+      void recordPositiveMoment();
+      track('lesson_completed');
+    }
 
     return {
       id: data.id,

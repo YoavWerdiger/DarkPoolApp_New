@@ -81,6 +81,7 @@ function SetupStep({ label, state }: { label: string; state: 'wait' | 'active' |
 }
 import { mediaService } from '../../services/mediaService';
 import InvestmentDisclaimer from '../../components/legal/InvestmentDisclaimer';
+import { track } from '../../lib/analytics';
 
 const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
   const { data, resetData } = useRegistration();
@@ -241,6 +242,7 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
             await AsyncStorage.removeItem('explicit_logout');
           } catch {}
           const fresh = await AuthService.getUserProfile(user.id);
+          track('signup_completed', { method: data.isGoogleSignUp ? 'oauth' : 'email' });
           setUser(fresh || { ...user, registration_completed: true });
           if (resetData) resetData();
 

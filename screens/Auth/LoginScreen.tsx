@@ -393,7 +393,7 @@ export default function LoginScreen({ navigation }: any) {
                   />
 
                   <TouchableOpacity onPress={handleForgotPassword} activeOpacity={0.7} hitSlop={8} style={styles.forgot}>
-                    <Text style={[styles.quietLinkText, { color: colors.text.secondary }]}>{i18n.t(K + 's13')}</Text>
+                    <Text style={[appCaptionStyle, styles.emailLinkText, { color: colors.text.secondary }]}>{i18n.t(K + 's13')}</Text>
                   </TouchableOpacity>
 
                   <UIButton
@@ -412,7 +412,7 @@ export default function LoginScreen({ navigation }: any) {
                     style={styles.emailLink}
                     accessibilityRole="button"
                   >
-                    <Text style={[styles.quietLinkText, { color: colors.text.secondary }]}>{i18n.t(K + 'noAccount')}</Text>
+                    <Text style={[appCaptionStyle, styles.emailLinkText, { color: colors.text.secondary }]}>{i18n.t(K + 'noAccount')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -443,7 +443,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  quietLinkText: { fontSize: 15, fontWeight: '500' },
   backBtn: { alignSelf: 'flex-start', width: 44, height: 44, justifyContent: 'center', marginBottom: 8 },
   forgot: { alignSelf: 'flex-end', marginTop: -4, marginBottom: 20 },
   buttonStack: {

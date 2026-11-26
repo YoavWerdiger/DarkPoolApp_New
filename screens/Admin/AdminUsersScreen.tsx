@@ -3,7 +3,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
-  FlatList,
   TextInput,
   StyleSheet,
   Image,
@@ -58,6 +57,7 @@ import {
 import { formatIntroDataRows } from '../../constants/onboardingQuestionnaire';
 import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { FlashList } from '@shopify/flash-list';
 
 const FILTERS: { key: AdminUserFilter; label: string }[] = [
   { key: 'all', label: i18n.t('auto.screens__Admin__AdminUsersScreen.s1') },
@@ -457,7 +457,7 @@ export default function AdminUsersScreen({ navigation }: any) {
       {loading ? (
         <AdminLoadingState label={i18n.t('auto.screens__Admin__AdminUsersScreen.s56')} />
       ) : (
-        <FlatList
+        <FlashList
           data={users}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}

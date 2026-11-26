@@ -6,7 +6,7 @@ import { appQueryKeys } from '../../lib/appQueryKeys';
 import type { NewsArticle } from '../../services/newsService';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { RefreshControl } from '../../components/ui/AppRefreshControl';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +24,7 @@ import { NewsScreenShell } from './NewsScreenShell';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { FlashList } from '@shopify/flash-list';
 
 interface LikedArticleCardProps {
   article: LikedArticle;
@@ -402,7 +403,7 @@ export default function LikedArticlesScreen() {
 
   return (
     <NewsScreenShell title={i18n.t('auto.screens__News__LikedArticlesScreen.s15')} headerRight={headerRight} onBack={goBack}>
-      <FlatList onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
+      <FlashList onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
         data={likedArticles}
         keyExtractor={(item) => item.id}
         renderItem={renderArticle}

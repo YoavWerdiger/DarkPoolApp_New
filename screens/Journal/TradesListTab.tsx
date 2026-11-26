@@ -2,7 +2,7 @@ import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, TextInput, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -32,6 +32,7 @@ import {
   journalRtlContent,
   journalSectionTitleStyle,
 } from './journalLayout';
+import { FlashList } from '@shopify/flash-list';
 
 export type { Trade } from './tradeTypes';
 
@@ -372,7 +373,7 @@ export default function TradesListTab() {
         />
       ) : (
         <View style={styles.listWrap}>
-          <FlatList
+          <FlashList
             data={filteredTrades}
             ListHeaderComponent={listHeader}
 
@@ -380,10 +381,6 @@ export default function TradesListTab() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={[styles.listContent, { paddingBottom: mainTabsHeight + 100 }]}
             showsVerticalScrollIndicator={true}
-            initialNumToRender={8}
-            maxToRenderPerBatch={10}
-            windowSize={10}
-            removeClippedSubviews={false}
           />
         </View>
       )}

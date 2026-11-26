@@ -50,7 +50,7 @@ describe('DarkPoolTickerScreen topology', () => {
 
   it('keeps logo + ticker + name on one header row, company name physical left', () => {
     expect(screenSrc).toMatch(/topBar: \{[\s\S]*?identityRow/);
-    expect(screenSrc).toMatch(/identityRow: \{[\s\S]*?direction: 'ltr'/);
+    expect(screenSrc).toMatch(/identityRow: \{[\s\S]*?direction: (?:'ltr'|ROOT_DIR)/);
     expect(screenSrc).toMatch(/identityTicker: \{[\s\S]*?textAlign: 'left'/);
     expect(screenSrc).toMatch(/companyName: \{[\s\S]*?darkPoolPhysicalLeftText/);
     expect(screenSrc).not.toMatch(/headerTicker/);

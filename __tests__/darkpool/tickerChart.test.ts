@@ -121,7 +121,8 @@ describe('yahooRequestForTickerRange', () => {
       const spec = yahooRequestForTickerRange(range);
       expect(spec.yahooRange).not.toBe('max');
       if (range === '1D') expect(spec.interval).toBe('5m');
-      else if (range === '1W' || range === '1M') expect(spec.interval).toBe('1h');
+      else if (range === '1W') expect(spec.interval).toBe('5m');
+      else if (range === '1M') expect(spec.interval).toBe('30m');
       else expect(spec.interval).toBe('1d');
     }
   });

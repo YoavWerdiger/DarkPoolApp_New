@@ -76,7 +76,8 @@ describe('media attach sheet — WhatsApp open path', () => {
     expect(sheetSrc).toContain('runAfterSheetDismiss');
     expect(sheetSrc).toContain('onBuiltinCamera');
     expect(sheetSrc).toContain('openSnapIndex={0}');
-    expect(sheetSrc).not.toContain('launchImageLibraryAsync');
+    // אנדרואיד: בוחר התמונות של המערכת (Photo Picker) — בלי הרשאת READ_MEDIA_* (מדיניות Google Play)
+    expect(sheetSrc).toMatch(/Platform\.OS === 'android'[\s\S]*launchImageLibraryAsync/);
   });
 
   it('does not flip fitContent after the sheet is visible', () => {

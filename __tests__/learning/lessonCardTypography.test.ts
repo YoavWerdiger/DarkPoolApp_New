@@ -18,7 +18,7 @@ describe('academy lesson card typography', () => {
     expect(lessonRowSrc).toContain('appCardBodyStyle');
     expect(lessonRowSrc).not.toContain('cardTitleToBodyGap');
     expect(lessonRowSrc).toContain('cardTitleToSubtitleGap');
-    expect(lessonRowSrc).toContain('שיעור {index + 1}');
+    expect(lessonRowSrc).toContain('שיעור {{v0}}');
     expect(lessonRowSrc).not.toContain('marginTop: T.spacing.xs');
   });
 

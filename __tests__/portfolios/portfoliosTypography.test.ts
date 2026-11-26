@@ -35,7 +35,7 @@ describe('portfolios typography (journal topology)', () => {
     expect(portfolioCardSrc).toMatch(/titleLatin:[\s\S]*writingDirection:\s*'ltr'/);
     expect(portfolioCardSrc).toContain('background.cardSolid');
     expect(portfolioCardSrc).not.toMatch(/fontSize:\s*10/);
-    expect(portfolioCardSrc).toMatch(/titleBlock:\s*\{[^}]*direction:\s*'ltr'/);
+    expect(portfolioCardSrc).toMatch(/titleBlock:\s*\{[^}]*direction:\s*(?:'ltr'|ROOT_DIR)/);
   });
 
   it('OverviewTab uses in-card section titles (cardTitle tier)', () => {

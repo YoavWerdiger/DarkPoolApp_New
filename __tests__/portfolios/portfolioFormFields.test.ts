@@ -15,7 +15,7 @@ const fieldsSrc = readRel('screens/Portfolios/components/PortfolioFormFields.tsx
 const createSrc = readRel('screens/Portfolios/CreatePortfolioScreen.tsx');
 const connectSrc = readRel('screens/Portfolios/ConnectBrokerScreen.tsx');
 const selectBrokerSrc = readRel('screens/Portfolios/SelectBrokerAccountScreen.tsx');
-const addTxSrc = readRel('screens/Portfolios/AddTransactionScreen.tsx');
+const addTxSrc = withHebrew(readRel('screens/Portfolios/AddTransactionScreen.tsx'));
 const importSrc = readRel('screens/Portfolios/ImportTransactionsScreen.tsx');
 const portfoliosTabSrc = readRel('screens/Portfolios/PortfoliosTab.tsx');
 

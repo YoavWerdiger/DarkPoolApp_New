@@ -11,7 +11,7 @@ describe('global app dialog card', () => {
   it('uses the theme canvas, not a separate card fill', () => {
     expect(alertSrc).toContain('backgroundColor: colors.background.primary');
     expect(alertSrc).toContain('colors.background.cardSolid');
-    expect(alertSrc).toContain("direction: 'ltr'");
+    expect(alertSrc).toMatch(/direction: (?:'ltr'|ROOT_DIR)/);
     expect(alertSrc).toContain("flexDirection: 'row-reverse'");
     expect(alertSrc).not.toContain('I18nManager');
     expect(alertSrc).toContain('UI_CARD_RADIUS');

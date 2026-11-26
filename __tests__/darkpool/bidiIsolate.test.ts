@@ -263,13 +263,13 @@ describe('insider feed Hebrew — no direction:ltr on Text', () => {
     expect(cardSrc).toMatch(/action: \{\s*\.\.\.darkPoolPhysicalRightText/);
     expect(cardSrc).toMatch(/personHint: \{\s*\.\.\.darkPoolPhysicalRightText/);
     expect(cardSrc).toMatch(/actionMeta: \{\s*\.\.\.darkPoolPhysicalRightText/);
-    expect(cardSrc).toMatch(/textCol: \{[\s\S]*?direction: 'ltr'/);
-    expect(cardSrc).toMatch(/nestedPrice: \{[\s\S]*?direction: 'ltr'/);
+    expect(cardSrc).toMatch(/textCol: \{[\s\S]*?direction: (?:'ltr'|ROOT_DIR)/);
+    expect(cardSrc).toMatch(/nestedPrice: \{[\s\S]*?direction: (?:'ltr'|ROOT_DIR)/);
     expect(cardSrc).toMatch(/nestedPrice: \{[\s\S]*?alignItems: 'flex-end'/);
     expect(cardSrc).toMatch(/nestedPriceLabel: \{[\s\S]*?textAlign: 'right'/);
     expect(cardSrc).toMatch(/nestedPriceValue: \{[\s\S]*?textAlign: 'right'/);
-    expect(cardSrc).toMatch(/nestedSinceRow: \{[\s\S]*?direction: 'ltr'/);
-    expect(cardSrc).toMatch(/nestedSinceLabel: \{[\s\S]*?writingDirection: 'rtl'/);
+    expect(cardSrc).toMatch(/nestedSinceRow: \{[\s\S]*?direction: (?:'ltr'|ROOT_DIR)/);
+    expect(cardSrc).toMatch(/nestedSinceLabel: \{[\s\S]*?writingDirection: (?:'rtl'|TEXT_DIR)/);
   });
 
   it('keeps ticker+logo as a non-shrinking cluster opposite the live price', () => {
@@ -287,7 +287,7 @@ describe('insider feed Hebrew — no direction:ltr on Text', () => {
 
   it('HomeScreen section title uses the Hebrew title style inside an LTR box', () => {
     expect(homeSrc).toMatch(/darkPoolHebrewTitleStyle/);
-    expect(homeSrc).toMatch(/tradesHead: \{\s*direction: 'ltr'/);
+    expect(homeSrc).toMatch(/tradesHead: \{\s*direction: (?:'ltr'|ROOT_DIR)/);
     expect(homeSrc).not.toMatch(/sectionTitle: \{\s*\.\.\.darkPoolSectionTitleStyle/);
   });
 

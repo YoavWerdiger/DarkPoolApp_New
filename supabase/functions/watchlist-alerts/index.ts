@@ -15,6 +15,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.94.1';
 import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import { ensurePushBidi } from '../_shared/notificationBidi.ts';
 import { withPushIdentity } from '../_shared/pushIdentity.ts';
+import { fetchYahooCompatible } from '../_shared/marketChart.ts';
 import {
   evaluateWatchlistItem,
   itemNeedsRange,
@@ -112,7 +113,7 @@ async function finnhubQuote(symbol: string): Promise<Quote | null> {
 
 async function yahooChart(symbol: string, range: string) {
   try {
-    const res = await fetch(`${YAHOO_CHART}/${encodeURIComponent(symbol.replace('.', '-'))}?range=${range}&interval=1d`, { headers: UA });
+    const res = await fetchYahooCompatible(`${YAHOO_CHART}/${encodeURIComponent(symbol)}?range=${range}&interval=1d`); // EODHD (פריט 17)
     if (!res.ok) return null;
     const data = await res.json();
     return data?.chart?.result?.[0] ?? null;

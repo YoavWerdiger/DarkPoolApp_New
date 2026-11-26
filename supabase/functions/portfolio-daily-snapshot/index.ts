@@ -16,6 +16,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1';
+import { fetchYahooCompatible } from '../_shared/marketChart.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -66,7 +67,7 @@ async function fetchYahooDaily(
     const url = `${YAHOO_BASE}/${encodeURIComponent(
       symbol
     )}?range=${range}&interval=1d`;
-    const res = await fetch(url);
+    const res = await fetchYahooCompatible(url); // EODHD (פריט 17)
     if (!res.ok) return [];
     const data = await res.json();
     const r = data?.chart?.result?.[0];

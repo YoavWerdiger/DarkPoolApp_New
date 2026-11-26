@@ -1,3 +1,4 @@
+import { fetchYahooCompatible } from './marketChart.ts';
 /**
  * Reconstruction של תיק פוליטיקאי מעסקאות STIR (UW) + מחירי Yahoo.
  * positions-only — ללא cash flow מדויק (כמו Insider Wave).
@@ -254,14 +255,7 @@ export async function fetchYahooDaily(
   const timer = setTimeout(() => controller.abort(), 4500);
   try {
     const url = `${YAHOO_BASE}/${encodeURIComponent(symbol)}?range=${range}&interval=1d`;
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        Accept: 'application/json',
-      },
-    });
+    const res = await fetchYahooCompatible(url); // EODHD (פריט 17)
     if (!res.ok) return out;
     const data = await res.json();
     const result = data?.chart?.result?.[0];

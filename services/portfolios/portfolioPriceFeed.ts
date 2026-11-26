@@ -43,15 +43,29 @@ async function finnhubProxyFetch(endpoint: 'quote' | 'search', params: Record<st
 }
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart';
 
-/** בלי User-Agent‏ Yahoo מחזיר 429 והגרף נופל לנקודת המחיר החי בלבד. */
-const YAHOO_CHART_HEADERS = {
-  'User-Agent':
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-  Accept: 'application/json',
-};
 
-function fetchYahooChart(url: string): Promise<Response> {
-  return fetch(url, { headers: YAHOO_CHART_HEADERS });
+/**
+ * היסטוריית מחירים: EODHD דרך Edge Function market-chart (ספק מורשה, המפתח בשרת).
+ * התשובה בפורמט Yahoo v8 chart — כל קוד הפענוח למטה נשאר כמו שהוא (פריט 17).
+ * ה-URL בסגנון Yahoo משמש רק כדי להעביר symbol / range / interval.
+ */
+async function fetchYahooChart(url: string): Promise<Response> {
+  const u = new URL(url);
+  const symbol = decodeURIComponent(u.pathname.split('/').pop() ?? '');
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  const base = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+  const anon = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+  if (!token || !base) return new Response(null, { status: 401 });
+  return fetch(`${base}/functions/v1/market-chart`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: anon, Authorization: `Bearer ${token}` },
+    body: JSON.stringify({
+      symbol,
+      range: u.searchParams.get('range') ?? '1mo',
+      interval: u.searchParams.get('interval') ?? '1d',
+    }),
+  });
 }
 
 interface CachedQuote {
@@ -606,33 +620,9 @@ export async function searchSymbols(
   }
 }
 
-/** גיבוי לחיפוש — Yahoo search (בלי מפתח). סוגים ממופים לשמות של Finnhub כדי שהסינון יעבוד אותו דבר. */
-async function searchSymbolsYahoo(query: string): Promise<SymbolSearchResult[]> {
-  try {
-    const res = await fetch(
-      `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=15&newsCount=0`,
-      { headers: YAHOO_CHART_HEADERS }
-    );
-    if (!res.ok) return [];
-    const data = await res.json();
-    const quotes = (data?.quotes ?? []) as Array<{
-      symbol?: string;
-      shortname?: string;
-      longname?: string;
-      quoteType?: string;
-    }>;
-    const typeMap: Record<string, string> = { EQUITY: 'Common Stock', ETF: 'ETP' };
-    return quotes
-      .filter((q) => q.symbol && q.quoteType && typeMap[q.quoteType])
-      .map((q) => ({
-        symbol: q.symbol!,
-        description: q.longname || q.shortname || q.symbol!,
-        display_symbol: q.symbol!,
-        type: typeMap[q.quoteType!],
-      }));
-  } catch {
-    return [];
-  }
+/** גיבוי לחיפוש — Yahoo הוסר (API לא רשמי, פריט 17). החיפוש עובר דרך finnhub-proxy בלבד. */
+async function searchSymbolsYahoo(_query: string): Promise<SymbolSearchResult[]> {
+  return [];
 }
 
 /** ניקוי cache ידני – שימושי כש-pull-to-refresh */

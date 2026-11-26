@@ -58,7 +58,7 @@ import ForwardMessageModal from './ForwardMessageModal';
 import ChatComposerBar from './ChatComposerBar';
 import ReactionPicker from './ReactionPicker';
 import { MediaBlurBackdrop, MediaKeyboardDim } from './MediaViewerChrome';
-import type { ScrollViewInstance } from 'react-native';
+import type { ScrollViewInstance, TextInputInstance } from 'react-native';
 
 /** צילום מסך של טלפון: גבוה וצר (h/w ≥ 1.9 — מכשירים מודרניים 19.5:9) */
 function isPhoneScreenshotRatio(w: number, h: number): boolean {
@@ -94,7 +94,7 @@ function MediaPreviewBody({
   const tokens = useDesignTokens();
   const iconColor = isDarkMode ? tokens.colors.text.primary : tokens.colors.text.inverse;
   const [videoPosterUri, setVideoPosterUri] = useState<string | null>(null);
-  const captionRef = useRef<TextInput>(null);
+  const captionRef = useRef<TextInputInstance>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
   
   const [localFiles, setLocalFiles] = useState(mediaFiles);

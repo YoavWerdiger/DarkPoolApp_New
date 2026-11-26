@@ -75,6 +75,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { isVideoCompressionAvailable } from '../../lib/videoCompressSafe';
 import { ensureUgcTermsAccepted } from '../moderation/ugcTermsGate';
 import { track } from '../../lib/analytics';
+import type { TextInputInstance } from 'react-native';
 
 const PREVIEW_PLAYER_ID = 'chat-input-preview';
 const MAX_CHAT_MENTIONS = 10;
@@ -320,7 +321,7 @@ function ChatInputImpl({
   const [communityMentions, setCommunityMentions] = useState<CommunityMention[]>([]);
 
 
-  const textInputRef = useRef<TextInput>(null);
+  const textInputRef = useRef<TextInputInstance>(null);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const recordingRef = useRef<AudioRecordingHandle | null>(null);
   const soundRef = useRef<AudioSoundHandle | null>(null);

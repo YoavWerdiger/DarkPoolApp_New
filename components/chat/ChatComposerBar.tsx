@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import UICard from '../ui/UICard';
 import { CHROME_UICARD, chromeSurfaceCardStyle } from '../ui/chromeControl';
 import { useDesignTokens } from '../ui/DesignTokens';
+import type { TextInputInstance } from 'react-native';
 
 /**
  * שורת הקלט המשותפת של הצ'אט — גלולת זכוכית עם שדה טקסט RTL רב-שורות
@@ -31,7 +32,7 @@ export interface ChatComposerBarProps {
   multiline?: boolean;
   numberOfLines?: number;
   maxLength?: number;
-  inputRef?: React.Ref<TextInput>;
+  inputRef?: React.Ref<TextInputInstance>;
   nativeID?: string;
   keyboardAppearance?: TextInputProps['keyboardAppearance'];
   blurOnSubmit?: boolean;

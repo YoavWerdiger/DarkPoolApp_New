@@ -3,7 +3,7 @@ import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Collapsible } from '../../components/ui/Collapsible';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Pressable, Dimensions, TextInput } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Pressable, Dimensions, TextInput, AppState } from 'react-native';
 import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Video, ResizeMode } from '../../lib/expoAvSafe';
@@ -219,6 +219,31 @@ export const LessonPlayerScreen: React.FC = () => {
       });
     }
   }, [lessonId, saveProgressMutation, duration]);
+
+  // שמירת התקדמות כשהאפליקציה יוצאת לרקע / המסך נסגר — לא רק כל 5 שניות
+  const latestRef = useRef({ position: 0, duration: 0 });
+  latestRef.current = { position: videoPosition, duration };
+  const saveRef = useRef(saveProgressMutation.mutate);
+  saveRef.current = saveProgressMutation.mutate;
+  useEffect(() => {
+    const flush = () => {
+      const { position, duration: total } = latestRef.current;
+      if (!lessonId || position <= 0 || total <= 0) return;
+      saveRef.current({
+        lesson_id: lessonId,
+        status: 'in_progress',
+        last_position_seconds: Math.floor(position),
+        total_duration_seconds: Math.floor(total),
+      });
+    };
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'background' || state === 'inactive') flush();
+    });
+    return () => {
+      sub.remove();
+      flush();
+    };
+  }, [lessonId]);
 
   const handleVideoComplete = useCallback(() => {
     // Mark lesson as completed

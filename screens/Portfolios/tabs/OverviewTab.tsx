@@ -75,6 +75,7 @@ import {
   JournalStatsCard,
 } from '../components/JournalDashboard';
 import Animated, { FadeIn, useSharedValue } from 'react-native-reanimated';
+import { useScreenActiveRef } from '../../../hooks/useScreenActiveRef';
 
 /** גובה הגרף — כמו בתיק האינסיידרים */
 const HERO_CHART_HEIGHT = 220;
@@ -262,6 +263,7 @@ export default function OverviewTab({
     };
   }, [chartSeries, openTrades, openTradeQuotes, period, portfolio.available_cash]);
 
+  const screenActiveRef = useScreenActiveRef();
   // טוען סטטיסטיקות מסחר (סגורות) + פוזיציות פתוחות (לחישוב ערך תיק חי)
   // chartRefreshKey מאלץ רענון גם אחרי סגירת פוזיציה
   useEffect(() => {
@@ -311,6 +313,7 @@ export default function OverviewTab({
         if (open.length > 0) {
           const symbols = [...new Set(open.map((t) => t.symbol))];
           const fetchPrices = () => {
+            if (!screenActiveRef.current) return;
             void getQuotes(symbols).then((quotesMap) => {
               if (cancel) return;
               const next = new Map<string, LiveQuote>();

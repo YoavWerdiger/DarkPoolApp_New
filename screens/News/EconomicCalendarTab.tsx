@@ -66,6 +66,16 @@ function formatEventCountdown(remainingMs: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
+/** הקאונטדאון מתעדכן כל שנייה רק כאן — לא כל הטאב והרשימה (פריט 50) */
+function LiveCountdown({ at }: { at: number }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return <>{formatEventCountdown(at - now)}</>;
+}
+
 /**
  * האירוע העתידי הקרוב ביותר להיום — אותה כוונה כמו גלילה ל־nearest,
  * עם דיוק שניות + חלון "עכשיו" קצר אחרי הזמן.
@@ -82,7 +92,7 @@ function findCountdownTarget(
   list: EconEvent[],
   day: Date,
   now: Date,
-): { index: number; label: string } | null {
+): { index: number; at: number } | null {
   if (list.length === 0) return null;
   if (day.toDateString() !== now.toDateString()) return null;
 
@@ -91,11 +101,8 @@ function findCountdownTarget(
     if (String(list[i].actual ?? '').trim()) continue;
     const eventAt = getEventDateOnDay(day, list[i].time);
     const remaining = eventAt.getTime() - now.getTime();
-    if (remaining > 0) {
-      return { index: i, label: formatEventCountdown(remaining) };
-    }
     if (remaining > -COUNTDOWN_GRACE_MS) {
-      return { index: i, label: i18n.t('auto.screens__News__EconomicCalendarTab.s1') };
+      return { index: i, at: eventAt.getTime() };
     }
   }
   return null;
@@ -130,12 +137,13 @@ const EconomicEventCard: React.FC<{
   /** לחיצה ארוכה — «העבר» לקבוצות צ׳אט */
   onLongPress?: (event: EconEvent) => void;
   /** קאונטדאון חי לאירוע הקרוב ביותר בלבד — מחליף את בייג' השעה. */
-  countdownLabel?: string;
+  /** זמן האירוע (ms) אם זה האירוע הקרוב — מציג קאונטדאון חי */
+  countdownAt?: number;
 }> = ({
   event,
   onPress,
   onLongPress,
-  countdownLabel,
+  countdownAt,
 }) => {
   const DesignTokens = useDesignTokens();
   
@@ -237,7 +245,7 @@ const EconomicEventCard: React.FC<{
                 style={{
                   // קאונטדאון לדוח הקרוב — רקע אדום שבולט; שעה רגילה — רקע הקנבס
                   // שעה רגילה — בצבע ה-CTA של ערכת הנושא
-                  backgroundColor: countdownLabel
+                  backgroundColor: countdownAt != null
                     ? DesignTokens.colors.danger.main
                     : DesignTokens.colors.primary.lightCta,
                   paddingHorizontal: 10,
@@ -249,12 +257,12 @@ const EconomicEventCard: React.FC<{
                 <Text
                   style={{
                     ...APP_TYPE.cardMetricLabel,
-                    color: countdownLabel ? '#FFFFFF' : DesignTokens.colors.text.inverse,
+                    color: countdownAt != null ? '#FFFFFF' : DesignTokens.colors.text.inverse,
                     textAlign: 'center',
                     fontVariant: ['tabular-nums'],
                   }}
                 >
-                  {countdownLabel ?? event.time}
+                  {countdownAt != null ? <LiveCountdown at={countdownAt} /> : event.time}
                 </Text>
               </View>
             </View>
@@ -438,7 +446,8 @@ export default function EconomicCalendarTab({
   useEffect(() => {
     if (!isFocused || !isSelectedToday) return;
     setNowMs(Date.now());
-    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    // רק בוחר מי האירוע הקרוב — הספירה עצמה ב-LiveCountdown
+    const id = setInterval(() => setNowMs(Date.now()), 15_000);
     return () => clearInterval(id);
   }, [isFocused, isSelectedToday]);
 
@@ -941,9 +950,7 @@ export default function EconomicCalendarTab({
         event={item}
         onPress={handleEventPress}
         onLongPress={handleEventLongPress}
-        countdownLabel={
-          countdownTarget?.index === index ? countdownTarget.label : undefined
-        }
+        countdownAt={countdownTarget?.index === index ? countdownTarget.at : undefined}
       />
     </View>
   );

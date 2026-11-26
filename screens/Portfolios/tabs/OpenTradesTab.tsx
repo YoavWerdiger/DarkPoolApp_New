@@ -72,6 +72,7 @@ import { formatThousandsInput, parseFormattedNumber } from '../../../utils/numbe
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { APP_TYPE } from '../../../components/ui/appType';
 import { FloatingLabelField, FieldGroupLabel } from '../../../components/ui/FloatingLabelField';
+import { useScreenActiveRef } from '../../../hooks/useScreenActiveRef';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 /** גובה תוכן שיט הסגירה האחרון — הפתיחה הבאה עולה ישר בגובה הנכון */
@@ -172,12 +173,15 @@ export default function OpenTradesTab({
   }, [load]);
 
   // רענון מחירים חי כל 30ש — קריטי לתיקי Colmex (holdings ריקים, בלי WS)
+  const screenActiveRef = useScreenActiveRef();
   useEffect(() => {
     if (trades.length === 0) return;
     const symbols = Array.from(new Set(trades.map((t) => t.symbol)));
     if (symbols.length === 0) return;
 
     const refreshPrices = () => {
+      // מסך מוסתר / אפליקציה ברקע — לא מושכים מחירים
+      if (!screenActiveRef.current) return;
       void getQuotes(symbols).then((quotesMap) => {
         const prices: Record<string, number> = {};
         for (const [sym, q] of quotesMap) {
@@ -189,7 +193,7 @@ export default function OpenTradesTab({
 
     const id = setInterval(refreshPrices, 30_000);
     return () => clearInterval(id);
-  }, [trades]);
+  }, [trades, screenActiveRef]);
 
   const refreshKeyInitialized = useRef(false);
   useEffect(() => {

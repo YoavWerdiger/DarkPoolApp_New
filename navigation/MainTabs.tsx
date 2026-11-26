@@ -35,6 +35,7 @@ import MarketsHeatmapScreen from '../screens/Markets/MarketsHeatmapScreen';
 import ChatStack from './ChatStack';
 import HomeScreen from '../screens/Home/HomeScreen';
 import MainTabBar, { MAIN_TAB_BAR_HEIGHT, useMainTabBarState } from './MainTabBar';
+import FirstRunTips from './FirstRunTips';
 import LearningStack from './LearningStack';
 import {
   MAIN_DRAWER_NAVIGATOR_ID,
@@ -529,6 +530,7 @@ export default function MainTabs() {
         />
       </Drawer.Navigator>
       {tabBar.visible ? <MainTabBar activeKey={tabBar.activeKey} /> : null}
+      {tabBar.visible && tabBar.activeKey === 'home' ? <FirstRunTips bottomOffset={tabBarSpace} /> : null}
     </View>
   );
 }

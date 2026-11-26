@@ -43,6 +43,7 @@ import { MarketsErrorBoundary } from '../Markets/MarketsErrorBoundary';
 import { PortfolioSwitcher } from '../Portfolios/components/PortfolioSwitcher';
 import UIButton from '../../components/ui/UIButton';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
+import MarketStatusPill from '../../components/ui/MarketStatusPill';
 
 function hapticDragStart() {
   void HapticFeedback.medium();
@@ -521,7 +522,8 @@ export default function WatchlistScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        addMoreBtn: {
+        delayedNote: { fontSize: 11, lineHeight: 16, textAlign: 'center', marginTop: 10, paddingHorizontal: 16 },
+  addMoreBtn: {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
@@ -586,6 +588,7 @@ export default function WatchlistScreen() {
         <MainDrawerScreenHeader
           title={i18n.t('auto.screens__Watchlist__WatchlistScreen.s23')}
           onMenuPress={openMainDrawer}
+          titleAccessory={<MarketStatusPill />}
           // בורר רשימות — כמו בורר התיקים ביומן המסחר
           sectionContainerStyle={{
             paddingTop: 0,
@@ -702,6 +705,7 @@ export default function WatchlistScreen() {
                       renderItem={renderWatchlistItem}
                       ListFooterComponent={
                         listData.length > 0 ? (
+                          <View>
                           <Pressable
                             onPress={() => {
                               void HapticFeedback.selection();
@@ -715,6 +719,11 @@ export default function WatchlistScreen() {
                               {i18n.t('auto.screens__Watchlist__components__WatchlistAddSheet.s20')}
                             </Text>
                           </Pressable>
+                          {/* פריט 33: מחירים שאינם בזמן אמת */}
+                          <Text style={[styles.delayedNote, { color: tokens.colors.text.tertiary }]}>
+                            המחירים עשויים להיות מושהים. מחוץ לשעות המסחר (Pre / After) מוצג מחיר הסגירה האחרון.
+                          </Text>
+                          </View>
                         ) : undefined
                       }
                     />

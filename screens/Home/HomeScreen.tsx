@@ -17,6 +17,7 @@ import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navig
 import { triggerDrawerMenuHaptic, HapticFeedback } from '../../utils/hapticFeedback';
 import { formatUntil, getMarketSession, israelTime, MARKET_PHASE_LABEL, type MarketSession } from '../../utils/marketSession';
 import { TEXT_DIR } from '../../lib/i18n/language';
+import MarketStatusPill from '../../components/ui/MarketStatusPill';
 
 const INDICES: { symbol: string; label: string }[] = [
   { symbol: 'SPY', label: 'S&P 500' },
@@ -123,7 +124,11 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-      <MainDrawerScreenHeader title={firstName ? `שלום, ${firstName}` : 'בית'} onMenuPress={openMenu} />
+      <MainDrawerScreenHeader
+        title={firstName ? `שלום, ${firstName}` : 'בית'}
+        onMenuPress={openMenu}
+        titleAccessory={<MarketStatusPill compact />}
+      />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />}

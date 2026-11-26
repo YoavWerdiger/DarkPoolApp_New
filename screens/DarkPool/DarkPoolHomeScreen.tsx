@@ -8,12 +8,10 @@ import { runAfterInteractions } from '../../utils/runAfterInteractions';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  FlatList,
   ScrollView,
   StyleSheet,
   Text,
   View,
-  type ListRenderItem,
 } from 'react-native';
 import { RefreshControl } from '../../components/ui/AppRefreshControl';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -74,6 +72,7 @@ import { RtlHorizontalScroll } from '../../components/ui/RtlHorizontalScroll';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 import { EmptyState } from '../../components/ui/EmptyState';
 import InvestmentDisclaimer from '../../components/legal/InvestmentDisclaimer';
+import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 
 const FEED_INITIAL_RENDER = 8;
 const FEED_MAX_BATCH = 6;
@@ -335,7 +334,7 @@ export default function DarkPoolHomeScreen() {
         />
 
         {/* תמיד אותה רשימה: הכותרת והצ'יפים אמיתיים מהרגע הראשון; בטעינה — כרטיסי שלד במקום הכרטיסים */}
-        <FlatList onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
+        <FlashList onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
           data={visibleRows}
           extraData={feedQuotes}
           keyExtractor={keyExtractor}
@@ -346,11 +345,6 @@ export default function DarkPoolHomeScreen() {
           style={darkPoolTransparentFill}
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
-          initialNumToRender={FEED_INITIAL_RENDER}
-          maxToRenderPerBatch={FEED_MAX_BATCH}
-          windowSize={FEED_WINDOW_SIZE}
-          updateCellsBatchingPeriod={40}
-          removeClippedSubviews={false}
           refreshControl={
             <RefreshControl hideNative
               refreshing={refreshing}

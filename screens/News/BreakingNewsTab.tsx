@@ -3,7 +3,7 @@ import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { View, Text, TextInput, FlatList, Pressable, TouchableOpacity, Image, Linking, Modal, ScrollView, Animated, Dimensions, StyleSheet, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, TouchableOpacity, Image, Linking, Modal, ScrollView, Animated, Dimensions, StyleSheet, Platform } from 'react-native';
 import { RefreshControl } from '../../components/ui/AppRefreshControl';
 import { Ionicons } from '@expo/vector-icons';
 import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
@@ -43,6 +43,7 @@ import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { FlashList } from '@shopify/flash-list';
 // Fear & Greed מוצג בטאב "עיקרי מדדים" בלבד
 
 const NEWS_DETAIL_IMAGE_HEIGHT = 240;
@@ -1561,7 +1562,7 @@ export default function BreakingNewsTab({
       {/* חיפוש + כפתור כתבות שאהבתי — קבועים, מחוץ לרשימה */}
       {renderSearchHeader()}
       <View style={{ flex: 1 }}>
-        <FlatList onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
+        <FlashList onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
           data={filteredArticles}
           keyExtractor={(item) => item.id}
           renderItem={renderArticle}

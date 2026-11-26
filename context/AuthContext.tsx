@@ -72,6 +72,11 @@ interface AuthContextType {
     isNewUser?: boolean;
     googleUser?: { id: string; email: string; fullName: string; profileImage: string | null };
   }>;
+  signInWithApple: () => Promise<{
+    error: string | null;
+    isNewUser?: boolean;
+    googleUser?: { id: string; email: string; fullName: string; profileImage: string | null };
+  }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -504,6 +509,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const signInWithApple = async (): Promise<{
+    error: string | null;
+    isNewUser?: boolean;
+    googleUser?: { id: string; email: string; fullName: string; profileImage: string | null };
+  }> => {
+    setIsLoading(true);
+    try {
+      await setPasswordRecoveryMode(false);
+      const result = await AuthService.signInWithApple();
+      if (result.error) return { error: result.error };
+      if (result.user && !result.isNewUser) {
+        await setPasswordRecoveryMode(false);
+        setUser(result.user);
+        setTimeout(() => registerTokenOnce(), 2000);
+      }
+      return {
+        error: null,
+        isNewUser: result.isNewUser,
+        googleUser: result.googleUser,
+      };
+    } catch (error: any) {
+      logger.error('AuthContext', 'Apple sign in exception', error);
+      return { error: error.message || i18n.t('auto.context__AuthContext.s1') };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const value = useMemo<AuthContextType>(() => ({
     user,
     isLoading,
@@ -516,6 +549,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser,
     attemptAutoLogin,
     signInWithGoogle,
+    signInWithApple,
   }), [user, isLoading, passwordRecoveryMode, setPasswordRecoveryMode]);
 
   return (

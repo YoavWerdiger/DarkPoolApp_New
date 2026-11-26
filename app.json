@@ -18,7 +18,8 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.darkpool.app",
-      "deploymentTarget": "16.4"
+      "deploymentTarget": "16.4",
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
@@ -109,7 +110,8 @@
         }
       ],
       "./plugins/withShareSuggestions",
-      "expo-asset"
+      "expo-asset",
+      "expo-apple-authentication"
     ],
     "owner": "darkpoolapp"
   },

@@ -7,6 +7,8 @@ import { openAuthSessionAsync, type WebBrowserAuthSessionResult } from '../lib/e
 import { makeRedirectUri } from 'expo-auth-session';
 import * as Linking from 'expo-linking';
 import Constants from 'expo-constants';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import { logger } from '../utils/logger';
 import { SUPABASE_URL } from '../config/publicEnv';
 import { mediaService } from './mediaService';
@@ -1570,70 +1572,7 @@ export class AuthService {
           return { user: null, error: sessionError?.message || i18n.t('auto.services__authService.s45') };
         }
 
-        // Check if user exists in our database / השלים רישום
-        const existingUser = await this.getUserProfile(sessionData.user.id);
-        const createdMs = new Date(sessionData.user.created_at).getTime();
-        const justCreatedAccount = Number.isFinite(createdMs) && Date.now() - createdMs < 5 * 60 * 1000;
-        const emptyIntro =
-          !existingUser?.intro_data ||
-          (typeof existingUser.intro_data === 'object' &&
-            Object.keys(existingUser.intro_data as object).length === 0);
-
-        // טריגר on_auth_user_created עלול ליצור שורה ריקה לפני הבדיקה —
-        // יוצרים/משלימים פרופיל רק כשאין שורה, או כשזה stub טרי בלי השלמה.
-        // חשוב: לא לעשות upsert מדכא על משתמש קיים (מוחק subscription / כופה false מחדש).
-        const needsProfileBootstrap = !existingUser;
-        const needsStubCompletion =
-          !!existingUser &&
-          justCreatedAccount &&
-          existingUser.registration_completed !== true &&
-          emptyIntro;
-
-        if (needsProfileBootstrap || needsStubCompletion) {
-          // account_type / subscription_* לא נכתבים כאן: ברירת המחדל בטבלה היא
-          // free/free_user, ועדכון המנוי שייך ל-webhook בלבד.
-          await upsertOwnUserRow(
-            sessionData.user.id,
-            {
-              display_name:
-                existingUser?.display_name ||
-                sessionData.user.user_metadata?.full_name ||
-                sessionData.user.email?.split('@')[0],
-              full_name:
-                existingUser?.full_name ||
-                sessionData.user.user_metadata?.full_name ||
-                sessionData.user.email?.split('@')[0],
-              profile_picture:
-                existingUser?.profile_picture ||
-                sessionData.user.user_metadata?.avatar_url ||
-                null,
-              registration_completed: false,
-            },
-            { email: sessionData.user.email },
-          );
-        }
-
-        let user = await this.getUserProfile(sessionData.user.id);
-        if (!user) {
-          return { user: null, error: i18n.t('auto.services__authService.s15') };
-        }
-
-        user = await this.healRegistrationCompletedIfNeeded(user);
-
-        // Onboarding רק למי שלא סיים רישום (חדש / באמצע) — לא לכל Google login
-        const isNewUser = user.registration_completed === false;
-
-        return {
-          user,
-          error: null,
-          isNewUser,
-          googleUser: {
-            id: user.id,
-            email: user.email,
-            fullName: user?.full_name || user?.display_name || '',
-            profileImage: user?.profile_picture || null,
-          },
-        };
+        return await this.finishOAuthSignIn(sessionData.user);
       }
 
       return { user: null, error: i18n.t('auto.services__authService.s41') };
@@ -1641,6 +1580,134 @@ export class AuthService {
       return { user: null, error: error.message || i18n.t('auto.services__authService.s41') };
     } finally {
       googleOAuthFlowLock = false;
+    }
+  }
+
+
+  /**
+   * אחרי שיש סשן מ-OAuth (Google / Apple): יוצר/משלים שורת משתמש ומחזיר אם צריך Onboarding.
+   * fallbackFullName — Apple מחזירה שם רק בהתחברות הראשונה ולא ב-user_metadata.
+   */
+  private static async finishOAuthSignIn(
+    authUser: SupabaseAuthUser,
+    fallbackFullName?: string | null,
+  ): Promise<{
+    user: AuthUser | null;
+    error: string | null;
+    isNewUser?: boolean;
+    googleUser?: { id: string; email: string; fullName: string; profileImage: string | null };
+  }> {
+    const sessionData = { user: authUser };
+    // Check if user exists in our database / השלים רישום
+    const existingUser = await this.getUserProfile(sessionData.user.id);
+    const createdMs = new Date(sessionData.user.created_at).getTime();
+    const justCreatedAccount = Number.isFinite(createdMs) && Date.now() - createdMs < 5 * 60 * 1000;
+    const emptyIntro =
+      !existingUser?.intro_data ||
+      (typeof existingUser.intro_data === 'object' &&
+        Object.keys(existingUser.intro_data as object).length === 0);
+
+    // טריגר on_auth_user_created עלול ליצור שורה ריקה לפני הבדיקה —
+    // יוצרים/משלימים פרופיל רק כשאין שורה, או כשזה stub טרי בלי השלמה.
+    // חשוב: לא לעשות upsert מדכא על משתמש קיים (מוחק subscription / כופה false מחדש).
+    const needsProfileBootstrap = !existingUser;
+    const needsStubCompletion =
+      !!existingUser &&
+      justCreatedAccount &&
+      existingUser.registration_completed !== true &&
+      emptyIntro;
+
+    if (needsProfileBootstrap || needsStubCompletion) {
+      // account_type / subscription_* לא נכתבים כאן: ברירת המחדל בטבלה היא
+      // free/free_user, ועדכון המנוי שייך ל-webhook בלבד.
+      await upsertOwnUserRow(
+        sessionData.user.id,
+        {
+          display_name:
+            existingUser?.display_name ||
+            sessionData.user.user_metadata?.full_name ||
+                fallbackFullName ||
+            sessionData.user.email?.split('@')[0],
+          full_name:
+            existingUser?.full_name ||
+            sessionData.user.user_metadata?.full_name ||
+                fallbackFullName ||
+            sessionData.user.email?.split('@')[0],
+          profile_picture:
+            existingUser?.profile_picture ||
+            sessionData.user.user_metadata?.avatar_url ||
+            null,
+          registration_completed: false,
+        },
+        { email: sessionData.user.email },
+      );
+    }
+
+    let user = await this.getUserProfile(sessionData.user.id);
+    if (!user) {
+      return { user: null, error: i18n.t('auto.services__authService.s15') };
+    }
+
+    user = await this.healRegistrationCompletedIfNeeded(user);
+
+    // Onboarding רק למי שלא סיים רישום (חדש / באמצע) — לא לכל Google login
+    const isNewUser = user.registration_completed === false;
+
+    return {
+      user,
+      error: null,
+      isNewUser,
+      googleUser: {
+        id: user.id,
+        email: user.email,
+        fullName: user?.full_name || user?.display_name || '',
+        profileImage: user?.profile_picture || null,
+      },
+    };
+  }
+
+  /** Sign in with Apple (iOS בלבד) — חובה לפי הנחיה 4.8 כשיש התחברות עם Google */
+  static async signInWithApple(): Promise<{
+    user: AuthUser | null;
+    error: string | null;
+    isNewUser?: boolean;
+    googleUser?: { id: string; email: string; fullName: string; profileImage: string | null };
+  }> {
+    try {
+      const rawNonce = Crypto.randomUUID() + Crypto.randomUUID();
+      const hashedNonce = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, rawNonce);
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+        nonce: hashedNonce,
+      });
+      if (!credential.identityToken) {
+        return { user: null, error: i18n.t('auto.services__authService.s41') };
+      }
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'apple',
+        token: credential.identityToken,
+        nonce: rawNonce,
+      });
+      if (error || !data.user) {
+        return { user: null, error: error?.message || i18n.t('auto.services__authService.s45') };
+      }
+      const fullName = [credential.fullName?.givenName, credential.fullName?.familyName]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+      if (fullName && !data.user.user_metadata?.full_name) {
+        // Apple שולחת את השם רק פעם אחת — שומרים אותו ב-metadata
+        await supabase.auth.updateUser({ data: { full_name: fullName } }).catch(() => {});
+      }
+      return await this.finishOAuthSignIn(data.user, fullName || null);
+    } catch (error: any) {
+      if (error?.code === 'ERR_REQUEST_CANCELED') {
+        return { user: null, error: i18n.t('auto.services__authService.s43') };
+      }
+      return { user: null, error: error?.message || i18n.t('auto.services__authService.s41') };
     }
   }
 

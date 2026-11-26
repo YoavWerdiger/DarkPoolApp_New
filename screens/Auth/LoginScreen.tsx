@@ -9,6 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useRegistration } from '../../context/RegistrationContext';
 import { AuthService } from '../../services/authService';
 import { Ionicons } from '@expo/vector-icons';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useTheme } from '../../context/ThemeContext';
@@ -113,10 +114,16 @@ export default function LoginScreen({ navigation }: any) {
   const [password, setPassword]         = useState('');
   const [rememberMe, setRememberMe]     = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    void AppleAuthentication.isAvailableAsync().then(setAppleAvailable).catch(() => setAppleAvailable(false));
+  }, []);
   const [showForm, setShowForm] = useState(false);
   const logoFloat = useRef(new Animated.Value(0)).current;
 
-  const { signIn, signInWithGoogle, isLoading, setUser, passwordRecoveryMode, setPasswordRecoveryMode } = useAuth();
+  const { signIn, signInWithGoogle, signInWithApple, isLoading, setUser, passwordRecoveryMode, setPasswordRecoveryMode } = useAuth();
   const { setGoogleUserData } = useRegistration();
 
   useEffect(() => {
@@ -220,6 +227,25 @@ export default function LoginScreen({ navigation }: any) {
     }
   };
 
+  const handleAppleSignIn = async () => {
+    setAppleLoading(true);
+    try {
+      const result = await signInWithApple();
+      if (result.error) { if (result.error === i18n.t('auto.services__authService.s43')) return; legacyAlert(i18n.t('auto.screens__Auth__LoginScreen.s3'), result.error); return; }
+      if (result.isNewUser && result.googleUser) {
+        // קודם קונטקסט הרשמה, אחר כך setUser — App מנתב ל-Onboarding עם isGoogleSignUp=true
+        setGoogleUserData(result.googleUser);
+        const { user: profile } = await AuthService.getCurrentUser();
+        if (profile) setUser(profile);
+        // Navigation ל-Onboarding קורה אוטומטית דרך App.tsx conditional rendering
+      }
+    } catch {
+      legacyAlert(i18n.t('auto.screens__Auth__LoginScreen.s1'), i18n.t('auto.screens__Auth__LoginScreen.s4'));
+    } finally {
+      setAppleLoading(false);
+    }
+  };
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <KeyboardAvoidingView
@@ -251,6 +277,22 @@ export default function LoginScreen({ navigation }: any) {
                   </View>
 
                   <View style={styles.buttonStack}>
+                    {appleAvailable ? (
+                      <AppleAuthentication.AppleAuthenticationButton
+                        buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                        buttonStyle={
+                          isDarkMode
+                            ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                            : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                        }
+                        cornerRadius={999}
+                        style={styles.appleButton}
+                        onPress={() => {
+                          if (isLoading || appleLoading) return;
+                          void handleAppleSignIn();
+                        }}
+                      />
+                    ) : null}
                     <UIButton
                       title={i18n.t('auto.screens__Auth__LoginScreen.s5')}
                       variant="primary"
@@ -405,6 +447,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  appleButton: {
+    width: '100%',
+    height: 56,
   },
   buttonStack: {
     gap: APP_LAYOUT.stackGapTight,

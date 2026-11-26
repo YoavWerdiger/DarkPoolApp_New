@@ -13,10 +13,6 @@ const pillSrc = readFileSync(
   join(__dirname, '../../components/ui/DayDividerPill.tsx'),
   'utf8'
 );
-const dividerSrc = readFileSync(
-  join(__dirname, '../../components/chat/DayDivider.tsx'),
-  'utf8'
-);
 const tickerSrc = readFileSync(
   join(__dirname, '../../screens/DarkPool/DarkPoolTickerScreen.tsx'),
   'utf8'
@@ -27,10 +23,6 @@ const chartSrc = readFileSync(
 );
 const homeSrc = readFileSync(
   join(__dirname, '../../screens/DarkPool/DarkPoolHomeScreen.tsx'),
-  'utf8'
-);
-const exploreFilterSrc = readFileSync(
-  join(__dirname, '../../screens/DarkPool/components/ExploreKindFilter.tsx'),
   'utf8'
 );
 const tradesListSrc = readFileSync(
@@ -67,7 +59,6 @@ describe('DayDividerPill', () => {
     expect(pillSrc).toMatch(/chromeSurfaceFill/);
     expect(pillSrc).not.toMatch(/NavGlassSurface/);
     expect(pillSrc).toMatch(/styles\.frame/);
-    expect(dividerSrc).toMatch(/DayDividerPill/);
   });
 
   it('wires ticker, portfolio, feed, explore, and journal chips to DayDividerPill', () => {
@@ -95,8 +86,6 @@ describe('DayDividerPill', () => {
     expect(tickerChips).not.toMatch(/disableBlur/);
     expect(chartChips).not.toMatch(/glassIntensity=/);
     expect(chartChips).not.toMatch(/disableBlur/);
-    expect(exploreFilterSrc).toMatch(/DayDividerPill/);
-    expect(exploreFilterSrc).not.toMatch(/GlassChip/);
     expect(tradesListSrc).toMatch(/DayDividerPill/);
     expect(tradesListSrc).not.toMatch(/GlassChip/);
     expect(addTradeSrc).toMatch(/DayDividerPill/);

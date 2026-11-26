@@ -9,7 +9,11 @@ module.exports = {
   setupFiles: ['<rootDir>/jest.setup.js'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    // react-native-svg (web build) מבקש את החבילה הזו, שלא מותקנת בשורש — RN מכיל את אותו registry
+    '^@react-native/assets-registry/registry$': '<rootDir>/jest/stubs/assetsRegistry.js',
   },
+  // עותקי worktree ישנים של סשנים (.claude/worktrees) והארכיון — לא טסטים של הפרויקט
+  testPathIgnorePatterns: ['/node_modules/', '<rootDir>/.claude/', '<rootDir>/archive/'],
   // Stay away from build artifacts and the legacy duplicate project tree —
   // they cause haste-map module-naming collisions on jest-expo.
   modulePathIgnorePatterns: [
@@ -19,6 +23,8 @@ module.exports = {
     '<rootDir>/android/',
     '<rootDir>/ios/',
     '<rootDir>/DarkPooliOS/',
+    '<rootDir>/.claude/',
+    '<rootDir>/archive/',
   ],
   haste: {
     forceNodeFilesystemAPI: true,

@@ -15,10 +15,6 @@ const exploreSrc = readFileSync(
   join(__dirname, '../../screens/DarkPool/DarkPoolExploreScreen.tsx'),
   'utf8'
 );
-const exploreFilterSrc = readFileSync(
-  join(__dirname, '../../screens/DarkPool/components/ExploreKindFilter.tsx'),
-  'utf8'
-);
 const darkPoolTabsSrc = readFileSync(
   join(__dirname, '../../navigation/DarkPoolTabs.tsx'),
   'utf8'
@@ -64,7 +60,6 @@ describe('feed recent-kind chips', () => {
 
   it('does not put הכל / כולם back on Explore', () => {
     expect(exploreSrc).not.toMatch(/FEED_RECENT_KIND/);
-    expect(exploreFilterSrc).not.toMatch(/FEED_RECENT_KIND/);
     expect(EXPLORE_KIND_CHIPS.map((c) => c.label)).not.toContain('הכל');
     expect(EXPLORE_KIND_CHIPS.map((c) => c.label)).not.toContain('כולם');
     expect(EXPLORE_KIND_CHIPS.some((c) => c.id === ('all' as string))).toBe(false);

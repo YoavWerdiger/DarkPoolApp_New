@@ -2,7 +2,7 @@
 // ב-`Audio` הגלובלי של ה-DOM — שלא קיים בסביבת node. הסוויטה הזו בודקת דווקא את
 // מסלול ה-stubs של expoAvSafe, לכן מציגים את המודולים כלא-זמינים במקום לשנות קוד אפליקציה.
 jest.mock('expo-audio', () => ({}));
-jest.mock('expo-av', () => ({}));
+jest.mock('expo-av', () => ({}), { virtual: true });
 
 import { Audio, ResizeMode, isExpoAvAvailable, prefetchAudioUris } from '../../lib/expoAvSafe';
 

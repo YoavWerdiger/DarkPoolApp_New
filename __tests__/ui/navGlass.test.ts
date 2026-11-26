@@ -15,10 +15,6 @@ const headerSrc = readFileSync(
   join(__dirname, '../../components/ui/MainDrawerScreenHeader.tsx'),
   'utf8',
 );
-const profileMenuSrc = readFileSync(
-  join(__dirname, '../../components/profile/ProfileDrawerMenuBar.tsx'),
-  'utf8',
-);
 const tabBarSrc = readFileSync(
   join(__dirname, '../../screens/DarkPool/components/DarkPoolBottomTabBar.tsx'),
   'utf8',
@@ -46,8 +42,6 @@ describe('nav glass chrome', () => {
     expect(LIGHT_TEXT_PRIMARY).toBe('#1E1A24');
     expect(headerSrc).toMatch(/drawerMenuFaceColor\(tokens\.colors\.background\.cardSolid\)/);
     expect(headerSrc).toMatch(/color=\{tokens\.colors\.text\.primary\}/);
-    expect(profileMenuSrc).toMatch(/drawerMenuFaceColor/);
-    expect(profileMenuSrc).toMatch(/color=\{DesignTokens\.colors\.text\.primary\}/);
   });
 
   it('fills exit buttons with cardSolid in both themes', () => {

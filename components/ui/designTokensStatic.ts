@@ -654,7 +654,7 @@ const staticTokens = {
       // Backgrounds - נקיים ופשוטים
       screen: '#FFFFFF',
       card: '#FAFAFA',
-      input: '#F8F8F8',
+      // היה כאן גם input: '#F8F8F8' — מפתח כפול; בפועל תמיד נכנס הערך של Borders (#E0E0E0)
       
       // Text
       headline: LIGHT_TEXT_PRIMARY,

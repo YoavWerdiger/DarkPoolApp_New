@@ -177,7 +177,8 @@ export default function CreatePortfolioScreen() {
     initialCash,
     mode,
     navigation,
-  , brokerSoon]);
+    brokerSoon,
+  ]);
 
   const styles = useMemo(
     () =>

@@ -257,6 +257,32 @@ export default function DarkPoolTradeDetailScreen() {
     setHelpOpen(true);
   }, []);
 
+  // hooks לפני ה-return המוקדם (rules-of-hooks)
+  const currentPrice = quoteQuery.data?.price ?? null;
+  const priceText =
+    currentPrice != null && Number.isFinite(currentPrice) && currentPrice > 0
+      ? `$${currentPrice.toFixed(2)}`
+      : null;
+
+  /**
+   * «מאז העסקה» = התשואה הכוללת על האחזקה (כל העסקאות של האדם בטיקר, מחיר ממוצע) — כמו בדף פרטי אחזקה.
+   * גיבוי כשאין מספיק נתונים: השינוי מיום העסקה הזו בלבד
+   * (קונגרס: Quiver PriceChange / פתיחת יום הביצוע; בכיר: מחיר Form 4 מול חי).
+   */
+  const positionTotalPct = useMemo(() => {
+    if (congressTrade) {
+      const all = congressHistoryQuery.data ?? [];
+      const list = all.some((t) => t.id === congressTrade.id) ? all : [congressTrade, ...all];
+      return congressPositionTotalReturnPct(list, currentPrice);
+    }
+    if (insiderTrade) {
+      const all = insiderHistoryQuery.data ?? [];
+      const list = all.some((t) => t.id === insiderTrade.id) ? all : [insiderTrade, ...all];
+      return insiderPositionTotalReturnPct(list, currentPrice);
+    }
+    return null;
+  }, [congressTrade, insiderTrade, congressHistoryQuery.data, insiderHistoryQuery.data, currentPrice]);
+
   if (!hasTradeDetailPayload(params) || !trade) {
     return (
       <ScreenChrome rtl>
@@ -284,30 +310,6 @@ export default function DarkPoolTradeDetailScreen() {
     );
   }
 
-  const currentPrice = quoteQuery.data?.price ?? null;
-  const priceText =
-    currentPrice != null && Number.isFinite(currentPrice) && currentPrice > 0
-      ? `$${currentPrice.toFixed(2)}`
-      : null;
-
-  /**
-   * «מאז העסקה» = התשואה הכוללת על האחזקה (כל העסקאות של האדם בטיקר, מחיר ממוצע) — כמו בדף פרטי אחזקה.
-   * גיבוי כשאין מספיק נתונים: השינוי מיום העסקה הזו בלבד
-   * (קונגרס: Quiver PriceChange / פתיחת יום הביצוע; בכיר: מחיר Form 4 מול חי).
-   */
-  const positionTotalPct = useMemo(() => {
-    if (congressTrade) {
-      const all = congressHistoryQuery.data ?? [];
-      const list = all.some((t) => t.id === congressTrade.id) ? all : [congressTrade, ...all];
-      return congressPositionTotalReturnPct(list, currentPrice);
-    }
-    if (insiderTrade) {
-      const all = insiderHistoryQuery.data ?? [];
-      const list = all.some((t) => t.id === insiderTrade.id) ? all : [insiderTrade, ...all];
-      return insiderPositionTotalReturnPct(list, currentPrice);
-    }
-    return null;
-  }, [congressTrade, insiderTrade, congressHistoryQuery.data, insiderHistoryQuery.data, currentPrice]);
 
   const singleTradePct = congressTrade
     ? resolveCongressSinceTradePct({

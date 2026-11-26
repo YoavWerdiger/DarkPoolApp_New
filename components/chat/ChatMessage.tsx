@@ -705,6 +705,11 @@ function ChatMessage({
     }
   }, [replyTargetId, onJumpToMessage]);
 
+  // בלי פרופיל ציבורי — לחיצה על האווטאר רק אם הקורא העביר פעולה
+  const handleAvatarPress = useCallback(() => {
+    onAvatarPress?.();
+  }, [onAvatarPress]);
+
   // הודעת מערכת
   if (message.is_system_message) {
     return (
@@ -726,11 +731,6 @@ function ChatMessage({
   };
 
   const timeText = format(new Date(message.created_at), 'HH:mm');
-
-  // בלי פרופיל ציבורי — לחיצה על האווטאר רק אם הקורא העביר פעולה
-  const handleAvatarPress = useCallback(() => {
-    onAvatarPress?.();
-  }, [onAvatarPress]);
 
   // הודעה שנמחקה לכולם — כמו וואטסאפ. אחרי כל ה-hooks: מחיקה בזמן אמת משנה את
   // ההודעה במקום, ו-return מוקדם לפני hooks היה שובר את סדר ה-hooks.

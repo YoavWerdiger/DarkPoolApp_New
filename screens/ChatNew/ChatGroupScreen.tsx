@@ -242,10 +242,13 @@ export default function ChatGroupScreen() {
    * cacheEpoch מתעדכן כש-prefetch/disk כותבים באמצע ה-slide.
    */
   const [cacheEpoch, setCacheEpoch] = useState(0);
+  const firstMessageId = messages[0]?.id;
+  const lastMessageId = messages[messages.length - 1]?.id;
+  const messageCount = messages.length;
   const cachedSeedMessages = useMemo(() => {
     if (!groupId) return [] as ChatMessageType[];
     return readGroupMessagesCache(groupId);
-  }, [groupId, cacheEpoch, messages.length, messages[0]?.id, messages[messages.length - 1]?.id]);
+  }, [groupId, cacheEpoch, messageCount, firstMessageId, lastMessageId]);
 
   const contextMessagesForGroup = useMemo(
     () => filterThreadForOpenGroup(messages, groupId),

@@ -287,6 +287,7 @@ export default function LoginScreen({ navigation }: any) {
                     </Animated.View>
                   </View>
 
+                  {/* Welcome: one main CTA, then "or" and the two quick sign-ins right here — no detour to the form */}
                   <View style={styles.buttonStack}>
                     <UIButton
                       title={i18n.t('auto.screens__Auth__LoginScreen.s5')}
@@ -295,12 +296,47 @@ export default function LoginScreen({ navigation }: any) {
                       fullWidth
                       onPress={() => navigation.navigate('Register')}
                     />
+
+                    <View style={styles.dividerRow}>
+                      <View style={[styles.dividerLine, { backgroundColor: colors.border.divider }]} />
+                      <Text style={[appCaptionStyle, styles.dividerText, { color: colors.text.tertiary }]}>{i18n.t('auto.screens__Auth__LoginScreen.s15')}</Text>
+                      <View style={[styles.dividerLine, { backgroundColor: colors.border.divider }]} />
+                    </View>
+
+                    {appleAvailable ? (
+                      <UIButton
+                        title={i18n.t('auto.screens__Auth__LoginScreen.appleSignIn')}
+                        variant="secondary"
+                        size="lg"
+                        icon="logo-apple"
+                        iconPosition={ICON_AFTER_TEXT}
+                        fullWidth
+                        loading={appleLoading}
+                        disabled={isLoading || appleLoading}
+                        style={{ borderRadius: tokens.borderRadius.full }}
+                        onPress={() => void handleAppleSignIn()}
+                      />
+                    ) : null}
                     <UIButton
-                      title={i18n.t('auto.screens__Auth__LoginScreen.s6')}
+                      title={i18n.t('auto.screens__Auth__LoginScreen.s16')}
                       variant="secondary"
                       size="lg"
+                      icon="logo-google"
+                      iconPosition={ICON_AFTER_TEXT}
                       fullWidth
+                      loading={googleLoading}
+                      disabled={isLoading || googleLoading}
                       style={{ borderRadius: tokens.borderRadius.full }}
+                      onPress={() => void handleGoogleSignIn()}
+                    />
+
+                    {/* Email accounts still have their way in */}
+                    <UIButton
+                      title={i18n.t('auto.screens__Auth__LoginScreen.s6')}
+                      variant="ghost"
+                      size="lg"
+                      fullWidth
+                      textStyle={{ color: colors.text.primary }}
                       onPress={() => setShowForm(true)}
                     />
                   </View>

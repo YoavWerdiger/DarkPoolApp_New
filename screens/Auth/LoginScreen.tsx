@@ -355,15 +355,13 @@ export default function LoginScreen({ navigation }: any) {
                 </>
               ) : (
                 <View style={styles.form}>
-                  {/* The welcome logo, smaller and floating the same way — the form continues the welcome screen */}
+                  {/* The welcome logo as a still header — the form continues the welcome screen, calmly */}
                   <View style={styles.formLogoWrap}>
-                    <Animated.View style={{ transform: [{ translateY: logoFloat }] }}>
-                      <Image
-                        source={isDarkMode ? { uri: WELCOME_LOGO_URI } : WELCOME_LOGO_LIGHT}
-                        style={{ width: width * 0.42, height: width * 0.42 }}
-                        contentFit="contain"
-                      />
-                    </Animated.View>
+                    <Image
+                      source={isDarkMode ? { uri: WELCOME_LOGO_URI } : WELCOME_LOGO_LIGHT}
+                      style={{ width: width * 0.34, height: width * 0.34 }}
+                      contentFit="contain"
+                    />
                   </View>
 
                   <View style={styles.titleBlock}>

@@ -522,12 +522,7 @@
     "formSub": "بالبريد الذي سجلت به",
     "signInBtn": "تسجيل الدخول",
     "noAccount": "ليس لديك حساب؟ سجّل",
-    "back": "رجوع",
-    "printsLabel": "أحدث صفقات الدارك بول",
-    "welcomeTitle": "شاهد ما يشتريه المال الكبير",
-    "welcomeSub": "صفقات الدارك بول والمطلعين وأعضاء الكونغرس في مكان واحد",
-    "appleContinue": "المتابعة باستخدام Apple",
-    "googleContinue": "المتابعة باستخدام Google"
+    "back": "رجوع"
   },
   "screens__Payment__CheckoutScreen": {
     "s1": "خطأ",

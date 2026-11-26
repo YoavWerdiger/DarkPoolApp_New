@@ -865,12 +865,7 @@
     "formSub": "With the email you signed up with",
     "signInBtn": "Sign in",
     "noAccount": "No account? Sign up",
-    "back": "Back",
-    "printsLabel": "Latest dark pool prints",
-    "welcomeTitle": "See what big money is buying",
-    "welcomeSub": "Dark pool prints, insiders and Congress trades, in one place",
-    "appleContinue": "Continue with Apple",
-    "googleContinue": "Continue with Google"
+    "back": "Back"
   },
   "screens__Payment__CheckoutScreen": {
     "s1": "Error",

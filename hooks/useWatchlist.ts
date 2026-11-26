@@ -36,6 +36,7 @@ import {
 import { realtimeQuotes } from '../services/portfolios/realtimeQuotes';
 import type { PriceQuote } from '../screens/Portfolios/portfolioTypes';
 import { HapticFeedback } from '../utils/hapticFeedback';
+import type { StockWatchlistItem } from '../services/watchlist/watchlistTypes';
 
 const EMPTY_QUOTES: Record<string, PriceQuote> = Object.freeze({});
 const EMPTY_RANGE_STATS: Record<string, SymbolRangeStats> = Object.freeze({});
@@ -391,6 +392,44 @@ export function useWatchlist() {
   const addSymbol = useCallback(
     async (symbol: string, companyName?: string | null) => {
       if (!activeWatchlistId) return;
+      // אופטימי: השורה נכנסת לרשימה מיד; כשל בשרת — מוציאים אותה (rollback)
+      const key = appQueryKeys.watchlistItems(activeWatchlistId);
+      void queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<typeof items>(key);
+      const sym = symbol.toUpperCase();
+      if (previous && !previous.some((it) => it.symbol.toUpperCase() === sym)) {
+        const temp: StockWatchlistItem = {
+          id: `temp-${sym}`,
+          watchlist_id: activeWatchlistId,
+          user_id: '',
+          symbol: sym,
+          company_name: companyName ?? null,
+          notes: null,
+          sort_order: previous.length,
+          created_at: new Date().toISOString(),
+          entry_price: null,
+          target_price: null,
+          alert_above: null,
+          alert_below: null,
+          alert_change_pct: null,
+          alert_above_prices: [],
+          alert_below_prices: [],
+          alert_change_pcts: [],
+          alerts_enabled: false,
+          alert_day_high: false,
+          alert_week_high: false,
+          alert_week_low: false,
+          alert_52w_high: false,
+          alert_52w_low: false,
+          alert_entry_gain_pct: null,
+          alert_entry_loss_pct: null,
+          alert_entry_gain_pcts: [],
+          alert_entry_loss_pcts: [],
+          alert_target_hit: false,
+          alert_earnings: false,
+        };
+        queryClient.setQueryData<typeof items>(key, [...previous, temp]);
+      }
       try {
         await addWatchlistItem({
           watchlistId: activeWatchlistId,
@@ -399,6 +438,7 @@ export function useWatchlist() {
         });
         void HapticFeedback.success();
       } catch (e) {
+        if (previous) queryClient.setQueryData(key, previous);
         void HapticFeedback.error();
         throw e;
       }
@@ -407,7 +447,7 @@ export function useWatchlist() {
         queryKey: appQueryKeys.watchlistInsights(symbolsKey),
       });
     },
-    [activeWatchlistId, invalidateItems, queryClient, symbolsKey]
+    [activeWatchlistId, invalidateItems, items, queryClient, symbolsKey]
   );
 
   /** הוספה של כמה סימבולים יחד (הוספה מהירה) — רענון אחד בסוף */

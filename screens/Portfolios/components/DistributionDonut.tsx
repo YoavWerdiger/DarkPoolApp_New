@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Circle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
@@ -132,7 +133,7 @@ export function DistributionDonut({
                     borderRadius: avatarImageSize / 2,
                   },
                 ]}
-                resizeMode="cover"
+                contentFit="cover"
                 onError={() => onAvatarError(activeAvatarUri)}
               />
             </View>

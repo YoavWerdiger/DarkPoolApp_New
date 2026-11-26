@@ -2,7 +2,8 @@ import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useCallback, useRef } from 'react';
-import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { SkeletonBox, SkeletonLine } from '../../components/ui/SkeletonLoader';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useCourse, useEnrollInCourse, useCourseProgress } from '../../hooks/useLearning';
@@ -195,7 +196,7 @@ export const CourseDetailScreen: React.FC = () => {
             <Image
               source={{ uri: course.cover_url }}
               style={styles.coverImage}
-              resizeMode="cover"
+              contentFit="cover"
             />
           ) : (
             <View style={styles.coverPlaceholder}>

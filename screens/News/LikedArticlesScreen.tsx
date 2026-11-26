@@ -6,7 +6,8 @@ import { appQueryKeys } from '../../lib/appQueryKeys';
 import type { NewsArticle } from '../../services/newsService';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Image, Pressable, StyleSheet } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { RefreshControl } from '../../components/ui/AppRefreshControl';
 import { Ionicons } from '@expo/vector-icons';
 import { Trash2 } from 'lucide-react-native';
@@ -50,7 +51,7 @@ const LikedArticleCard: React.FC<LikedArticleCardProps> = ({ article, onPress, o
               <Image
                 source={{ uri: article.article_image_url }}
                 style={{ width: '100%', height: '100%' }}
-                resizeMode="cover"
+                contentFit="cover"
               />
               <LinearGradient
                 colors={['transparent', 'rgba(0,0,0,0.75)']}

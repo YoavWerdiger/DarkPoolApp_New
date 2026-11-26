@@ -9,7 +9,8 @@ import { runAfterInteractions } from '../../utils/runAfterInteractions';
 import { useToast } from '../../components/ui/Toast';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useMemo, useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
-import { View, FlatList, Text, StyleSheet, type ViewStyle, TouchableOpacity, Pressable, Image, Modal, TextInput, Animated as RNAnimated, Easing, Platform, LayoutChangeEvent, Keyboard } from 'react-native';
+import { View, FlatList, Text, StyleSheet, type ViewStyle, TouchableOpacity, Pressable, Modal, TextInput, Animated as RNAnimated, Easing, Platform, LayoutChangeEvent, Keyboard } from 'react-native';
+import { Image } from 'expo-image';
 import { SHEET_CLOSE_MS } from '../../components/ui/BottomSheet/sheetMotion';
 import { chatComposerSafeBottomInset, chatComposerKeyboardTranslate, CHAT_COMPOSER_KEYBOARD_GAP, CHAT_KEYBOARD_LTR_STYLE } from '../../components/chat/chatInputLayout';
 import { ChatComposerDock, ChatKeyboardFollow } from '../../components/chat/ChatComposerDock';
@@ -2674,7 +2675,7 @@ const TypingIndicatorBubble = React.memo(({
               key={t.id}
               source={{ uri: t.avatar }}
               style={[styles.typingAvatar, ring, overlap]}
-              resizeMode="cover"
+              contentFit="cover"
             />
           ) : (
             <View key={t.id} style={[styles.typingAvatarPlaceholder, ring, overlap]}>

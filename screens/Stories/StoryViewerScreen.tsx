@@ -84,7 +84,7 @@ import {
   reactStyles,
 } from '../../components/stories/StoryChrome';
 import { StoryViewersSheet } from '../../components/stories/StoryViewersSheet';
-import { openContentActions } from '../../components/moderation/contentActions';
+import { openContentActionsOverModal } from '../../components/moderation/contentActions';
 
 /** 'forward' = לכיוון אינדקס נמוך (קדימה בשורה), 'back' = אינדקס גבוה */
 type Dir = 'forward' | 'back';
@@ -972,7 +972,7 @@ function StoryViewerScreenInner() {
           <TouchableOpacity
             onPress={() => {
               setModerationOpen(true);
-              void openContentActions({
+              void openContentActionsOverModal({
                 targetType: 'story',
                 targetId: String(currentStory.id),
                 targetUserId: currentUserId,

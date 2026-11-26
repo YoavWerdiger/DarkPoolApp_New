@@ -55,6 +55,10 @@ import { useCaptureCameraMode } from '../../hooks/useCaptureCameraMode';
 import { ensureUgcTermsAccepted } from '../moderation/ugcTermsGate';
 import type { TextInputInstance, ViewInstance } from 'react-native';
 import { silent } from '../../utils/silentError';
+import StaticDesignTokens from '../../components/ui/DesignTokens';
+
+/** כרום מעל מדיה (מצלמה / סטורי) — טוקנים קבועים, פריט 44 */
+const M = StaticDesignTokens.colors.onMedia;
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const GALLERY_THUMB = 52;
@@ -97,13 +101,13 @@ const GRADIENT_BACKGROUNDS: [string, string][] = [
 ];
 
 const OVERLAY_COLORS = [
-  '#FFFFFF', '#000000', '#FF3B30', '#FF9500', '#FFCC00',
+  M.text, M.base, M.record, '#FF9500', '#FFCC00',
   '#34C759', '#00C7BE', '#007AFF', '#5856D6', '#AF52DE',
   '#FF2D55', '#A2845E',
 ];
 
 const DRAW_COLORS = [
-  '#FFFFFF', '#000000', '#FF3B30', '#FF9500', '#FFCC00',
+  M.text, M.base, M.record, '#FF9500', '#FFCC00',
   '#34C759', '#00C7BE', '#007AFF', '#AF52DE', '#FF2D55',
 ];
 
@@ -366,9 +370,9 @@ function DraggableText({
   const bgColor = isEmoji
     ? 'transparent'
     : item.bgStyle === 'solid'
-      ? (item.color === '#FFFFFF' ? '#000000' : '#FFFFFF')
+      ? (item.color === M.text ? M.base : M.text)
       : item.bgStyle === 'semi'
-        ? 'rgba(0,0,0,0.45)'
+        ? M.scrim
         : 'transparent';
 
   return (
@@ -386,7 +390,7 @@ function DraggableText({
           <Text style={[
             dragStyles.text,
             isEmoji
-              ? { fontSize: item.fontSize, color: '#fff' }
+              ? { fontSize: item.fontSize, color: M.text }
               : {
                   color: item.color,
                   fontSize: item.fontSize,
@@ -431,7 +435,7 @@ function TextEditorOverlay({
   onCancel: () => void;
 }) {
   const [text, setText] = useState(initial?.text || '');
-  const [color, setColor] = useState(initial?.color || '#FFFFFF');
+  const [color, setColor] = useState(initial?.color || M.text);
   const [bold, setBold] = useState(initial?.bold ?? true);
   const [bgStyle, setBgStyle] = useState<BgStyle>(initial?.bgStyle || 'none');
   const [fontSize, setFontSize] = useState(initial?.fontSize || 28);
@@ -441,7 +445,7 @@ function TextEditorOverlay({
   useEffect(() => {
     if (visible) {
       setText(initial?.text || '');
-      setColor(initial?.color || '#FFFFFF');
+      setColor(initial?.color || M.text);
       setBold(initial?.bold ?? true);
       setBgStyle(initial?.bgStyle || 'none');
       setFontSize(initial?.fontSize || 28);
@@ -458,9 +462,9 @@ function TextEditorOverlay({
   };
 
   const bgPreviewColor = bgStyle === 'solid'
-    ? (color === '#FFFFFF' ? '#000' : '#fff')
+    ? (color === M.text ? M.base : M.text)
     : bgStyle === 'semi'
-      ? 'rgba(0,0,0,0.45)'
+      ? M.scrim
       : 'transparent';
 
   return (
@@ -501,7 +505,7 @@ function TextEditorOverlay({
             onPress={cycleBgStyle}
           >
             <View style={[editorStyles.bgPreview, { backgroundColor: bgPreviewColor }]}>
-              <Text style={{ color: bgStyle === 'solid' ? color : '#fff', fontSize: 11, fontWeight: '700' }}>A</Text>
+              <Text style={{ color: bgStyle === 'solid' ? color : M.text, fontSize: 11, fontWeight: '700' }}>A</Text>
             </View>
           </TouchableOpacity>
 
@@ -509,7 +513,7 @@ function TextEditorOverlay({
             style={editorStyles.toolBtn}
             onPress={() => setFontSize(prev => prev >= 42 ? 18 : prev + 4)}
           >
-            <MaterialCommunityIcons name="format-size" size={20} color="#fff" />
+            <MaterialCommunityIcons name="format-size" size={20} color={M.text} />
           </TouchableOpacity>
         </View>
       </View>
@@ -565,7 +569,7 @@ function TextEditorOverlay({
                   editorStyles.colorDot,
                   { backgroundColor: c },
                   // לבן — קו כהה דק כדי שייראה עגול כמו שאר הצבעים
-                  c === '#FFFFFF' && { borderColor: 'rgba(0,0,0,0.28)' },
+                  c === M.text && { borderColor: 'rgba(0,0,0,0.28)' },
                 ]}
               />
             </TouchableOpacity>
@@ -603,7 +607,7 @@ const editorStyles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: 'rgba(0,0,0,0.42)',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: M.control,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -611,7 +615,7 @@ const editorStyles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.35)',
   },
   toolBtnLabel: {
-    color: '#fff',
+    color: M.text,
     fontSize: 16,
   },
   bgPreview: {
@@ -628,7 +632,7 @@ const editorStyles = StyleSheet.create({
     borderRadius: 18,
   },
   doneBtnText: {
-    color: '#fff',
+    color: M.text,
     fontSize: 15,
     fontWeight: '600',
   },
@@ -669,7 +673,7 @@ const editorStyles = StyleSheet.create({
     alignItems: 'center',
   },
   colorRingActive: {
-    borderColor: '#FFFFFF',
+    borderColor: M.text,
   },
   colorDot: {
     width: 28,
@@ -701,7 +705,7 @@ function EmojiPickerOverlay({
         <View style={emojiStyles.header}>
           <Text style={emojiStyles.title}>{i18n.t('auto.components__chat__AddStoryFullScreen.s3')}</Text>
           <TouchableOpacity onPress={onClose} style={emojiStyles.closeBtn}>
-            <Ionicons name="close" size={22} color="#fff" />
+            <Ionicons name="close" size={22} color={M.text} />
           </TouchableOpacity>
         </View>
         <ScrollView
@@ -758,7 +762,7 @@ const emojiStyles = StyleSheet.create({
     paddingBottom: 10,
   },
   title: {
-    color: '#fff',
+    color: M.text,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -970,7 +974,7 @@ function TrashZone({
           <Ionicons
             name={hovering ? 'trash' : 'trash-outline'}
             size={hovering ? 30 : 24}
-            color="#fff"
+            color={M.text}
           />
         </Reanimated.View>
       </View>
@@ -1010,7 +1014,7 @@ const trashStyles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: '#FF3B30',
+    backgroundColor: M.record,
   },
   circle: {
     width: 56,
@@ -1024,7 +1028,7 @@ const trashStyles = StyleSheet.create({
   },
   circleActive: {
     backgroundColor: 'rgba(255,59,48,0.95)',
-    borderColor: '#fff',
+    borderColor: M.text,
     borderWidth: 3,
   },
   hint: {
@@ -1032,12 +1036,12 @@ const trashStyles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     marginTop: 8,
-    textShadowColor: 'rgba(0,0,0,0.7)',
+    textShadowColor: M.scrimStrong,
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
   hintActive: {
-    color: '#fff',
+    color: M.text,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -1695,7 +1699,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       type: 'emoji',
       text: emoji,
-      color: '#FFFFFF',
+      color: M.text,
       fontSize: 72,
       bold: false,
       bgStyle: 'none',
@@ -1838,7 +1842,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
         {/* ── Panel 0: Camera preview + background gestures ── */}
         <View style={s.modePanel} collapsable={false}>
           <GestureDetector gesture={captureBackgroundGestures}>
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000' }]} collapsable={false}>
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: M.base }]} collapsable={false}>
               {permission?.granted && cameraSessionReady ? (
                 <CameraView
                   ref={cameraRef}
@@ -1871,7 +1875,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
                   }}
                 />
               ) : (
-                <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }]}>
+                <View style={[StyleSheet.absoluteFill, { backgroundColor: M.base, justifyContent: 'center', alignItems: 'center' }]}>
                   <Ionicons name="camera-outline" size={64} color="rgba(255,255,255,0.2)" />
                 </View>
               )}
@@ -1972,7 +1976,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
                 onClose();
               }}
             >
-              <Ionicons name="close" size={28} color="#fff" />
+              <Ionicons name="close" size={28} color={M.text} />
             </TouchableOpacity>
             <View style={{ flex: 1 }} />
             {!permission?.granted ? (
@@ -1983,7 +1987,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
                 style={s.topIconBtn}
                 onPress={() => setFlash(!flash)}
               >
-                <Ionicons name={flash ? 'flash' : 'flash-off'} size={22} color="#fff" />
+                <Ionicons name={flash ? 'flash' : 'flash-off'} size={22} color={M.text} />
               </TouchableOpacity>
             )}
           </View>
@@ -2010,7 +2014,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
                       <ExpoImage source={{ uri: item.uri }} style={s.galleryGridImg} />
                       {item.mediaType === 'video' && (
                         <View style={s.gridVideoTag}>
-                          <Ionicons name="play" size={10} color="#fff" />
+                          <Ionicons name="play" size={10} color={M.text} />
                           <Text style={s.gridVideoDuration}>
                             {Math.round((item.duration || 0))}s
                           </Text>
@@ -2033,7 +2037,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
                 {recentPhotos.length > 0 ? (
                   <ExpoImage source={{ uri: recentPhotos[0].uri }} style={s.galleryBtnImg} />
                 ) : (
-                  <Ionicons name="images" size={24} color="#fff" />
+                  <Ionicons name="images" size={24} color={M.text} />
                 )}
               </TouchableOpacity>
 
@@ -2072,7 +2076,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
                 }}
                 activeOpacity={0.7}
               >
-                <Ionicons name="camera-reverse-outline" size={26} color="#fff" />
+                <Ionicons name="camera-reverse-outline" size={26} color={M.text} />
               </TouchableOpacity>
             </View>
           </View>
@@ -2092,7 +2096,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
               onClose();
             }}
           >
-            <Ionicons name="close" size={28} color="#fff" />
+            <Ionicons name="close" size={28} color={M.text} />
           </TouchableOpacity>
           <View style={{ flex: 1 }} />
           <TouchableOpacity
@@ -2102,7 +2106,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
             accessibilityRole="button"
             accessibilityLabel={i18n.t('auto.components__chat__AddStoryFullScreen.s17')}
           >
-            <Ionicons name="arrow-up" size={26} color="#fff" />
+            <Ionicons name="arrow-up" size={26} color={M.text} />
           </TouchableOpacity>
         </View>
       )}
@@ -2113,7 +2117,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
   /* ═══════ PREVIEW PHASE ════════════════════════ */
   /* ═══════════════════════════════════════════════ */
   const renderPreview = () => (
-    <View style={[s.fullFlex, { backgroundColor: '#000' }]}>
+    <View style={[s.fullFlex, { backgroundColor: M.base }]}>
       {/* רקע: אותה תמונה מטושטשת ומוכהה מסביב לחלון (כמו וואטסאפ/אינסטגרם) */}
       {mediaType === 'image' && mediaUri ? (
         <>
@@ -2174,7 +2178,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
               </View>
             ) : (
               <View style={[StyleSheet.absoluteFill, s.videoWait]}>
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={M.text} />
               </View>
             )}
           </View>
@@ -2216,13 +2220,13 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
         <View style={[s.previewTopBar, s.chromeLayer, { paddingTop: insets.top + 10 }]} pointerEvents="box-none">
           <View style={s.previewTools}>
             <TouchableOpacity style={s.topIconBtn} onPress={() => setDrawMode(true)} activeOpacity={0.75} accessibilityLabel={i18n.t('auto.components__chat__AddStoryFullScreen.s18')}>
-              <Ionicons name="brush-outline" size={22} color="#fff" />
+              <Ionicons name="brush-outline" size={22} color={M.text} />
             </TouchableOpacity>
             <TouchableOpacity style={s.topIconBtn} onPress={() => setShowEmojiPicker(true)} activeOpacity={0.75} accessibilityLabel={i18n.t('auto.components__chat__AddStoryFullScreen.s19')}>
-              <Ionicons name="happy-outline" size={22} color="#fff" />
+              <Ionicons name="happy-outline" size={22} color={M.text} />
             </TouchableOpacity>
             <TouchableOpacity style={s.topIconBtn} onPress={() => openTextEditor()} activeOpacity={0.75} accessibilityLabel={i18n.t('auto.components__chat__AddStoryFullScreen.s20')}>
-              <MaterialCommunityIcons name="format-text" size={22} color="#fff" />
+              <MaterialCommunityIcons name="format-text" size={22} color={M.text} />
             </TouchableOpacity>
           </View>
           <TouchableOpacity
@@ -2232,7 +2236,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
             accessibilityRole="button"
             accessibilityLabel={i18n.t('auto.components__chat__AddStoryFullScreen.s21')}
           >
-            <Ionicons name={dirIcon('chevron-forward')} size={26} color="#fff" />
+            <Ionicons name={dirIcon('chevron-forward')} size={26} color={M.text} />
           </TouchableOpacity>
         </View>
       )}
@@ -2257,7 +2261,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
               disabled={drawPaths.length === 0}
               activeOpacity={0.7}
             >
-              <Ionicons name="arrow-undo" size={20} color="#fff" />
+              <Ionicons name="arrow-undo" size={20} color={M.text} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -2266,7 +2270,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
               disabled={drawPaths.length === 0}
               activeOpacity={0.7}
             >
-              <Ionicons name="trash-outline" size={20} color="#fff" />
+              <Ionicons name="trash-outline" size={20} color={M.text} />
             </TouchableOpacity>
           </View>
 
@@ -2330,7 +2334,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
               accessibilityRole="button"
               accessibilityLabel={i18n.t('auto.components__chat__AddStoryFullScreen.s17')}
             >
-              <Ionicons name="arrow-up" size={26} color="#fff" />
+              <Ionicons name="arrow-up" size={26} color={M.text} />
             </TouchableOpacity>
           </View>
         </LinearGradient>
@@ -2445,7 +2449,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
   );
 
   if (presentation === 'screen') {
-    return <View style={{ flex: 1, backgroundColor: '#000' }}>{body}</View>;
+    return <View style={{ flex: 1, backgroundColor: M.base }}>{body}</View>;
   }
 
   return (
@@ -2472,7 +2476,7 @@ const s = StyleSheet.create({
     left: 0,
     width: SW,
     height: SH,
-    backgroundColor: '#000',
+    backgroundColor: M.base,
   },
   recordedVideoFill: {
     width: SW,
@@ -2484,11 +2488,11 @@ const s = StyleSheet.create({
   videoWait: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#000',
+    backgroundColor: M.base,
   },
   root: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: M.base,
     overflow: 'hidden',
   },
 
@@ -2506,7 +2510,7 @@ const s = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    backgroundColor: '#000',
+    backgroundColor: M.base,
   },
 
   /* Chrome overlays sit above background Pans (Android touch isolation). */
@@ -2605,7 +2609,7 @@ const s = StyleSheet.create({
     gap: 2,
   },
   gridVideoDuration: {
-    color: '#fff',
+    color: M.text,
     fontSize: 10,
     fontWeight: '600',
   },
@@ -2639,7 +2643,7 @@ const s = StyleSheet.create({
     height: CAPTURE_RING,
     borderRadius: CAPTURE_RING / 2,
     borderWidth: 3,
-    borderColor: '#fff',
+    borderColor: M.text,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 41,
@@ -2649,13 +2653,13 @@ const s = StyleSheet.create({
     width: CAPTURE_SIZE,
     height: CAPTURE_SIZE,
     borderRadius: CAPTURE_SIZE / 2,
-    backgroundColor: '#fff',
+    backgroundColor: M.text,
   },
   captureRecording: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: '#FF3B30',
+    backgroundColor: M.record,
   },
 
   flipBtn: {
@@ -2705,10 +2709,10 @@ const s = StyleSheet.create({
     borderRadius: 19,
   },
   modePillText: {
-    color: '#fff',
+    color: M.text,
     fontSize: 13,
     fontWeight: '600',
-    textShadowColor: 'rgba(0,0,0,0.45)',
+    textShadowColor: M.scrim,
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
@@ -2722,7 +2726,7 @@ const s = StyleSheet.create({
     borderRadius: 24,
   },
   permissionBtnText: {
-    color: '#fff',
+    color: M.text,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -2734,7 +2738,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 28,
   },
   textBigInput: {
-    color: '#fff',
+    color: M.text,
     fontSize: 28,
     fontWeight: '700',
     textAlign: 'center',
@@ -2745,7 +2749,7 @@ const s = StyleSheet.create({
     textShadowRadius: 3,
   },
   textCounter: {
-    color: 'rgba(255,255,255,0.28)',
+    color: M.controlStrong,
     fontSize: 12,
     textAlign: 'center',
     marginTop: 12,
@@ -2766,7 +2770,7 @@ const s = StyleSheet.create({
     borderColor: 'transparent',
   },
   bgDotActive: {
-    borderColor: '#fff',
+    borderColor: M.text,
     borderWidth: 3,
     width: 36,
     height: 36,
@@ -2783,7 +2787,7 @@ const s = StyleSheet.create({
     position: 'absolute',
     left: 0,
     width: SW,
-    backgroundColor: '#000',
+    backgroundColor: M.base,
   },
   overlayLayer: {
     backgroundColor: 'transparent',
@@ -2900,7 +2904,7 @@ const s = StyleSheet.create({
     marginHorizontal: 4,
   },
   drawDoneText: {
-    color: '#fff',
+    color: M.text,
     fontSize: 15,
     fontWeight: '600',
   },
@@ -2932,7 +2936,7 @@ const s = StyleSheet.create({
   },
   strokeBtnActive: {
     backgroundColor: 'rgba(255,255,255,0.22)',
-    borderColor: '#fff',
+    borderColor: M.text,
   },
   drawColorScroll: {
     paddingHorizontal: 16,
@@ -2947,7 +2951,7 @@ const s = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.25)',
   },
   drawColorDotActive: {
-    borderColor: '#fff',
+    borderColor: M.text,
     borderWidth: 3,
     transform: [{ scale: 1.18 }],
   },
@@ -2972,15 +2976,15 @@ const s = StyleSheet.create({
   },
   trashCircleActive: {
     backgroundColor: 'rgba(255,59,48,0.85)',
-    borderColor: '#fff',
+    borderColor: M.text,
     transform: [{ scale: 1.15 }],
   },
   trashHint: {
-    color: '#fff',
+    color: M.text,
     fontSize: 12,
     fontWeight: '600',
     marginTop: 6,
-    textShadowColor: 'rgba(0,0,0,0.7)',
+    textShadowColor: M.scrimStrong,
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },

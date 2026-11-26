@@ -298,6 +298,8 @@ const staticColors = {
     scrim: 'rgba(0, 0, 0, 0.45)',
     scrimStrong: 'rgba(0, 0, 0, 0.7)',
     base: '#000000',
+    /** כפתור / נקודת הקלטה */
+    record: '#FF3B30',
   },
 };
 

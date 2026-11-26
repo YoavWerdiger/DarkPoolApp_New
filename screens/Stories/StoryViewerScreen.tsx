@@ -86,6 +86,10 @@ import {
 import { StoryViewersSheet } from '../../components/stories/StoryViewersSheet';
 import { openContentActionsOverModal } from '../../components/moderation/contentActions';
 import { silent } from '../../utils/silentError';
+import StaticDesignTokens from '../../components/ui/DesignTokens';
+
+/** כרום מעל מדיה (מצלמה / סטורי) — טוקנים קבועים, פריט 44 */
+const M = StaticDesignTokens.colors.onMedia;
 
 /** 'forward' = לכיוון אינדקס נמוך (קדימה בשורה), 'back' = אינדקס גבוה */
 type Dir = 'forward' | 'back';
@@ -770,7 +774,7 @@ function StoryViewerScreenInner() {
     const list = storiesMap?.[id] ?? [];
     return (
       <LinearGradient
-        colors={['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0)']}
+        colors={[M.scrimStrong, 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0)']}
         locations={[0, 0.6, 1]}
         style={[styles.topGradient, { paddingTop: insets.top + 10 }]}
         pointerEvents="none"
@@ -789,7 +793,7 @@ function StoryViewerScreenInner() {
         <View style={styles.header} pointerEvents="box-none">
           {/* ויזואלי בלבד — הלחיצה בשכבת הכפתורים מחוץ למחוות */}
           <View style={styles.closeBtn}>
-            <Ionicons name="close" size={22} color="#fff" />
+            <Ionicons name="close" size={22} color={M.text} />
           </View>
 
           <View style={styles.headerInfo} pointerEvents="none">
@@ -891,7 +895,7 @@ function StoryViewerScreenInner() {
           {story && (story.media_type !== 'text') && loaded[story.id] ? <StoryOverlays content={story.content} /> : null}
           {active && showMediaSpinner && spinnerDue && (
             <View style={[styles.center, StyleSheet.absoluteFill]}>
-              <ActivityIndicator size="large" color="#fff" />
+              <ActivityIndicator size="large" color={M.text} />
             </View>
           )}
           {active && mediaFailed && (
@@ -986,7 +990,7 @@ function StoryViewerScreenInner() {
             accessibilityRole="button"
             accessibilityLabel="אפשרויות: דיווח או חסימה"
           >
-            <Ionicons name="ellipsis-horizontal" size={22} color="#fff" />
+            <Ionicons name="ellipsis-horizontal" size={22} color={M.text} />
           </TouchableOpacity>
         ) : null}
         <Reanimated.View style={[StyleSheet.absoluteFill, chromeAnim]} pointerEvents="box-none">
@@ -1040,18 +1044,18 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: '#000',
+    backgroundColor: M.base,
   },
   // פאה בקוביה — גלויה במנוחה גם בלי אנימציה (הנוכחית מרונדרת אחרונה, מעל השכנים)
   face: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: '#000',
+    backgroundColor: M.base,
     overflow: 'hidden',
   },
   // הצללה: אטימות בסיס 0 — אם העדכון המונפש לא מגיע למסך היא שקופה ולא מכסה את הסטורי
   cubeShade: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: '#000',
+    backgroundColor: M.base,
     opacity: 0,
   },
   blurDim: {
@@ -1067,20 +1071,20 @@ const styles = StyleSheet.create({
   },
   staticBarFill: {
     height: '100%',
-    backgroundColor: '#fff',
+    backgroundColor: M.text,
     borderRadius: 1.5,
   },
   stage: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: M.base,
     overflow: 'hidden',
   },
   mediaLayer: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: '#000',
+    backgroundColor: M.base,
   },
   emptyRoot: {
-    backgroundColor: '#000',
+    backgroundColor: M.base,
   },
   center: {
     flex: 1,
@@ -1140,7 +1144,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   headerName: {
-    color: '#fff',
+    color: M.text,
     fontSize: 16,
     fontWeight: '700',
     maxWidth: 180,
@@ -1197,7 +1201,7 @@ const styles = StyleSheet.create({
     borderRadius: 23,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
+    shadowColor: M.base,
     shadowOpacity: 0.22,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },

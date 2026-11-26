@@ -38,6 +38,10 @@ import { legacyAlert } from '../../utils/appDialog';
 import MediaPreviewModal from './MediaPreviewModal';
 import { useCaptureCameraMode } from '../../hooks/useCaptureCameraMode';
 import type { MediaFile } from '../../services/mediaService';
+import StaticDesignTokens from '../../components/ui/DesignTokens';
+
+/** כרום מעל מדיה (מצלמה / סטורי) — טוקנים קבועים, פריט 44 */
+const M = StaticDesignTokens.colors.onMedia;
 
 export type ChatAttachCameraResult = {
   uri: string;
@@ -63,7 +67,7 @@ const SCREEN_W = Dimensions.get('window').width;
 const MODE_PILL_W = 78;
 const MODE_PILL_GAP = 6;
 const MODE_SPRING = { damping: 22, stiffness: 220, mass: 0.8 };
-const RECORD_RED = '#FF3B30';
+const RECORD_RED = M.record;
 
 function shotToMediaFile(shot: ChatAttachCameraResult): MediaFile {
   const isVideo = shot.mediaType === 'video';
@@ -363,7 +367,7 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit, i
         ) : null}
         {shot ? null : (<>
         {granted && !sessionReady ? (
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000' }]} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: M.base }]} />
         ) : granted ? (
           <GestureDetector gesture={modeSwipe}>
             <View style={[StyleSheet.absoluteFill, styles.previewStage]} collapsable={false}>
@@ -397,7 +401,7 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit, i
           </GestureDetector>
         ) : (
           // בלי הרשאה: הממשק הרגיל על רקע שחור — הבקשה בדיאלוג (בפתיחה / בלחיצה על הצילום)
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000' }]} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: M.base }]} />
         )}
 
         {/* «חלון» המצלמה — המצלמה במסך מלא (כמו קודם; מיכל בגודל מותאם הקפיא את התצוגה ב-iOS)
@@ -412,7 +416,7 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit, i
             accessibilityRole="button"
             accessibilityLabel={i18n.t('auto.components__chat__ChatAttachCameraSheet.s4')}
           >
-            <Ionicons name="close" size={26} color="#fff" />
+            <Ionicons name="close" size={26} color={M.text} />
           </Pressable>
           <Pressable
             onPress={() => {
@@ -423,7 +427,7 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit, i
             accessibilityRole="button"
             accessibilityLabel={flashOn ? i18n.t('auto.components__chat__ChatAttachCameraSheet.s5') : i18n.t('auto.components__chat__ChatAttachCameraSheet.s6')}
           >
-            <Ionicons name={flashOn ? 'flash' : 'flash-off'} size={22} color="#fff" />
+            <Ionicons name={flashOn ? 'flash' : 'flash-off'} size={22} color={M.text} />
           </Pressable>
         </View>
 
@@ -436,7 +440,7 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit, i
                 accessibilityRole="button"
                 accessibilityLabel={i18n.t('auto.components__chat__ChatAttachCameraSheet.s7')}
               >
-                <Ionicons name="images" size={22} color="#fff" />
+                <Ionicons name="images" size={22} color={M.text} />
               </Pressable>
             </View>
 
@@ -452,7 +456,7 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit, i
               accessibilityLabel={captureMode === 'video' ? (recording ? i18n.t('auto.components__chat__ChatAttachCameraSheet.s8') : i18n.t('auto.components__chat__ChatAttachCameraSheet.s9')) : i18n.t('auto.components__chat__ChatAttachCameraSheet.s10')}
             >
               {capturing ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={M.text} />
               ) : (
                 <View
                   style={[
@@ -471,7 +475,7 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit, i
                 accessibilityRole="button"
                 accessibilityLabel={i18n.t('auto.components__chat__ChatAttachCameraSheet.s11')}
               >
-                <Ionicons name="camera-reverse-outline" size={26} color="#fff" />
+                <Ionicons name="camera-reverse-outline" size={26} color={M.text} />
               </Pressable>
             </View>
           </View>
@@ -515,7 +519,7 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit, i
 
 const styles = StyleSheet.create({
   previewStage: {
-    backgroundColor: '#000',
+    backgroundColor: M.base,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -525,18 +529,18 @@ const styles = StyleSheet.create({
   },
   root: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: M.base,
   },
   permissionFallback: {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
     paddingHorizontal: 32,
-    backgroundColor: '#000',
+    backgroundColor: M.base,
   },
   permissionText: {
     ...appPhysicalRightText,
-    color: 'rgba(255,255,255,0.72)',
+    color: M.textMuted,
     fontSize: APP_TYPE.body.fontSize,
     textAlign: 'center',
   },
@@ -545,7 +549,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     paddingHorizontal: 20,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: M.text,
   },
   permissionBtnLabel: {
     fontSize: APP_TYPE.body.fontSize,
@@ -556,7 +560,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    backgroundColor: '#000',
+    backgroundColor: M.base,
   },
   topBar: {
     position: 'absolute',
@@ -607,7 +611,7 @@ const styles = StyleSheet.create({
     height: 84,
     borderRadius: 42,
     borderWidth: 3,
-    borderColor: '#fff',
+    borderColor: M.text,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
@@ -616,7 +620,7 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 34,
-    backgroundColor: '#fff',
+    backgroundColor: M.text,
   },
   shutterVideo: {
     backgroundColor: RECORD_RED,
@@ -660,7 +664,7 @@ const styles = StyleSheet.create({
     fontSize: APP_TYPE.cardSubtitle.fontSize,
     lineHeight: APP_TYPE.cardSubtitle.lineHeight,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: M.text,
     writingDirection: TEXT_DIR,
   },
 });

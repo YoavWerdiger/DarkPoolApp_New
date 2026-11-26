@@ -10,6 +10,7 @@ import { Image } from 'react-native';
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../config/publicEnv';
 import { supabase } from '../lib/supabase';
 import { logger } from '../utils/logger';
+import { fetchBlockedUserIds } from './moderationService';
 import { compressVideoForUpload, discardCompressedVideo } from '../lib/videoCompressSafe';
 import {
   isCacheableMediaPath,
@@ -119,14 +120,20 @@ async function resolveMediaUrl(mediaUrl: string | null): Promise<string | null> 
 }
 
 export async function getUsersWithStories(currentUserId?: string): Promise<StoryWithUser[]> {
-  const { data: stories, error: storiesErr } = await supabase
-    .from('user_stories')
-    .select('id, user_id, media_type, media_url, content, created_at, expires_at, background_color')
-    .gt('expires_at', new Date().toISOString())
-    .order('created_at', { ascending: false });
+  const [{ data: allStories, error: storiesErr }, blockedIds] = await Promise.all([
+    supabase
+      .from('user_stories')
+      .select('id, user_id, media_type, media_url, content, created_at, expires_at, background_color')
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false }),
+    currentUserId ? fetchBlockedUserIds() : Promise.resolve([] as string[]),
+  ]);
 
   if (storiesErr) throw storiesErr;
-  if (!stories || stories.length === 0) return [];
+  // סטוריז של משתמשים חסומים לא מוצגים
+  const blocked = new Set(blockedIds);
+  const stories = (allStories ?? []).filter((s) => !blocked.has(s.user_id));
+  if (stories.length === 0) return [];
 
   const userIds = [...new Set(stories.map((s) => s.user_id))];
   const { data: users, error: usersErr } = await supabase

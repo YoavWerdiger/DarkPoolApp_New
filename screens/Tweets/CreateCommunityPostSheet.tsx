@@ -43,6 +43,7 @@ import EntityEmbedCard from '../../components/share/EntityEmbedCard';
 import MentionPickerSheet from '../../components/share/MentionPickerSheet';
 import CommunityPostImage from './CommunityPostImage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ensureUgcTermsAccepted } from '../../components/moderation/ugcTermsGate';
 
 type Props = {
   visible: boolean;
@@ -254,6 +255,7 @@ function CreateCommunityPostSheetBody({
 
   const submit = useCallback(async () => {
     if (!canSubmit) return;
+    if (!(await ensureUgcTermsAccepted())) return;
     setBusy(true);
     setError(null);
     void HapticFeedback.impactLight();

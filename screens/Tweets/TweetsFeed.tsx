@@ -52,6 +52,8 @@ import CommunityPostImage from './CommunityPostImage';
 import { UserBadges, badgeSizeForLineHeight } from '../../components/ui/badges/UserBadges';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { openContentActions } from '../../components/moderation/contentActions';
+import { useBlockedUsers } from '../../hooks/useBlockedUsers';
 
 const PAGE_SIZE = 30;
 
@@ -212,6 +214,30 @@ function PostCard({
                   size={17}
                   color={tokens.colors.text.secondary}
                 />
+              </TouchableOpacity>
+            ) : null}
+            {!isMine ? (
+              <TouchableOpacity
+                onPress={() =>
+                  void openContentActions({
+                    targetType: 'post',
+                    targetId: post.id,
+                    targetUserId: post.author.id,
+                    targetName: post.author.displayName,
+                    snapshot: post.body,
+                  })
+                }
+                hitSlop={8}
+                accessibilityLabel="אפשרויות: דיווח או חסימה"
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 17,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="ellipsis-horizontal" size={18} color={tokens.colors.text.secondary} />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -721,6 +747,13 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
     });
   }, []);
 
+  const blockedUsers = useBlockedUsers();
+  // פוסטים של משתמשים חסומים מוסתרים
+  const visiblePosts = useMemo(
+    () => (blockedUsers.size === 0 ? posts : posts.filter((p) => !blockedUsers.has(p.userId))),
+    [posts, blockedUsers],
+  );
+
   if (loading && posts.length === 0) {
     return (
       <View style={{ flex: 1 }}>
@@ -766,7 +799,7 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
         <FeedTabToggle value={feedMode} onChange={handleFeedModeChange} />
         <FlatList onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
           ref={listRef}
-          data={posts}
+          data={visiblePosts}
           keyExtractor={(item) => item.id}
           onScrollToIndexFailed={(info) => {
             // גובה הכרטיסים משתנה — גוללים בערך ומנסים שוב

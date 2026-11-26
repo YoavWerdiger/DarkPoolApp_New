@@ -77,6 +77,8 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import {
   scrollChatListToBottom,
 } from '../../utils/chatListScrollToBottom';
+import { blockFlow, reportFlow } from '../../components/moderation/contentActions';
+import { useBlockedUsers } from '../../hooks/useBlockedUsers';
 
 // ── בועת שלד — בזמן טעינת ההודעות ──────────────────────
 // באותה גאומטריה כמו ChatMessage: אווטאר 24 לצד בועות של אחרים, בועה עד 80% עם פינה 4 בצד הזנב,
@@ -254,7 +256,15 @@ export default function ChatGroupScreen() {
    * לא תלוי ב-isLoadingMessages: רענון רשת ברקע לא צריך להסתיר הודעות cache. */
   const rawDisplayMessages = contextMessagesForGroup ?? cachedSeedMessages;
   // תמונות שנשלחו יחד (media_group_id) → בועת גריד אחת, כמו וואטסאפ
-  const displayMessages = useMemo(() => collapseMediaAlbums(rawDisplayMessages), [rawDisplayMessages]);
+  const blockedUsers = useBlockedUsers();
+  // הודעות של משתמשים חסומים מוסתרות
+  const displayMessages = useMemo(() => {
+    const visible =
+      blockedUsers.size === 0
+        ? rawDisplayMessages
+        : rawDisplayMessages.filter((m) => !m.sender_id || !blockedUsers.has(m.sender_id));
+    return collapseMediaAlbums(visible);
+  }, [rawDisplayMessages, blockedUsers]);
   const hasLocalMessagesForGroup = displayMessages.length > 0;
 
   /** כותרת מיידית משורת הרשימה / cache — לא נופלים לשם של קבוצה אחרת */
@@ -1577,7 +1587,7 @@ export default function ChatGroupScreen() {
     // פעולות שפותחות Modal (דיאלוג מחיקה, עריכה, העברה, בורר ריאקציות, מידע) מחכות שה-Modal של
     // השיט יירד לגמרי — Modal שנפתח בזמן ש-Modal אחר נסגר מקריס את האפליקציה ב-iOS.
     // (השיט נשאר mounted עד SHEET_CLOSE_MS + 60 — ראה LongPressOverlay.)
-    const OPENS_MODAL = new Set(['openReactionPicker', 'delete', 'deleteForEveryone', 'edit', 'forward', 'info']);
+    const OPENS_MODAL = new Set(['openReactionPicker', 'delete', 'deleteForEveryone', 'edit', 'forward', 'info', 'report', 'block']);
     const actionDelayMs = OPENS_MODAL.has(action) ? SHEET_CLOSE_MS + 140 : 300;
 
     setTimeout(() => {
@@ -1616,6 +1626,18 @@ export default function ChatGroupScreen() {
           break;
         case 'retry':
           void retrySendMessage(message.id);
+          break;
+        case 'report':
+          void reportFlow({
+            targetType: 'message',
+            targetId: String(message.id),
+            targetUserId: message.sender_id ?? null,
+            targetName: message.sender?.display_name ?? null,
+            snapshot: typeof message.content === 'string' ? message.content : null,
+          });
+          break;
+        case 'block':
+          if (message.sender_id) void blockFlow(message.sender_id, message.sender?.display_name);
           break;
       }
     }, actionDelayMs);

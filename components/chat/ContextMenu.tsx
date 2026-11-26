@@ -6,7 +6,7 @@ import i18n from '../../lib/i18n';
 // ============================================
 import React, { useMemo } from 'react';
 import { View } from 'react-native';
-import { Copy, Forward, Info, Pencil, Reply, Star, Trash2, Users, type LucideIcon } from 'lucide-react-native';
+import { Ban, Copy, Flag, Forward, Info, Pencil, Reply, Star, Trash2, Users, type LucideIcon } from 'lucide-react-native';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { SettingsActionRow, SettingsGlassCard } from '../profile/ProfileSettingsUI';
 
@@ -37,6 +37,8 @@ export default function ContextMenu({ onSelect, isAdmin = false, isMe = false, c
     const danger: OptionDef[] = [
       ...(isMe ? [{ key: 'delete', label: i18n.t('auto.components__chat__ContextMenu.s7'), icon: Trash2 }] : []),
       ...(isMe || isAdmin ? [{ key: 'deleteForEveryone', label: i18n.t('auto.components__chat__ContextMenu.s8'), icon: Users }] : []),
+      // תוכן של אחרים: דיווח וחסימה (דרישת Apple / Google לתוכן גולשים)
+      ...(!isMe ? [{ key: 'report', label: 'דיווח', icon: Flag }, { key: 'block', label: 'חסימת השולח', icon: Ban }] : []),
     ];
     return { mainOptions: main, dangerOptions: danger };
   }, [isAdmin, isMe, canEdit, canForward]);

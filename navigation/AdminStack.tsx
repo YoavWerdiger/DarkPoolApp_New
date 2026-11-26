@@ -6,6 +6,7 @@ import AdminDashboardScreen from '../screens/Admin/AdminDashboardScreen';
 import AdminUsersScreen from '../screens/Admin/AdminUsersScreen';
 import AdminPushScreen from '../screens/Admin/AdminPushScreen';
 import AdminTicketsScreen from '../screens/Admin/AdminTicketsScreen';
+import AdminReportsScreen from '../screens/Admin/AdminReportsScreen';
 import AdminCardComScreen from '../screens/Admin/AdminCardComScreen';
 import AdminPaymentsScreen from '../screens/Admin/AdminPaymentsScreen';
 import AdminGroupsScreen from '../screens/Admin/AdminGroupsScreen';
@@ -44,6 +45,7 @@ export default function AdminStack() {
       <Stack.Screen name="AdminCourseEdit" component={withAdminShell(AdminCourseEditScreen)} />
       <Stack.Screen name="AdminPush" component={withAdminShell(AdminPushScreen)} />
       <Stack.Screen name="AdminTickets" component={withAdminShell(AdminTicketsScreen)} />
+      <Stack.Screen name="AdminReports" component={withAdminShell(AdminReportsScreen)} />
       <Stack.Screen name="AdminCardCom" component={withAdminShell(AdminCardComScreen)} />
       <Stack.Screen name="AdminPayments" component={withAdminShell(AdminPaymentsScreen)} />
     </Stack.Navigator>

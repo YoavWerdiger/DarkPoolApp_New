@@ -57,6 +57,9 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 import UserAvatarButton from '../../components/profile/UserAvatarButton';
 import UserNameButton from '../../components/profile/UserNameButton';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { openContentActions } from '../moderation/contentActions';
+import { useBlockedUsers } from '../../hooks/useBlockedUsers';
+import { ensureUgcTermsAccepted } from '../moderation/ugcTermsGate';
 
 /** ההודעה שמגיבים עליה (הכרזה) */
 export type CommentTarget = { id: string; groupId: string };
@@ -132,6 +135,12 @@ function MessageCommentsSheetBody({
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
   const [replies, setReplies] = useState<MessageComment[]>([]);
+  const blockedUsers = useBlockedUsers();
+  // תגובות של משתמשים חסומים מוסתרות
+  const visibleReplies = useMemo(
+    () => (blockedUsers.size === 0 ? replies : replies.filter((r) => !blockedUsers.has(r.userId))),
+    [replies, blockedUsers],
+  );
   // עדכון מונה התגובות בפיד — מחוץ ל-updater של setReplies (שרץ בזמן רינדור →
   // «Cannot update TweetsFeed while rendering PostRepliesSheetBody»)
   const repliesRef = useRef<MessageComment[]>([]);
@@ -215,6 +224,7 @@ function MessageCommentsSheetBody({
   const submit = useCallback(async () => {
     const current = postRef.current;
     if (!canSubmit || !current) return;
+    if (!(await ensureUgcTermsAccepted())) return;
     setBusy(true);
     setError(null);
     void HapticFeedback.impactLight();
@@ -359,7 +369,7 @@ function MessageCommentsSheetBody({
     ) : (
       <FlatList
         ref={listRef}
-        data={replies}
+        data={visibleReplies}
         keyExtractor={(item) => item.id}
         style={styles.list}
         contentContainerStyle={styles.listContent}
@@ -417,6 +427,24 @@ function MessageCommentsSheetBody({
                     size={badgeSizeForLineHeight(APP_TYPE.cardTitle.lineHeight)}
                   />
                   <View style={styles.replyMetaSpacer} />
+                  {!isMine ? (
+                    <TouchableOpacity
+                      onPress={() =>
+                        void openContentActions({
+                          targetType: 'message_comment',
+                          targetId: item.id,
+                          targetUserId: item.author.id,
+                          targetName: item.author.displayName,
+                          snapshot: item.body,
+                        })
+                      }
+                      hitSlop={8}
+                      accessibilityLabel="אפשרויות: דיווח או חסימה"
+                      style={{ width: 24, height: 24, alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <Ionicons name="ellipsis-horizontal" size={15} color={tokens.colors.text.secondary} />
+                    </TouchableOpacity>
+                  ) : null}
                   {canDelete ? (
                     <TouchableOpacity
                       onPress={() => handleDelete(item)}

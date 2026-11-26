@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { RefreshControl } from '../../components/ui/AppRefreshControl';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Bell, CreditCard, KeyRound, LifeBuoy, Users, MessagesSquare, GraduationCap } from 'lucide-react-native';
+import { Bell, CreditCard, Flag, KeyRound, LifeBuoy, Users, MessagesSquare, GraduationCap } from 'lucide-react-native';
 import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import { SettingsActionRow, SettingsSwitchRow } from '../../components/profile/ProfileSettingsUI';
@@ -278,10 +278,18 @@ export default function AdminDashboardScreen({ navigation }: any) {
           <SettingsActionRow
             title={i18n.t('auto.screens__Admin__AdminDashboardScreen.s13')}
             icon={LifeBuoy}
-            showDivider={false}
             onPress={() => {
               void HapticFeedback.impactLight();
               navigation.navigate('AdminTickets');
+            }}
+          />
+          <SettingsActionRow
+            title="דיווחים על תוכן"
+            icon={Flag}
+            showDivider={false}
+            onPress={() => {
+              void HapticFeedback.impactLight();
+              navigation.navigate('AdminReports');
             }}
           />
         </AdminSurface>

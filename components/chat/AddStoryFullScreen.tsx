@@ -52,6 +52,7 @@ import { useAuth } from '../../context/AuthContext';
 import { uploadStoryImage, uploadStoryVideo, createStory } from '../../services/storiesService';
 import { chatPalette } from './chatDesignTokens';
 import { useCaptureCameraMode } from '../../hooks/useCaptureCameraMode';
+import { ensureUgcTermsAccepted } from '../moderation/ugcTermsGate';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const GALLERY_THUMB = 52;
@@ -1733,6 +1734,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
   }, []);
 
   const handleShareMedia = async () => {
+    if (!(await ensureUgcTermsAccepted())) return;
     if (!user?.id || !mediaUri) return;
     try {
       const hasOverlays = overlays.length > 0;
@@ -1791,6 +1793,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
 
   const handleShareText = async () => {
     if (!user?.id || !textContent.trim()) return;
+    if (!(await ensureUgcTermsAccepted())) return;
     const bg = GRADIENT_BACKGROUNDS[textBgIndex];
     publishStoryOptimistic({
       userId: user.id,

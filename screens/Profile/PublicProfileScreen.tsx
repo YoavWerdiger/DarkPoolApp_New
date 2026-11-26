@@ -54,6 +54,8 @@ import { fetchCommunityPostsByUser, formatPostTime } from '../../services/tweets
 import type { CommunityPost } from '../../types/tweets.types';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { legacyAlert } from '../../utils/appDialog';
+import { blockFlow, reportFlow, unblockFlow } from '../../components/moderation/contentActions';
+import { useBlockedUsers } from '../../hooks/useBlockedUsers';
 
 const AVATAR = 92;
 
@@ -93,6 +95,8 @@ export default function PublicProfileScreen({ route, navigation }: any) {
   const { user } = useAuth();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const isSelf = !!user && user.id === userId;
+  const blockedUsers = useBlockedUsers();
+  const isBlocked = !isSelf && blockedUsers.has(userId);
 
   const [profile, setProfile] = useState<PublicUserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -263,6 +267,31 @@ export default function PublicProfileScreen({ route, navigation }: any) {
               onPress={() => void toggleFollow()}
             />
           )}
+
+          {/* דיווח וחסימה (Apple 1.2 / Google UGC) */}
+          {!isSelf && userId ? (
+            <View style={styles.moderationRow}>
+              <Pressable
+                onPress={() =>
+                  void reportFlow({ targetType: 'user', targetId: userId, targetUserId: userId, targetName: name })
+                }
+                accessibilityRole="button"
+                hitSlop={8}
+              >
+                <Text style={[styles.moderationLink, { color: tokens.colors.text.secondary }]}>דיווח על המשתמש</Text>
+              </Pressable>
+              <Text style={[styles.moderationLink, { color: tokens.colors.text.tertiary }]}>·</Text>
+              <Pressable
+                onPress={() => void (isBlocked ? unblockFlow(userId) : blockFlow(userId, name))}
+                accessibilityRole="button"
+                hitSlop={8}
+              >
+                <Text style={[styles.moderationLink, { color: isBlocked ? tokens.colors.text.primary : tokens.colors.danger.main }]}>
+                  {isBlocked ? 'ביטול חסימה' : 'חסימה'}
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
 
           {/* ותק — הדגש של הפרופיל: סמל הדרגה עם הילה, שם הדרגה, ומסלול 7 הדרגות */}
           {progress && metalColor ? (
@@ -466,6 +495,17 @@ function Stat({
 
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
+    moderationRow: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 10,
+      marginTop: 12,
+    },
+    moderationLink: {
+      fontSize: 13,
+      lineHeight: 18,
+    },
     // תת-עץ RTL (כמו Dark Pool): שורות מימין לשמאל; טקסט לימין דרך appPhysicalRightText
     root: {
       flex: 1,

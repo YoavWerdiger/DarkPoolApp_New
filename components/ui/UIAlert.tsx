@@ -147,18 +147,20 @@ const UIAlert: React.FC<UIAlertProps> = ({
     ...centeredCopy,
   };
 
+  // יותר משני כפתורים (למשל בחירת סיבת דיווח) — עמודה, אחרת לא נכנסים בשורה
+  const stackButtons = buttons.length > 2;
   const buttonContainerStyle: ViewStyle = {
-    flexDirection: 'row-reverse',
+    flexDirection: stackButtons ? 'column' : 'row-reverse',
     direction: ROOT_DIR,
     alignItems: 'stretch',
     alignSelf: 'stretch',
     width: '100%',
     marginTop: spacing.xs,
-    gap: APP_LAYOUT.cardStackGap,
+    gap: stackButtons ? 8 : APP_LAYOUT.cardStackGap,
   };
 
   const getButtonStyle = (): ViewStyle => ({
-    flex: 1,
+    flex: stackButtons ? undefined : 1,
     minWidth: 0,
     minHeight: 52,
     borderRadius: borderRadius.full,

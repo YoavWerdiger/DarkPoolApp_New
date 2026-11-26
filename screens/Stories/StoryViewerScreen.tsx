@@ -84,6 +84,7 @@ import {
   reactStyles,
 } from '../../components/stories/StoryChrome';
 import { StoryViewersSheet } from '../../components/stories/StoryViewersSheet';
+import { openContentActions } from '../../components/moderation/contentActions';
 
 /** 'forward' = לכיוון אינדקס נמוך (קדימה בשורה), 'back' = אינדקס גבוה */
 type Dir = 'forward' | 'back';
@@ -419,8 +420,9 @@ function StoryViewerScreenInner() {
   const [viewersSheetOpen, setViewersSheetOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ visible: boolean; error?: string }>({ visible: false });
   const [deleting, setDeleting] = useState(false);
+  const [moderationOpen, setModerationOpen] = useState(false);
   const paused =
-    holdPaused || dragPaused || switching || viewersSheetOpen || confirmDelete.visible || !isFocused;
+    holdPaused || dragPaused || switching || viewersSheetOpen || confirmDelete.visible || moderationOpen || !isFocused;
 
   /* ── התקדמות: טיימר JS קובע את המעבר; Reanimated רק מצייר את הפסים ── */
   const progress = useSharedValue(0);
@@ -965,6 +967,27 @@ function StoryViewerScreenInner() {
           accessibilityRole="button"
           accessibilityLabel={i18n.t('auto.screens__Stories__StoryViewerScreen.s8')}
         />
+        {!isOwnStory && currentStory && currentUserId ? (
+          // דיווח / חסימה על סטורי של משתמש אחר
+          <TouchableOpacity
+            onPress={() => {
+              setModerationOpen(true);
+              void openContentActions({
+                targetType: 'story',
+                targetId: String(currentStory.id),
+                targetUserId: currentUserId,
+                targetName: userInfo(currentUserId).name,
+                snapshot: currentStory.media_url ?? null,
+              }).finally(() => setModerationOpen(false));
+            }}
+            style={[styles.moreHit, { top: insets.top + 10 + 3.5 + 12 - 4 }]}
+            hitSlop={{ top: 10, bottom: 10, left: 6, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="אפשרויות: דיווח או חסימה"
+          >
+            <Ionicons name="ellipsis-horizontal" size={22} color="#fff" />
+          </TouchableOpacity>
+        ) : null}
         <Reanimated.View style={[StyleSheet.absoluteFill, chromeAnim]} pointerEvents="box-none">
           {renderBottom()}
         </Reanimated.View>
@@ -1140,6 +1163,15 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
+  },
+  moreHit: {
+    position: 'absolute',
+    left: 58,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   bottomGradient: {
     position: 'absolute',

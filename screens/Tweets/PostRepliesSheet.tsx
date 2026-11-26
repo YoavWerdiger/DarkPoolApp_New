@@ -56,6 +56,9 @@ import UserAvatarButton from '../../components/profile/UserAvatarButton';
 import UserNameButton from '../../components/profile/UserNameButton';
 import FollowUserButton from '../../components/profile/FollowUserButton';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { openContentActions } from '../../components/moderation/contentActions';
+import { useBlockedUsers } from '../../hooks/useBlockedUsers';
+import { ensureUgcTermsAccepted } from '../../components/moderation/ugcTermsGate';
 
 type Props = {
   visible: boolean;
@@ -127,6 +130,12 @@ function PostRepliesSheetBody({
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
   const [replies, setReplies] = useState<CommunityPostReply[]>([]);
+  const blockedUsers = useBlockedUsers();
+  // תגובות של משתמשים חסומים מוסתרות
+  const visibleReplies = useMemo(
+    () => (blockedUsers.size === 0 ? replies : replies.filter((r) => !blockedUsers.has(r.userId))),
+    [replies, blockedUsers],
+  );
   // עדכון מונה התגובות בפיד — מחוץ ל-updater של setReplies (שרץ בזמן רינדור →
   // «Cannot update TweetsFeed while rendering PostRepliesSheetBody»)
   const repliesRef = useRef<CommunityPostReply[]>([]);
@@ -218,6 +227,7 @@ function PostRepliesSheetBody({
   const submit = useCallback(async () => {
     const current = postRef.current;
     if (!canSubmit || !current) return;
+    if (!(await ensureUgcTermsAccepted())) return;
     setBusy(true);
     setError(null);
     void HapticFeedback.impactLight();
@@ -364,7 +374,7 @@ function PostRepliesSheetBody({
     ) : (
       <FlatList
         ref={listRef}
-        data={replies}
+        data={visibleReplies}
         keyExtractor={(item) => item.id}
         style={styles.list}
         contentContainerStyle={styles.listContent}
@@ -423,6 +433,24 @@ function PostRepliesSheetBody({
                   />
                   {isMine ? null : <FollowUserButton userId={item.author.id} />}
                   <View style={styles.replyMetaSpacer} />
+                  {!isMine ? (
+                    <TouchableOpacity
+                      onPress={() =>
+                        void openContentActions({
+                          targetType: 'post_reply',
+                          targetId: item.id,
+                          targetUserId: item.author.id,
+                          targetName: item.author.displayName,
+                          snapshot: item.body,
+                        })
+                      }
+                      hitSlop={8}
+                      accessibilityLabel="אפשרויות: דיווח או חסימה"
+                      style={{ width: 24, height: 24, alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <Ionicons name="ellipsis-horizontal" size={15} color={tokens.colors.text.secondary} />
+                    </TouchableOpacity>
+                  ) : null}
                   {canDelete ? (
                     <TouchableOpacity
                       onPress={() => handleDelete(item)}

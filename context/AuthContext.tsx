@@ -21,6 +21,7 @@ import { clear as clearChatOfflineQueue } from '../services/chat/chatOfflineQueu
 import { clearAllColmexLocal, purgeLegacyColmexPassword } from '../services/colmex/colmexCredentials';
 import * as Notifications from 'expo-notifications';
 import { startIapListeners } from '../services/iapService';
+import { maybeOfferBiometricLogin } from '../utils/biometricOffer';
 
 /** בעלים של ה-cache המקומי — אם משתמש אחר נכנס (או התנתקות אוטומטית), לא מציגים לו נתונים של הקודם */
 const CACHE_OWNER_KEY = 'app_cache_owner_v1';
@@ -333,6 +334,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await setPasswordRecoveryMode(false);
       setUser(user);
       setTimeout(() => registerTokenOnce(), 2000);
+      setTimeout(() => void maybeOfferBiometricLogin(), 1500);
       return { error: null };
     } catch (error: any) {
       logger.error('AuthContext', 'Sign in exception', error);
@@ -508,6 +510,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await setPasswordRecoveryMode(false);
         setUser(result.user);
         setTimeout(() => registerTokenOnce(), 2000);
+        setTimeout(() => void maybeOfferBiometricLogin(), 1500);
       }
       return {
         error: null,
@@ -536,6 +539,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await setPasswordRecoveryMode(false);
         setUser(result.user);
         setTimeout(() => registerTokenOnce(), 2000);
+        setTimeout(() => void maybeOfferBiometricLogin(), 1500);
       }
       return {
         error: null,

@@ -23,6 +23,7 @@ import { Image } from 'expo-image';
 import { Camera, UserRound } from 'lucide-react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
+import { getGalleryPermission, requestGalleryPermission } from '../../utils/galleryPermission';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
@@ -100,7 +101,7 @@ export default function EditProfileScreen({ navigation }: any) {
   }, [user]);
 
   useEffect(() => {
-    ImagePicker.requestMediaLibraryPermissionsAsync().catch(() => {});
+    requestGalleryPermission().catch(() => {});
   }, []);
 
   const loadUserData = async () => {
@@ -146,7 +147,7 @@ export default function EditProfileScreen({ navigation }: any) {
 
   const handleImageFromGallery = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status } = await requestGalleryPermission();
       if (status !== 'granted') {
         legacyAlert(i18n.t('auto.screens__Profile__EditProfileScreen.s1'), i18n.t('auto.screens__Profile__EditProfileScreen.s2'));
         return;

@@ -25,6 +25,7 @@ import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { Ionicons } from '@expo/vector-icons';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import * as ImagePicker from 'expo-image-picker';
+import { getGalleryPermission, requestGalleryPermission } from '../../utils/galleryPermission';
 
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
@@ -118,7 +119,7 @@ export default function CreateNewsSheet({ visible, onClose, onCreated, editArtic
 
   const handlePickImage = useCallback(async () => {
     try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permission = await requestGalleryPermission();
 
       const allowed = permission.granted || permission.accessPrivileges === 'limited';
 

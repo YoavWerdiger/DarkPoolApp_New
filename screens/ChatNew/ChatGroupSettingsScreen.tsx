@@ -25,6 +25,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { scheduleAfterNavigationTransition } from '../../hooks/afterNavigationTransition';
 import * as ImagePicker from 'expo-image-picker';
+import { getGalleryPermission, requestGalleryPermission } from '../../utils/galleryPermission';
 import { Ionicons } from '@expo/vector-icons';
 import { useChat } from '../../context/ChatContext';
 import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
@@ -155,7 +156,7 @@ export default function ChatGroupSettingsScreen() {
   const handleChangePhoto = async () => {
     if (!isAdmin) return;
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status } = await requestGalleryPermission();
       if (status !== 'granted') {
         legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s1'), i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s7'));
         return;

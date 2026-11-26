@@ -12,6 +12,7 @@ import React, { useRef, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Pressable, Image, Keyboard } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import * as ImagePicker from 'expo-image-picker';
+import { getGalleryPermission, requestGalleryPermission } from '../../utils/galleryPermission';
 import { mediaService } from '../../services/mediaService';
 import { SHEET_CLOSE_MS } from '../ui/BottomSheet/sheetMotion';
 import { Ionicons } from '@expo/vector-icons';
@@ -82,7 +83,7 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
 
   const pickImage = async () => {
     void HapticFeedback.selection();
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const { status } = await requestGalleryPermission();
     if (status !== 'granted') {
       legacyAlert(i18n.t('auto.components__chat__CreateGroupSheet.s3'), i18n.t('auto.components__chat__CreateGroupSheet.s4'));
       return;

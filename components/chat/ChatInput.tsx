@@ -17,6 +17,7 @@ import { useDesignTokens } from '../ui/DesignTokens';
 import UICard from '../ui/UICard';
 import { CHROME_UICARD, chromeSurfaceCardStyle } from '../ui/chromeControl';
 import * as ImagePicker from 'expo-image-picker';
+import { getGalleryPermission, requestGalleryPermission } from '../../utils/galleryPermission';
 import { Image as ExpoImage } from 'expo-image';
 import AttachMenuSheet from './AttachMenuSheet';
 import { ChatAttachCameraSheet } from './ChatAttachCameraSheet';
@@ -1191,10 +1192,10 @@ function ChatInputImpl({
 
   const handlePickImage = async () => {
     try {
-      const { status: currentStatus } = await ImagePicker.getMediaLibraryPermissionsAsync();
+      const { status: currentStatus } = await getGalleryPermission();
 
       if (currentStatus !== 'granted') {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        const { status } = await requestGalleryPermission();
         if (status !== 'granted') {
           legacyAlert(i18n.t('auto.components__chat__ChatInput.s8'), i18n.t('auto.components__chat__ChatInput.s9'));
           return;
@@ -2300,10 +2301,10 @@ function ChatInputImpl({
 
   const handlePickVideo = async () => {
     try {
-      const { status: currentStatus } = await ImagePicker.getMediaLibraryPermissionsAsync();
+      const { status: currentStatus } = await getGalleryPermission();
 
       if (currentStatus !== 'granted') {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        const { status } = await requestGalleryPermission();
         if (status !== 'granted') {
           legacyAlert(i18n.t('auto.components__chat__ChatInput.s8'), i18n.t('auto.components__chat__ChatInput.s9'));
           return;

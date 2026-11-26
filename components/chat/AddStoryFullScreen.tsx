@@ -17,6 +17,7 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import { getGalleryPermission, requestGalleryPermission } from '../../utils/galleryPermission';
 import {
   peekMediaRecents,
   prefetchMediaRecents,
@@ -1574,13 +1575,16 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
       return;
     }
     try {
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      const status = perm.status;
-      logger.debug('AddStoryFullScreen', `openGallery permission=${status} access=${perm.accessPrivileges ?? '-'}`);
-      // «גישה מוגבלת» (iOS: רק תמונות נבחרות) — גם היא אישור; קודם נחשבה סירוב והבקשה חזרה
-      if (status !== 'granted' && perm.accessPrivileges !== 'limited') {
-        legacyAlert(i18n.t('auto.components__chat__AddStoryFullScreen.s9'), i18n.t('auto.components__chat__AddStoryFullScreen.s10'));
-        return;
+      // אנדרואיד: Photo Picker של המערכת לא צריך הרשאה (ואין לנו READ_MEDIA_* במניפסט)
+      if (Platform.OS !== 'android') {
+        const perm = await requestGalleryPermission();
+        const status = perm.status;
+        logger.debug('AddStoryFullScreen', `openGallery permission=${status} access=${perm.accessPrivileges ?? '-'}`);
+        // «גישה מוגבלת» (iOS: רק תמונות נבחרות) — גם היא אישור; קודם נחשבה סירוב והבקשה חזרה
+        if (status !== 'granted' && perm.accessPrivileges !== 'limited') {
+          legacyAlert(i18n.t('auto.components__chat__AddStoryFullScreen.s9'), i18n.t('auto.components__chat__AddStoryFullScreen.s10'));
+          return;
+        }
       }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images', 'videos'],
@@ -1620,8 +1624,12 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
 
   const handleGalleryPress = useCallback(() => {
     void HapticFeedback.selection();
+    if (Platform.OS === 'android') {
+      void openGallery();
+      return;
+    }
     setInAppGalleryOpen(true);
-  }, []);
+  }, [openGallery]);
 
 
   const handleCapturePress = useCallback(() => {

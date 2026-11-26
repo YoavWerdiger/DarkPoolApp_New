@@ -2,9 +2,11 @@ import { ROOT_DIR, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
 import {
   FlatList,
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -411,6 +413,35 @@ export default function MediaPickerSheet({
   );
 
   const requestPermission = useCallback(() => {
+    // אנדרואיד: אין הרשאת READ_MEDIA_* (מדיניות Google Play) — עוברים לבוחר של המערכת
+    if (Platform.OS === 'android') {
+      void (async () => {
+        const res = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: kind === 'photo' ? ['images'] : kind === 'video' ? ['videos'] : ['images', 'videos'],
+          allowsMultipleSelection: allowsMultiple,
+          selectionLimit,
+          quality: 1,
+        }).catch(() => null);
+        if (!res || res.canceled || res.assets.length === 0) return;
+        const now = Date.now();
+        onPickedMedia?.(
+          res.assets.map((a, i): PickedRecentMedia => {
+            const isVideo = a.type === 'video';
+            return {
+              id: `picker-${now}-${i}`,
+              uri: a.uri,
+              thumbnailUri: a.uri,
+              type: isVideo ? 'video' : 'image',
+              name: a.fileName || (isVideo ? `video_${now}_${i}.mp4` : `photo_${now}_${i}.jpg`),
+              width: a.width,
+              height: a.height,
+              duration: a.duration != null ? a.duration / 1000 : undefined,
+            };
+          }),
+        );
+      })();
+      return;
+    }
     void requestMediaLibraryRead().then((ok) => {
       if (!ok) {
         setPermission('denied');
@@ -423,7 +454,7 @@ export default function MediaPickerSheet({
         else setLoading(false);
       });
     });
-  }, [applyPage, kind]);
+  }, [allowsMultiple, applyPage, kind, onPickedMedia, selectionLimit]);
 
   const secondaryActions = useMemo<SheetAction[]>(() => {
     const next: SheetAction[] = [];

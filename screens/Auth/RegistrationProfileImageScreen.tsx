@@ -10,6 +10,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRegistration } from '../../context/RegistrationContext';
 import * as ImagePicker from 'expo-image-picker';
+import { getGalleryPermission, requestGalleryPermission } from '../../utils/galleryPermission';
 import * as ImageManipulator from 'expo-image-manipulator';
 import CashAppScreen from '../../components/ui/CashAppScreen';
 import CashAppButton from '../../components/ui/CashAppButton';
@@ -29,7 +30,7 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    ImagePicker.requestMediaLibraryPermissionsAsync().catch(() => {});
+    requestGalleryPermission().catch(() => {});
     ImagePicker.requestCameraPermissionsAsync().catch(() => {});
   }, []);
 
@@ -59,7 +60,7 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
   };
 
   const pickImageFromGallery = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const { status } = await requestGalleryPermission();
     if (status !== 'granted') {
       legacyAlert(i18n.t('auto.screens__Auth__RegistrationProfileImageScreen.s1'), i18n.t('auto.screens__Auth__RegistrationProfileImageScreen.s2'));
       return;

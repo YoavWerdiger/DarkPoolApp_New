@@ -20,6 +20,7 @@ import { logger } from '../../utils/logger';
 import { enterCameraAudioSession, ensurePermissionOrSettings, exitCameraAudioSession, requestCameraWithDialog } from '../../lib/cameraSession';
 import { stableCameraPreviewFrame } from '../../lib/cameraFrame';
 import { InAppGalleryPanel, type InAppGalleryPick } from './InAppGalleryPanel';
+import * as ImagePicker from 'expo-image-picker';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
@@ -237,8 +238,28 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit, i
   const openGallery = useCallback(() => {
     if (recording || capturing) return;
     void HapticFeedback.selection();
+    // אנדרואיד: בוחר התמונות של המערכת (Photo Picker) — בלי הרשאת READ_MEDIA_*, לפי מדיניות Google Play
+    if (Platform.OS === 'android') {
+      void (async () => {
+        try {
+          const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 1 });
+          const a = res.canceled ? null : res.assets[0];
+          if (!a) return;
+          finish({
+            uri: a.uri,
+            width: a.width,
+            height: a.height,
+            mediaType: a.type === 'video' ? 'video' : 'image',
+            durationMs: a.duration ?? undefined,
+          });
+        } catch (err) {
+          logger.error('ChatAttachCameraSheet', 'system picker failed', err);
+        }
+      })();
+      return;
+    }
     setGalleryOpen(true);
-  }, [capturing, recording]);
+  }, [capturing, finish, recording]);
   const onGalleryPick = useCallback(
     (pick: InAppGalleryPick) => {
       setGalleryOpen(false);

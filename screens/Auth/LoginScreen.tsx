@@ -389,6 +389,23 @@ export default function LoginScreen({ navigation }: any) {
                   </View>
 
                   <View style={styles.buttonStack}>
+                    {/* Apple גם בטופס «יש לי חשבון», לא רק במסך הפתיחה */}
+                    {appleAvailable ? (
+                      <AppleAuthentication.AppleAuthenticationButton
+                        buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                        buttonStyle={
+                          isDarkMode
+                            ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                            : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                        }
+                        cornerRadius={999}
+                        style={styles.appleButton}
+                        onPress={() => {
+                          if (isLoading || appleLoading) return;
+                          void handleAppleSignIn();
+                        }}
+                      />
+                    ) : null}
                     <UIButton
                       title={i18n.t('auto.screens__Auth__LoginScreen.s16')}
                       variant="secondary"

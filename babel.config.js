@@ -7,5 +7,12 @@ module.exports = function (api) {
       ["babel-preset-expo", { jsxImportSource: "nativewind" }],
       "nativewind/babel",
     ],
+    env: {
+      // בילד פרודקשן: בלי console.log/info/debug (ביצועים + לא לחשוף מידע בלוגים של המכשיר).
+      // console.error / console.warn נשארים — Sentry אוסף אותם.
+      production: {
+        plugins: [["transform-remove-console", { exclude: ["error", "warn"] }]],
+      },
+    },
   };
 };

@@ -88,7 +88,7 @@ import {
   darkPoolRtlContent,
   darkPoolTransparentFill,
 } from './darkPoolLayout';
-import InvestmentDisclaimer from '../components/legal/InvestmentDisclaimer';
+import InvestmentDisclaimer from '../../components/legal/InvestmentDisclaimer';
 
 type Nav = NativeStackNavigationProp<DarkPoolStackParamList, 'DarkPoolTicker'>;
 type RP = RouteProp<DarkPoolStackParamList, 'DarkPoolTicker'>;

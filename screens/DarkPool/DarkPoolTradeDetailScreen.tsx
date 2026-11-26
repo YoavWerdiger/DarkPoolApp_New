@@ -122,7 +122,7 @@ import {
   buildTradeDetailFieldRows,
   type TradeDetailFieldIcon,
 } from './utils/tradeDetailSummary';
-import InvestmentDisclaimer from '../components/legal/InvestmentDisclaimer';
+import InvestmentDisclaimer from '../../components/legal/InvestmentDisclaimer';
 
 type Nav = NativeStackNavigationProp<DarkPoolStackParamList, 'DarkPoolTradeDetail'>;
 type RP = RouteProp<DarkPoolStackParamList, 'DarkPoolTradeDetail'>;

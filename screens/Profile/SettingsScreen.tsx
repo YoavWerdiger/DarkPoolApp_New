@@ -46,7 +46,7 @@ import {
   settingsCaptionType,
 } from '../../components/profile/settingsType';
 import { isolateNumericRuns } from '../DarkPool/utils/bidi';
-import InvestmentDisclaimer from '../components/legal/InvestmentDisclaimer';
+import InvestmentDisclaimer from '../../components/legal/InvestmentDisclaimer';
 
 interface SettingItem {
   id: string;

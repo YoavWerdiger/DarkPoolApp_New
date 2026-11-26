@@ -10,7 +10,6 @@ import {
   purchaseUpdatedListener,
   requestPurchase,
   type Purchase,
-  type PurchaseError,
 } from 'expo-iap';
 import { supabase } from './supabase';
 import { logger } from '../utils/logger';
@@ -127,7 +126,7 @@ export async function startIapListeners(): Promise<void> {
   purchaseUpdatedListener((p: Purchase) => {
     void handlePurchase(p);
   });
-  purchaseErrorListener((err: PurchaseError) => {
+  purchaseErrorListener((err) => {
     const sku = err.productId ?? '';
     const resolve = sku ? waiters.get(sku) : waiters.values().next().value;
     if (!resolve) return;

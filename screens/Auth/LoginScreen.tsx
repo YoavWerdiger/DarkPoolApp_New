@@ -373,21 +373,19 @@ export default function LoginScreen({ navigation }: any) {
                   </View>
 
                   <View style={styles.buttonStack}>
-                    {/* Apple גם בטופס «יש לי חשבון», לא רק במסך הפתיחה */}
+                    {/* Apple בעיצוב של האפליקציה (כמו Google) — הכפתור הנייטיב מצויר באנגלית ובפונט של המערכת */}
                     {appleAvailable ? (
-                      <AppleAuthentication.AppleAuthenticationButton
-                        buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                        buttonStyle={
-                          isDarkMode
-                            ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
-                            : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
-                        }
-                        cornerRadius={999}
-                        style={styles.appleButton}
-                        onPress={() => {
-                          if (isLoading || appleLoading) return;
-                          void handleAppleSignIn();
-                        }}
+                      <UIButton
+                        title={i18n.t('auto.screens__Auth__LoginScreen.appleSignIn')}
+                        variant="secondary"
+                        size="lg"
+                        icon="logo-apple"
+                        iconPosition="right"
+                        fullWidth
+                        loading={appleLoading}
+                        disabled={isLoading || appleLoading}
+                        style={{ borderRadius: tokens.borderRadius.full }}
+                        onPress={() => void handleAppleSignIn()}
                       />
                     ) : null}
                     <UIButton
@@ -452,10 +450,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  appleButton: {
-    width: '100%',
-    height: 56,
   },
   buttonStack: {
     gap: APP_LAYOUT.stackGapTight,

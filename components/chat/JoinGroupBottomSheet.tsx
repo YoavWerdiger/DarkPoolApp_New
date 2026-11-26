@@ -1,5 +1,7 @@
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
+import { IS_RTL_UI, UI_DIR } from '../../lib/i18n/direction';
+import { appLocale } from '../../lib/i18n/locale';
 import React, { useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Image, Platform, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,7 +20,7 @@ import UIButton from '../ui/UIButton';
 
 const AVATAR = 84;
 /** גובה התוכן הקבוע (טבעת + שם + חברים + כפתור) — הערכה מדויקת כדי שהשיט ייפתח ישר לגובה הנכון בלי «קפיצה» */
-const CONTENT_EST_PX = 8 + (AVATAR + 12) + 16 + 30 + 28 + 56;
+const CONTENT_EST_PX = 8 + (AVATAR + 12) + 16 + 30 + 28 + 36 + 150 + 56;
 
 /** זהב Premium — כמו תגית מסחר מוקדם */
 const PREMIUM_GOLD = '#C7950F';
@@ -29,7 +31,12 @@ interface GroupInfo {
   description?: string;
   avatar_url?: string;
   members_count?: number;
+  messages_count?: number;
+  settings?: { is_announcement?: boolean; onlyAdminsCanSend?: boolean } | null;
 }
+
+/** יישור טקסט לפי שפת הממשק (עברית / ערבית לימין, אנגלית לשמאל) */
+const START_ALIGN = IS_RTL_UI ? 'right' : 'left';
 
 interface JoinGroupBottomSheetProps {
   visible: boolean;
@@ -86,6 +93,8 @@ export default function JoinGroupBottomSheet({
       transform: [{ translateY: 10000 }],
     },
     container: {
+      // כל השיט לפי כיוון שפת הממשק — שורות ואייקונים מתהפכים לבד באנגלית
+      direction: UI_DIR,
       alignItems: 'center',
       paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
       paddingTop: APP_LAYOUT.stackGapSmall,
@@ -133,7 +142,7 @@ export default function JoinGroupBottomSheet({
     lockBadge: {
       position: 'absolute',
       bottom: 2,
-      right: 2,
+      end: 2,
       width: 28,
       height: 28,
       borderRadius: 14,
@@ -168,7 +177,7 @@ export default function JoinGroupBottomSheet({
       backgroundColor: DesignTokens.colors.background.cardSolid,
     },
     perkRow: {
-      flexDirection: 'row-reverse',
+      flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
       paddingVertical: 12,
@@ -182,8 +191,53 @@ export default function JoinGroupBottomSheet({
       fontSize: APP_TYPE.cardBody.fontSize,
       lineHeight: APP_TYPE.cardBody.lineHeight,
       color: DesignTokens.colors.text.primary,
-      textAlign: 'right',
+      textAlign: START_ALIGN,
       writingDirection: TEXT_DIR,
+    },
+    perkTitle: {
+      fontSize: APP_TYPE.cardBody.fontSize,
+      lineHeight: APP_TYPE.cardBody.lineHeight,
+      fontWeight: '600',
+      color: DesignTokens.colors.text.primary,
+      textAlign: START_ALIGN,
+      writingDirection: TEXT_DIR,
+    },
+    perkSub: {
+      ...APP_TYPE.caption,
+      color: DesignTokens.colors.text.secondary,
+      textAlign: START_ALIGN,
+      writingDirection: TEXT_DIR,
+      marginTop: 2,
+    },
+    perkIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: DesignTokens.colors.background.tertiary,
+    },
+    stats: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      marginTop: APP_LAYOUT.stackGapSmall,
+    },
+    statChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      height: 28,
+      paddingHorizontal: 10,
+      borderRadius: 14,
+      backgroundColor: DesignTokens.colors.background.cardSolid,
+    },
+    statText: {
+      ...APP_TYPE.caption,
+      fontWeight: '600',
+      color: DesignTokens.colors.text.secondary,
+      fontVariant: ['tabular-nums'],
     },
     footnote: {
       ...APP_TYPE.caption,
@@ -196,6 +250,7 @@ export default function JoinGroupBottomSheet({
   if (!group) return null;
 
   const avatar = groupAvatarSource(group.name, group.avatar_url, isDarkMode);
+  const isAnnouncement = !!(group.settings?.is_announcement || group.settings?.onlyAdminsCanSend);
 
   const body = (
         <View style={styles.container}>
@@ -209,7 +264,7 @@ export default function JoinGroupBottomSheet({
         )}
         {premiumLocked ? (
           <View style={styles.lockBadge}>
-            <Ionicons name="lock-closed" size={12} color="#FFFFFF" />
+            <Ionicons name="lock-closed" size={12} color={DesignTokens.colors.text.inverse} />
           </View>
         ) : null}
       </View>
@@ -225,6 +280,34 @@ export default function JoinGroupBottomSheet({
         {chatGroupDisplayName(group.name)}
       </Text>
 
+
+      {/* חברים / הודעות — שהשיט לא ירגיש ריק כשאין תיאור */}
+      {(group.members_count ?? 0) > 0 || (group.messages_count ?? 0) > 0 ? (
+        <View style={styles.stats}>
+          {(group.members_count ?? 0) > 0 ? (
+            <View style={styles.statChip}>
+              <Ionicons name="people-outline" size={14} color={DesignTokens.colors.text.secondary} />
+              <Text style={styles.statText}>
+                {group.members_count === 1
+                  ? i18n.t('auto.components__chat__JoinGroupBottomSheet.j8')
+                  : i18n.t('auto.components__chat__JoinGroupBottomSheet.j1', {
+                      v0: (group.members_count ?? 0).toLocaleString(appLocale()),
+                    })}
+              </Text>
+            </View>
+          ) : null}
+          {(group.messages_count ?? 0) > 0 ? (
+            <View style={styles.statChip}>
+              <Ionicons name="chatbubble-outline" size={13} color={DesignTokens.colors.text.secondary} />
+              <Text style={styles.statText}>
+                {i18n.t('auto.components__chat__JoinGroupBottomSheet.j2', {
+                  v0: (group.messages_count ?? 0).toLocaleString(appLocale()),
+                })}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
 
       {group.description ? <Text style={styles.description}>{group.description}</Text> : null}
 
@@ -251,6 +334,34 @@ export default function JoinGroupBottomSheet({
           </View>
         </>
       ) : (
+      <>
+      {/* מה זה הערוץ הזה — הכרזות או דיון */}
+      <View style={styles.perks}>
+        {(isAnnouncement
+          ? [
+              { icon: 'megaphone-outline' as const, title: 'j3', sub: 'j4' },
+              { icon: 'notifications-off-outline' as const, title: null, sub: 'j7' },
+            ]
+          : [
+              { icon: 'chatbubbles-outline' as const, title: 'j5', sub: 'j6' },
+              { icon: 'notifications-off-outline' as const, title: null, sub: 'j7' },
+            ]
+        ).map((row, i, arr) => (
+          <View key={row.sub} style={[styles.perkRow, i < arr.length - 1 && styles.perkDivider]}>
+            <View style={styles.perkIcon}>
+              <Ionicons name={row.icon} size={18} color={DesignTokens.colors.text.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              {row.title ? (
+                <Text style={styles.perkTitle}>{i18n.t(`auto.components__chat__JoinGroupBottomSheet.${row.title}`)}</Text>
+              ) : null}
+              <Text style={row.title ? styles.perkSub : styles.perkText}>
+                {i18n.t(`auto.components__chat__JoinGroupBottomSheet.${row.sub}`)}
+              </Text>
+            </View>
+          </View>
+        ))}
+      </View>
       <View style={styles.cta}>
         <UIButton
           title={isJoining ? i18n.t('auto.components__chat__JoinGroupBottomSheet.s1') : i18n.t('auto.components__chat__JoinGroupBottomSheet.s2')}
@@ -262,6 +373,7 @@ export default function JoinGroupBottomSheet({
           onPress={onJoin}
         />
       </View>
+      </>
       )}
     </View>
   );

@@ -3909,7 +3909,15 @@
     "p3": "Access to every community and trading group",
     "p4": "Every course in the Academy",
     "p5": "Talk with traders in real time",
-    "p6": "Cancel anytime"
+    "p6": "Cancel anytime",
+    "j1": "{{v0}} members",
+    "j2": "{{v0}} messages",
+    "j3": "Announcements channel",
+    "j4": "Only admins post — you get every update",
+    "j5": "Discussion group",
+    "j6": "Every member can post, reply and share",
+    "j7": "You can mute or leave the group anytime",
+    "j8": "1 member"
   },
   "components__chat__ForwardMessageModal": {
     "s1": "Group",

@@ -5340,5 +5340,9 @@
     "s4": "{{v0}} shares",
     "s5": "Entry price",
     "s6": "Opened"
+  },
+  "components__OtaUpdateBanner": {
+    "ready": "A new version is ready",
+    "restart": "Restart"
   }
 }

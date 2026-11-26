@@ -29,6 +29,7 @@ import { logger } from './utils/logger';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppLaunchScreen } from './components/AppLaunchScreen';
 import ForceUpdateGate from './components/ForceUpdateGate';
+import OtaUpdateBanner from './components/OtaUpdateBanner';
 import OfflineBanner from './components/OfflineBanner';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -597,6 +598,8 @@ export default function App() {
                     <ErrorBoundary>
                       <ForceUpdateGate>
                         <AppContent />
+                        {/* OTA: download in the background, offer a one-tap restart */}
+                        <OtaUpdateBanner />
                       </ForceUpdateGate>
                     </ErrorBoundary>
                   </AppDialogProvider>

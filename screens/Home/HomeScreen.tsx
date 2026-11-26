@@ -19,6 +19,7 @@ import { formatUntil, getMarketSession, israelTime, MARKET_PHASE_LABEL, type Mar
 import { TEXT_DIR } from '../../lib/i18n/language';
 import MarketStatusPill from '../../components/ui/MarketStatusPill';
 import { hasIntroDataAnswers } from '../../constants/onboardingQuestionnaire';
+import { formatPercentChange, percentChange } from '../../utils/format/number';
 
 const INDICES: { symbol: string; label: string }[] = [
   { symbol: 'SPY', label: 'S&P 500' },
@@ -28,16 +29,6 @@ const INDICES: { symbol: string; label: string }[] = [
 ];
 
 type QuoteRow = { symbol: string; label: string; price: number | null; changePct: number | null };
-
-function pct(price: number, prev: number | null | undefined): number | null {
-  if (!prev || prev <= 0) return null;
-  return ((price - prev) / prev) * 100;
-}
-
-function formatPct(v: number | null): string {
-  if (v == null || !Number.isFinite(v)) return '—';
-  return `${v > 0 ? '▲ +' : v < 0 ? '▼ −' : ''}${Math.abs(v).toFixed(2)}%`;
-}
 
 /**
  * מסך הבית: מצב השוק, מדדים, Watchlist מקוצר ושיעור הבא — נקודת הכניסה של ה-Tab Bar.
@@ -66,7 +57,7 @@ export default function HomeScreen() {
       setIndices(
         INDICES.map((i) => {
           const q = quotes.get(i.symbol);
-          return { ...i, price: q?.price ?? null, changePct: q ? pct(q.price, q.previous_close) : null };
+          return { ...i, price: q?.price ?? null, changePct: q ? percentChange(q.price, q.previous_close) : null };
         }),
       );
       setWatch(
@@ -76,7 +67,7 @@ export default function HomeScreen() {
             symbol: w.symbol,
             label: w.companyName ?? w.symbol,
             price: q?.price ?? null,
-            changePct: q ? pct(q.price, q.previous_close) : null,
+            changePct: q ? percentChange(q.price, q.previous_close) : null,
           };
         }),
       );
@@ -155,7 +146,7 @@ export default function HomeScreen() {
             >
               <Text style={[styles.quoteName, { color: c.text.primary }]}>{r.label}</Text>
               <Text style={[styles.quotePrice, { color: c.text.primary }]}>{r.price != null ? r.price.toFixed(2) : '—'}</Text>
-              <Text style={[styles.quoteChange, { color: changeColor(r.changePct) }]}>{formatPct(r.changePct)}</Text>
+              <Text style={[styles.quoteChange, { color: changeColor(r.changePct) }]}>{formatPercentChange(r.changePct, { arrows: true })}</Text>
             </View>
           ))}
         </UICard>
@@ -189,7 +180,7 @@ export default function HomeScreen() {
                   ) : null}
                 </View>
                 <Text style={[styles.quotePrice, { color: c.text.primary }]}>{r.price != null ? `$${r.price.toFixed(2)}` : '—'}</Text>
-                <Text style={[styles.quoteChange, { color: changeColor(r.changePct) }]}>{formatPct(r.changePct)}</Text>
+                <Text style={[styles.quoteChange, { color: changeColor(r.changePct) }]}>{formatPercentChange(r.changePct, { arrows: true })}</Text>
               </View>
             ))
           )}

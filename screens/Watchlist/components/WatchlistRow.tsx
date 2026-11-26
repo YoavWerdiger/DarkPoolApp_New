@@ -18,6 +18,7 @@ import {
   colVol,
   quoteRow,
 } from '../watchlistTheme';
+import { formatPrice, formatSigned, formatVolume } from '../../../utils/format/number';
 
 type Props = {
   row: WatchlistRowData;
@@ -28,32 +29,6 @@ type Props = {
 };
 
 export const LOGO_SIZE = 28;
-
-function formatPrice(n: number | null): string {
-  if (n == null || !Number.isFinite(n)) return '—';
-  if (n >= 1000) {
-    return n.toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  }
-  if (n >= 1) return n.toFixed(2);
-  return n.toFixed(4);
-}
-
-function formatSigned(n: number | null, digits = 2): string {
-  if (n == null || !Number.isFinite(n)) return '—';
-  const sign = n > 0 ? '+' : '';
-  return `${sign}${n.toFixed(digits)}`;
-}
-
-function formatVolume(n: number | null): string {
-  if (n == null || !Number.isFinite(n)) return '—';
-  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1)}K`;
-  return `${Math.round(n)}`;
-}
 
 function WatchlistRowInner({ row, onPress, onDrag, isActive }: Props) {
   const tokens = useDesignTokens();

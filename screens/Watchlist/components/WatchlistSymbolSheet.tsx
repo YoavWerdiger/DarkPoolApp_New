@@ -66,6 +66,7 @@ import {
   diffAlertPatch,
   type AlertValues,
 } from '../../../services/watchlist/watchlistAlertForm';
+import { formatPrice, formatVolume } from '../../../utils/format/number';
 
 type Props = {
   visible: boolean;
@@ -91,22 +92,6 @@ type Chip = { key: string; label: string };
 type PriceSide = 'above' | 'below';
 type AlertEditorKey = 'price' | 'daily' | 'target';
 type IonName = React.ComponentProps<typeof Ionicons>['name'];
-
-function formatPrice(n: number | null | undefined): string {
-  if (n == null || !Number.isFinite(n)) return '—';
-  return `$${n.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
-
-function formatVolume(n: number | null | undefined): string {
-  if (n == null || !Number.isFinite(n)) return '—';
-  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1)}K`;
-  return `${Math.round(n)}`;
-}
 
 function formatPctLabel(n: number): string {
   const rounded = Math.round(n * 100) / 100;
@@ -424,15 +409,15 @@ function Body({
   ];
 
   const dayRows: Array<{ label: string; value: string; icon: IonName }> = [
-    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s7'), value: formatPrice(row.open), icon: 'sunny-outline' },
-    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s8'), value: formatPrice(row.dayHigh), icon: 'arrow-up' },
-    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s9'), value: formatPrice(row.dayLow), icon: 'arrow-down' },
-    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s10'), value: formatPrice(row.previousClose), icon: 'time-outline' },
+    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s7'), value: formatPrice(row.open, { currency: '$' }), icon: 'sunny-outline' },
+    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s8'), value: formatPrice(row.dayHigh, { currency: '$' }), icon: 'arrow-up' },
+    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s9'), value: formatPrice(row.dayLow, { currency: '$' }), icon: 'arrow-down' },
+    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s10'), value: formatPrice(row.previousClose, { currency: '$' }), icon: 'time-outline' },
     { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s11'), value: formatVolume(row.volume), icon: 'bar-chart-outline' },
-    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s2'), value: formatPrice(row.weekHigh), icon: 'trending-up' },
-    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s3'), value: formatPrice(row.weekLow), icon: 'trending-down' },
-    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s4'), value: formatPrice(row.high52), icon: 'flag-outline' },
-    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s5'), value: formatPrice(row.low52), icon: 'flag' },
+    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s2'), value: formatPrice(row.weekHigh, { currency: '$' }), icon: 'trending-up' },
+    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s3'), value: formatPrice(row.weekLow, { currency: '$' }), icon: 'trending-down' },
+    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s4'), value: formatPrice(row.high52, { currency: '$' }), icon: 'flag-outline' },
+    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s5'), value: formatPrice(row.low52, { currency: '$' }), icon: 'flag' },
   ];
   if (row.earningsDate) {
     dayRows.push({
@@ -447,11 +432,11 @@ function Body({
   const priceSelected: Chip[] = [
     ...alertAbovePrices.map((level) => ({
       key: `above:${level}`,
-      label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s13', { v0: formatPrice(level) }),
+      label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s13', { v0: formatPrice(level, { currency: '$' }) }),
     })),
     ...alertBelowPrices.map((level) => ({
       key: `below:${level}`,
-      label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s14', { v0: formatPrice(level) }),
+      label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s14', { v0: formatPrice(level, { currency: '$' }) }),
     })),
   ];
 
@@ -544,7 +529,7 @@ function Body({
   );
 
   const targetSelected: Chip[] =
-    targetPrice != null ? [{ key: `target:${targetPrice}`, label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s15', { v0: formatPrice(targetPrice) }) }] : [];
+    targetPrice != null ? [{ key: `target:${targetPrice}`, label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s15', { v0: formatPrice(targetPrice, { currency: '$' }) }) }] : [];
 
   const submitTargetDraft = useCallback(() => {
     const n = parseNum(targetDraft);
@@ -732,7 +717,7 @@ function Body({
                 icon="locate-outline"
                 title={i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s28')}
                 subtitle={
-                  targetPrice != null ? i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s15', { v0: formatPrice(targetPrice) }) : i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s29')
+                  targetPrice != null ? i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s15', { v0: formatPrice(targetPrice, { currency: '$' }) }) : i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s29')
                 }
                 enabled={alertTargetHit}
                 onEnabledChange={setTargetEnabled}

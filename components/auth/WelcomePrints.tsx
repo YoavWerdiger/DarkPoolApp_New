@@ -13,7 +13,8 @@ const PRINTS = [
   { ticker: 'TSLA', size: '890K', price: '338.12', time: '09:36' },
 ];
 
-export function WelcomePrints() {
+/** `rows`: how many prints to show — 3 on welcome, 1 on the sign-in form */
+export function WelcomePrints({ rows = 3 }: { rows?: number }) {
   const { colors } = useDesignTokens();
   const accent = colors.text.accent;
 
@@ -26,7 +27,7 @@ export function WelcomePrints() {
         </Text>
       </View>
 
-      {PRINTS.map((p, i) => {
+      {PRINTS.slice(0, rows).map((p, i) => {
         const newest = i === 0;
         return (
           <View

@@ -328,6 +328,11 @@ export default function LoginScreen({ navigation }: any) {
                     <Text style={[appFlowSubtitleStyle, { color: colors.text.secondary }]}>{i18n.t(K + 'formSub')}</Text>
                   </View>
 
+                  {/* The latest print from the welcome stack — the same world, so the form isn't a blank page */}
+                  <View style={styles.formPrint}>
+                    <WelcomePrints rows={1} />
+                  </View>
+
                   <Field
                     label={i18n.t(K + 's9')}
                     value={email}
@@ -394,6 +399,7 @@ const styles = StyleSheet.create({
   },
   backBtn: { alignSelf: 'flex-start', width: 44, height: 44, justifyContent: 'center', marginBottom: 8 },
   forgot: { alignSelf: 'flex-end', marginTop: -4, marginBottom: 20 },
+  formPrint: { marginBottom: APP_LAYOUT.sectionGap / 2 },
   welcomeTop: { flex: 1, justifyContent: 'center', gap: 12, paddingBottom: 24 },
   welcomeTitle: { fontSize: 34, lineHeight: 40, fontWeight: '700', letterSpacing: -0.6, textAlign: 'right', writingDirection: TEXT_DIR },
   welcomeSub: { fontSize: 17, lineHeight: 24, textAlign: 'right', writingDirection: TEXT_DIR, marginBottom: 12 },

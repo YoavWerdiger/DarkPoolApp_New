@@ -10,6 +10,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
 import UIButton from '../ui/UIButton';
 import { SUBSCRIPTION_PLANS } from '../../services/paymentService';
+import { IAP_ENABLED } from '../../lib/iapProducts';
+import { useStorePrices } from '../../hooks/useStorePrices';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../ui/appLayout';
 import {
@@ -149,6 +151,7 @@ export default function PlanPicker({
 }: PlanPickerProps) {
   const tokens = useDesignTokens();
   const plans = useMemo(() => getSelectablePlans(mode), [mode]);
+  const storePrices = useStorePrices();
   const freePlan = plans.find((p) => p.id === 'free') ?? null;
   // מסלולי פרימיום לפי תקופה — טאבים פנימיים בכרטיס אחד (כמו מחירון ChatGPT)
   const premiumPlans = useMemo(
@@ -259,15 +262,32 @@ export default function PlanPicker({
               ) : null}
             </View>
 
-            <View style={styles.priceRow}>
-              <Text style={[styles.priceBig, { color: tokens.colors.text.primary }]}>₪{perMonth}</Text>
-              <Text style={[styles.priceUnit, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.components__subscription__PlanPicker.s28')}</Text>
-            </View>
-            <Text style={[styles.priceNote, { color: tokens.colors.text.secondary }]}>
-              {multiMonth
-                ? i18n.t('auto.components__subscription__PlanPicker.s29', { v0: activePremium.price.toLocaleString(appLocale()), v1: PERIOD_MONTHS[activePremium.period] })
-                : i18n.t('auto.components__subscription__PlanPicker.s30')}
-            </Text>
+            {IAP_ENABLED ? (
+              // מובייל: המחיר והמטבע מהחנות (Apple / Google) — חיוב מראש לכל התקופה, חידוש אוטומטי
+              <>
+                <View style={styles.priceRow}>
+                  <Text style={[styles.priceBig, { color: tokens.colors.text.primary }]}>
+                    {storePrices[activePremium.id]?.displayPrice ?? '—'}
+                  </Text>
+                  <Text style={[styles.priceUnit, { color: tokens.colors.text.secondary }]}>{formatPlanPeriod(activePremium.period)}</Text>
+                </View>
+                <Text style={[styles.priceNote, { color: tokens.colors.text.secondary }]}>
+                  מתחדש אוטומטית · אפשר לבטל בכל עת בהגדרות החנות
+                </Text>
+              </>
+            ) : (
+              <>
+                <View style={styles.priceRow}>
+                  <Text style={[styles.priceBig, { color: tokens.colors.text.primary }]}>₪{perMonth}</Text>
+                  <Text style={[styles.priceUnit, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.components__subscription__PlanPicker.s28')}</Text>
+                </View>
+                <Text style={[styles.priceNote, { color: tokens.colors.text.secondary }]}>
+                  {multiMonth
+                    ? i18n.t('auto.components__subscription__PlanPicker.s29', { v0: activePremium.price.toLocaleString(appLocale()), v1: PERIOD_MONTHS[activePremium.period] })
+                    : i18n.t('auto.components__subscription__PlanPicker.s30')}
+                </Text>
+              </>
+            )}
 
             {features(activePremium.highlights)}
           </TouchableOpacity>

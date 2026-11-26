@@ -16,6 +16,8 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { appQueryKeys } from '../../lib/appQueryKeys';
+import { IAP_ENABLED } from '../../lib/iapProducts';
+import { purchasePlan } from '../../services/iapService';
 
 /**
  * reCAPTCHA / "אני לא רובוט" נשבר ב-RN WebView כשה-UA כולל `; wv`
@@ -151,6 +153,10 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
     return userId;
   };
 
+  const outcomeHandlerRef = useRef<
+    ((type: 'payment_success' | 'payment_failed' | 'payment_cancelled', message?: string) => void) | null
+  >(null);
+
   const startCheckout = useCallback(async () => {
     if (startingRef.current) return;
     startingRef.current = true;
@@ -189,6 +195,24 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
       }
 
       const checkoutUserId = await resolveCheckoutUserId();
+
+      // מובייל: תשלום דרך Apple / Google (הנחיות החנויות). CardCom נשאר לווב בלבד.
+      if (IAP_ENABLED) {
+        const outcome = await purchasePlan(selectedPlan, checkoutUserId);
+        if (outcome.kind === 'success') {
+          outcomeHandlerRef.current?.('payment_success');
+          return;
+        }
+        if (outcome.kind === 'cancelled') {
+          outcomeHandlerRef.current?.('payment_cancelled');
+          return;
+        }
+        throw new Error(
+          outcome.kind === 'pending'
+            ? 'התשלום ממתין לאישור בחנות. המנוי ייפתח אוטומטית ברגע שיאושר.'
+            : outcome.message,
+        );
+      }
 
       const paymentResponse = await paymentService.createPaymentRequest({
         amount: plan.price,
@@ -290,6 +314,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
       user?.id,
     ]
   );
+  outcomeHandlerRef.current = handlePaymentOutcome;
 
   /** תופס redirect להצלחה/כישלון — לא טוען את HTML של smart-action */
   const interceptRedirectUrl = useCallback(

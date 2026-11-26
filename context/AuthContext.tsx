@@ -20,6 +20,7 @@ import { clearAllDrafts } from '../services/chat/chatDrafts';
 import { clear as clearChatOfflineQueue } from '../services/chat/chatOfflineQueue';
 import { clearAllColmexLocal } from '../services/colmex/colmexCredentials';
 import * as Notifications from 'expo-notifications';
+import { startIapListeners } from '../services/iapService';
 
 /** בעלים של ה-cache המקומי — אם משתמש אחר נכנס (או התנתקות אוטומטית), לא מציגים לו נתונים של הקודם */
 const CACHE_OWNER_KEY = 'app_cache_owner_v1';
@@ -177,6 +178,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
     // isLoading נסגר רק אחרי אירוע onAuthStateChange הראשון — מונע הבהוב מסך התחברות
   }, [checkUser, registerTokenOnce]);
+
+  // רכישות Apple/Google שלא הסתיימו (Ask to Buy, קריסה באמצע, חידוש) — מאומתות בשרת אחרי התחברות
+  useEffect(() => {
+    if (!user?.id) return;
+    void startIapListeners();
+  }, [user?.id]);
 
   useEffect(() => {
     logger.debug('AuthContext', 'Initializing');

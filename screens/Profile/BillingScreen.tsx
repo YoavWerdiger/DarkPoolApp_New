@@ -60,6 +60,9 @@ import {
 } from '../../utils/billingDisplay';
 import { appQueryKeys } from '../../lib/appQueryKeys';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
+import { IAP_ENABLED } from '../../lib/iapProducts';
+import { openStoreSubscriptionSettings } from '../../services/iapService';
+import { supabase as supabaseClient } from '../../services/supabase';
 
 export default function BillingScreen({ navigation }: any) {
   const refreshRing = useRefreshRing();
@@ -211,6 +214,19 @@ export default function BillingScreen({ navigation }: any) {
 
   const onCancelSubscription = async () => {
     void HapticFeedback.selection();
+    // מנוי שנקנה דרך Apple / Google מבוטל רק בחנות
+    if (IAP_ENABLED) {
+      const { data: storeSub } = await supabaseClient
+        .from('iap_purchases')
+        .select('id')
+        .eq('kind', 'subscription')
+        .in('status', ['active', 'grace'])
+        .limit(1);
+      if (storeSub && storeSub.length > 0) {
+        await openStoreSubscriptionSettings();
+        return;
+      }
+    }
     const ok = await showAppConfirm(
       i18n.t('auto.screens__Profile__BillingScreen.s11'),
       i18n.t('auto.screens__Profile__BillingScreen.s12'),

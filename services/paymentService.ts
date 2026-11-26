@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import i18n from '../lib/i18n';
 import { supabase } from '../lib/supabase';
 
@@ -14,6 +15,8 @@ import { supabase } from '../lib/supabase';
 
 /** Checkout kill-switch only (not a CardCom secret). EXPO_PUBLIC_CARDCOM_CHECKOUT_ENABLED=false */
 export const isSubscriptionCheckoutEnabled = () => {
+  // מובייל: Apple / Google — לא תלוי בדגל של CardCom
+  if (Platform.OS === 'ios' || Platform.OS === 'android') return true;
   const flag = process.env.EXPO_PUBLIC_CARDCOM_CHECKOUT_ENABLED;
   if (flag === '0' || flag === 'false') return false;
   return true;

@@ -297,7 +297,7 @@ export default function LoginScreen({ navigation }: any) {
                       onPress={() => navigation.navigate('Register')}
                     />
 
-                    <View style={styles.dividerRow}>
+                    <View style={[styles.dividerRow, styles.dividerTight]}>
                       <View style={[styles.dividerLine, { backgroundColor: colors.border.divider }]} />
                       <Text style={[appCaptionStyle, styles.dividerText, { color: colors.text.tertiary }]}>{i18n.t('auto.screens__Auth__LoginScreen.orSignInWith')}</Text>
                       <View style={[styles.dividerLine, { backgroundColor: colors.border.divider }]} />
@@ -337,15 +337,20 @@ export default function LoginScreen({ navigation }: any) {
                       </View>
                     </View>
 
-                    {/* Email accounts still have their way in */}
-                    <UIButton
-                      title={i18n.t('auto.screens__Auth__LoginScreen.s6')}
-                      variant="ghost"
-                      size="lg"
-                      fullWidth
-                      textStyle={{ color: colors.text.primary }}
-                      onPress={() => setShowForm(true)}
-                    />
+                    {/* Email accounts: a quiet link, not a third big button */}
+                    <TouchableOpacity
+                      onPress={() => {
+                        void HapticFeedback.selection();
+                        setShowForm(true);
+                      }}
+                      hitSlop={10}
+                      style={styles.emailLink}
+                      accessibilityRole="button"
+                    >
+                      <Text style={[appCaptionStyle, styles.emailLinkText, { color: colors.text.secondary }]}>
+                        {i18n.t('auto.screens__Auth__LoginScreen.emailSignInLink')}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 </>
               ) : (
@@ -416,49 +421,17 @@ export default function LoginScreen({ navigation }: any) {
                     onPress={() => void handleSignIn()}
                   />
 
-                  <View style={styles.dividerRow}>
-                    <View style={[styles.dividerLine, { backgroundColor: colors.border.divider }]} />
-                    <Text style={[appCaptionStyle, styles.dividerText, { color: colors.text.tertiary }]}>{i18n.t('auto.screens__Auth__LoginScreen.s15')}</Text>
-                    <View style={[styles.dividerLine, { backgroundColor: colors.border.divider }]} />
-                  </View>
-
-                  <View style={styles.buttonStack}>
-                    {/* Apple בעיצוב של האפליקציה (כמו Google) — הכפתור הנייטיב מצויר באנגלית ובפונט של המערכת */}
-                    {appleAvailable ? (
-                      <UIButton
-                        title={i18n.t('auto.screens__Auth__LoginScreen.appleSignIn')}
-                        variant="secondary"
-                        size="lg"
-                        icon="logo-apple"
-                        iconPosition={ICON_AFTER_TEXT}
-                        fullWidth
-                        loading={appleLoading}
-                        disabled={isLoading || appleLoading}
-                        style={{ borderRadius: tokens.borderRadius.full }}
-                        onPress={() => void handleAppleSignIn()}
-                      />
-                    ) : null}
-                    <UIButton
-                      title={i18n.t('auto.screens__Auth__LoginScreen.s16')}
-                      variant="secondary"
-                      size="lg"
-                      icon="logo-google"
-                      iconPosition={ICON_AFTER_TEXT}
-                      fullWidth
-                      loading={googleLoading}
-                      disabled={isLoading || googleLoading}
-                      style={{ borderRadius: tokens.borderRadius.full }}
-                      onPress={() => void handleGoogleSignIn()}
-                    />
-                    <UIButton
-                      title={i18n.t('auto.screens__Auth__LoginScreen.s17')}
-                      variant="ghost"
-                      size="lg"
-                      fullWidth
-                      textStyle={{ color: colors.text.primary }}
-                      onPress={() => navigation.navigate('Register')}
-                    />
-                  </View>
+                  {/* Email sign-in only — Apple / Google are on the welcome screen */}
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('Register')}
+                    hitSlop={10}
+                    style={styles.emailLink}
+                    accessibilityRole="button"
+                  >
+                    <Text style={[appCaptionStyle, styles.emailLinkText, { color: colors.text.secondary }]}>
+                      {i18n.t('auto.screens__Auth__LoginScreen.s17')}
+                    </Text>
+                  </TouchableOpacity>
 
                   <Text style={[appCaptionStyle, styles.footer, { color: colors.text.tertiary }]}>{i18n.t('auto.screens__Auth__LoginScreen.s18')}</Text>
 
@@ -540,6 +513,9 @@ const styles = StyleSheet.create({
   linkText: {
     fontWeight: APP_TYPE.cardTitle.fontWeight,
   },
+  dividerTight: { marginVertical: 6 },
+  emailLink: { alignSelf: 'center', paddingVertical: 6, marginTop: 4 },
+  emailLinkText: { textDecorationLine: 'underline' },
   socialRow: { flexDirection: 'row', gap: 12, alignSelf: 'stretch' },
   // Each cell takes half the row; the button fills it (fullWidth) and centres its content
   socialCell: { flex: 1 },

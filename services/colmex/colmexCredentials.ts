@@ -36,35 +36,24 @@ const SECURE_OPTIONS: SecureStore.SecureStoreOptions = {
 // --------------------------------------------------------------------------
 
 /**
- * שומר username ו-password ב-SecureStore.
- * הסיסמה נשמרת מוצפנת, מוגנת ב-biometrics/PIN אם מוגדר ע"י המשתמש.
- *
- * ⚠️  קרא את הערת האבטחה בראש הקובץ לפני שימוש.
+ * שומר רק את שם המשתמש (לנוחות ה-UI). הסיסמה של Colmex לא נשמרת על המכשיר בשום מצב —
+ * היא נשלחת פעם אחת ל-broker-colmex-connect ונשמרת ב-Supabase Vault.
+ * מוחק גם סיסמה שנשמרה בגרסאות ישנות.
  */
-export async function saveColmexCredentials(
-  username: string,
-  password: string
-): Promise<void> {
+export async function saveColmexUsername(username: string): Promise<void> {
   await Promise.all([
     SecureStore.setItemAsync(KEY_USERNAME, username, SECURE_OPTIONS),
-    SecureStore.setItemAsync(KEY_PASSWORD, password, SECURE_OPTIONS),
+    SecureStore.deleteItemAsync(KEY_PASSWORD, SECURE_OPTIONS),
   ]);
 }
 
-/**
- * שולף credentials שמורים.
- * מחזיר null אם אין credentials שמורים.
- */
-export async function getColmexCredentials(): Promise<{
-  username: string;
-  password: string;
-} | null> {
-  const [username, password] = await Promise.all([
-    SecureStore.getItemAsync(KEY_USERNAME, SECURE_OPTIONS),
-    SecureStore.getItemAsync(KEY_PASSWORD, SECURE_OPTIONS),
-  ]);
-  if (!username || !password) return null;
-  return { username, password };
+export async function getColmexUsername(): Promise<string | null> {
+  return SecureStore.getItemAsync(KEY_USERNAME, SECURE_OPTIONS);
+}
+
+/** מוחק סיסמה שנשמרה במכשיר בגרסאות ישנות (נקרא בהפעלה). */
+export async function purgeLegacyColmexPassword(): Promise<void> {
+  await SecureStore.deleteItemAsync(KEY_PASSWORD, SECURE_OPTIONS).catch(() => {});
 }
 
 /**

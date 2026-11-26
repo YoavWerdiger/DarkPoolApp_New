@@ -18,7 +18,7 @@ import { clearPersistedQueryCache } from '../lib/queryPersist';
 import { queryClient } from '../lib/queryClient';
 import { clearAllDrafts } from '../services/chat/chatDrafts';
 import { clear as clearChatOfflineQueue } from '../services/chat/chatOfflineQueue';
-import { clearAllColmexLocal } from '../services/colmex/colmexCredentials';
+import { clearAllColmexLocal, purgeLegacyColmexPassword } from '../services/colmex/colmexCredentials';
 import * as Notifications from 'expo-notifications';
 import { startIapListeners } from '../services/iapService';
 
@@ -184,6 +184,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!user?.id) return;
     void startIapListeners();
   }, [user?.id]);
+
+  // סיסמת Colmex לא נשמרת יותר במכשיר — מוחקים שאריות מגרסאות ישנות
+  useEffect(() => {
+    void purgeLegacyColmexPassword();
+  }, []);
 
   useEffect(() => {
     logger.debug('AuthContext', 'Initializing');

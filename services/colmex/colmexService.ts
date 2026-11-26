@@ -46,7 +46,7 @@ import type {
   ColmexSyncResult,
 } from './colmexTypes';
 import {
-  saveColmexCredentials,
+  saveColmexUsername,
   saveColmexSession,
   clearAllColmexLocal,
 } from './colmexCredentials';
@@ -84,7 +84,7 @@ export async function colmexConnect(
 ): Promise<ColmexConnectResult> {
   const result = await _connectColmex({ username, password, environment });
   // שמירת username בלבד מקומית (לנוחות UI)
-  await saveColmexCredentials(username, '').catch(() => {});
+  await saveColmexUsername(username).catch(() => {});
   return {
     connectionId: result.connectionId,
     accounts: result.accounts,

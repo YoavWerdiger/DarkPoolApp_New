@@ -1,15 +1,36 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
+import { isServiceCaller } from '../_shared/serviceOnly.ts'
+
+/**
+ * רק מי שמחזיק בסוד (header x-webhook-secret = ECONOMIC_WEBHOOK_SECRET) או השרת עצמו (service key).
+ * בלי הסוד מוגדר — הכל נדחה (fail closed).
+ */
+function isAuthorizedCaller(req: Request): boolean {
+  if (isServiceCaller(req)) return true
+  const expected = (Deno.env.get('ECONOMIC_WEBHOOK_SECRET') ?? '').trim()
+  const got = (req.headers.get('x-webhook-secret') ?? '').trim()
+  if (!expected || got.length !== expected.length) return false
+  let diff = 0
+  for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ got.charCodeAt(i)
+  return diff === 0
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-webhook-secret',
 }
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
+  }
+  if (!isAuthorizedCaller(req)) {
+    return new Response(JSON.stringify({ error: 'unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 
   try {

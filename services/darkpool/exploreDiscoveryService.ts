@@ -166,7 +166,7 @@ async function listReportedFundBooks(limit: number): Promise<ExplorePerson[]> {
         portfolio_value: value,
       };
     })
-    .filter((p): p is ExplorePerson => p != null);
+    .filter((p): p is NonNullable<typeof p> => p != null);
 }
 
 /** רק מובילות ה-S&P שמגישות 13F, בסדר שווי שוק (בערך) — Mag 7 קודם. חברות אחרות במסד לא מוצגות */
@@ -270,7 +270,7 @@ async function listRecentlyAddedFeatured(limit: number): Promise<ExplorePerson[]
         ticker: row.ticker ? String(row.ticker) : undefined,
       };
     })
-    .filter((p): p is ExplorePerson => p != null);
+    .filter((p): p is NonNullable<typeof p> => p != null);
 }
 
 async function listExploreExecutives(limit: number): Promise<ExplorePerson[]> {

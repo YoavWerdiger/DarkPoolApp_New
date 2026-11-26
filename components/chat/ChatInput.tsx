@@ -451,7 +451,7 @@ function ChatInputImpl({
   useEffect(() => {
     const recents = scheduleMediaRecentsPrefetch('all');
     ImagePicker.getCameraPermissionsAsync().then(({ status }) => {
-      if (status !== 'granted') ImagePicker.requestCameraPermissionsAsync().catch((error) => { logger.error('ChatInput', 'Camera permission request error', error); });
+      if (status !== 'granted') ImagePicker.requestCameraPermissionsAsync().catch((error: unknown) => { logger.error('ChatInput', 'Camera permission request error', error); });
     });
     return () => recents.cancel();
   }, []);
@@ -1865,7 +1865,7 @@ function ChatInputImpl({
         }
       }
 
-      sound.setOnPlaybackStatusUpdate((st) => {
+      sound.setOnPlaybackStatusUpdate((st: any) => {
         if (!st?.isLoaded) return;
         if (st.durationMillis && st.durationMillis > 0) {
           setPreviewDuration(st.durationMillis);
@@ -1977,7 +1977,7 @@ function ChatInputImpl({
             },
           );
           soundRef.current = sound;
-          sound.setOnPlaybackStatusUpdate((st) => {
+          sound.setOnPlaybackStatusUpdate((st: any) => {
             if (!st?.isLoaded) return;
             if (st.didJustFinish) {
               void resetPreviewPlayhead();
@@ -2077,7 +2077,7 @@ function ChatInputImpl({
     // נקה את ההקלטה מיד כדי שה-UI יתעדכן
     releaseVoicePlayback(PREVIEW_PLAYER_ID);
     if (soundRef.current) {
-      soundRef.current.unloadAsync().catch((error) => { logger.error('ChatInput', 'Playback error', error); });
+      soundRef.current.unloadAsync().catch((error: unknown) => { logger.error('ChatInput', 'Playback error', error); });
       soundRef.current = null;
     }
     if (previewPositionInterval.current) {
@@ -2150,7 +2150,7 @@ function ChatInputImpl({
 
     // עצור שמיעה אם יש
     if (soundRef.current) {
-      soundRef.current.unloadAsync().catch((error) => { logger.error('ChatInput', 'Playback error', error); });
+      soundRef.current.unloadAsync().catch((error: unknown) => { logger.error('ChatInput', 'Playback error', error); });
       soundRef.current = null;
     }
     if (previewPositionInterval.current) {
@@ -2174,7 +2174,7 @@ function ChatInputImpl({
 
     if (recordingRef.current) {
       recordingRef.current.setOnRecordingStatusUpdate(null);
-      recordingRef.current.stopAndUnloadAsync().catch((error) => { logger.error('ChatInput', 'Recording error', error); });
+      recordingRef.current.stopAndUnloadAsync().catch((error: unknown) => { logger.error('ChatInput', 'Recording error', error); });
       recordingRef.current = null;
     }
     waveformSamplesRef.current = [];
@@ -2395,11 +2395,11 @@ function ChatInputImpl({
     return () => {
       releaseVoicePlayback(PREVIEW_PLAYER_ID);
       if (recordingRef.current) {
-        recordingRef.current.stopAndUnloadAsync().catch((error) => { logger.error('ChatInput', 'Recording error', error); });
+        recordingRef.current.stopAndUnloadAsync().catch((error: unknown) => { logger.error('ChatInput', 'Recording error', error); });
         recordingRef.current = null;
       }
       if (soundRef.current) {
-        soundRef.current.unloadAsync().catch((error) => { logger.error('ChatInput', 'Playback error', error); });
+        soundRef.current.unloadAsync().catch((error: unknown) => { logger.error('ChatInput', 'Playback error', error); });
         soundRef.current = null;
       }
       recordingClockActiveRef.current = false;

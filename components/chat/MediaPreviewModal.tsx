@@ -290,7 +290,7 @@ function MediaPreviewBody({
           await sound.playAsync();
           setIsPlaying(prev => ({ ...prev, [fileId]: true }));
 
-          sound.setOnPlaybackStatusUpdate((status) => {
+          sound.setOnPlaybackStatusUpdate((status: any) => {
             if (status?.isLoaded && status.didJustFinish) {
               setIsPlaying(prev => ({ ...prev, [fileId]: false }));
             }

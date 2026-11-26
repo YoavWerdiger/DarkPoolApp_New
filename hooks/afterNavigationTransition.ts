@@ -8,8 +8,9 @@ import { useNavigation } from '@react-navigation/native';
 
 export const AFTER_NAV_TRANSITION_FALLBACK_MS = 420;
 
+// addListener של React Navigation מוקלד לפי שמות אירועים ספציפיים — כאן מספיק «יש addListener»
 type NavLike = {
-  addListener: (event: string, cb: () => void) => () => void;
+  addListener: (event: any, cb: (...args: any[]) => void) => () => void;
 };
 
 export function scheduleAfterNavigationTransition(

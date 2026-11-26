@@ -300,7 +300,7 @@ export const LessonPlayerScreen: React.FC = () => {
           resizeMode={ResizeMode.CONTAIN}
           shouldPlay={isPlaying}
           useNativeControls={false}
-          onPlaybackStatusUpdate={(status) => {
+          onPlaybackStatusUpdate={(status: any) => {
             if (status.isLoaded) {
               const currentPosition = status.positionMillis / 1000;
               const totalDuration = status.durationMillis ? status.durationMillis / 1000 : duration;

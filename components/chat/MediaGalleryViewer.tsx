@@ -426,7 +426,7 @@ export default function MediaGalleryViewer({
               resizeMode={ResizeMode.CONTAIN}
               shouldPlay={isPlaying}
               pointerEvents="none"
-              onPlaybackStatusUpdate={(status) => {
+              onPlaybackStatusUpdate={(status: any) => {
                 if (!isMountedRef.current || !status?.isLoaded) return;
                 if (status.durationMillis != null) setDuration(status.durationMillis / 1000);
                 if (!isDraggingRef.current) {

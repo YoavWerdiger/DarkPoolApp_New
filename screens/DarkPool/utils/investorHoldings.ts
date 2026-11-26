@@ -525,7 +525,7 @@ export function form4TradesFromInsiderRows(rows: InsiderBuyRow[]): Form4TradeInp
         security,
       } satisfies Form4TradeInput;
     })
-    .filter((t): t is Form4TradeInput => t != null);
+    .filter((t): t is NonNullable<typeof t> => t != null);
 }
 
 type Form4Position = {

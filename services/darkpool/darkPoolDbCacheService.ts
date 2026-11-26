@@ -252,7 +252,7 @@ function mapBioguideHoldingsFromPayload(
         vendorPriceChangePct: vendor.vendorPriceChangePct,
       } satisfies ActualCongressHolding;
     })
-    .filter((h): h is ActualCongressHolding => h != null)
+    .filter((h): h is NonNullable<typeof h> => h != null)
     .sort((a, b) => (b.currentValueUSD ?? 0) - (a.currentValueUSD ?? 0));
 }
 

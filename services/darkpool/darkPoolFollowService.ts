@@ -197,6 +197,6 @@ export async function countFollowedInvestors(): Promise<FollowCountRow[]> {
         follower_count: Math.floor(follower_count),
       };
     })
-    .filter((row): row is FollowCountRow => row != null)
+    .filter((row): row is NonNullable<typeof row> => row != null)
     .sort((a, b) => b.follower_count - a.follower_count);
 }

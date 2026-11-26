@@ -260,7 +260,7 @@ export function build13FMarkToMarketSeries(
       const weight = leg.valueUsd != null && leg.valueUsd > 0 ? leg.valueUsd : 0;
       if (weight > 0) bookUsd += weight;
       const live = lastClose.get(leg.ticker);
-      if (!(live > 0)) continue;
+      if (live == null || !(live > 0)) continue;
 
       if (leg.shares != null && leg.shares > 0) {
         value += leg.shares * live;

@@ -137,7 +137,7 @@ export default function PortfolioTradesTable({
   onEdit,
 }: PortfolioTradesTableProps) {
   const tokens = useDesignTokens();
-  const light = tokens.colors.background.primary === LIGHT_CANVAS;
+  const light = (tokens.colors.background.primary as string) === LIGHT_CANVAS;
   /** פס עדין בצבע הערכה: בבהיר קנבס על כרטיס לבן, בכהה לבן שקוף. לא tertiary מלא. */
   const rowStripe = light ? tokens.colors.background.primary : 'rgba(255,255,255,0.03)';
 

@@ -78,7 +78,7 @@ const UICard: React.FC<UICardProps> = ({
   const tokens = useDesignTokens();
   const { colors, spacing, shadows, glassmorphism, layout } = tokens;
   const contentCardFill = colors.background.cardSolid;
-  const isDarkMode = colors.background.primary !== LIGHT_CANVAS;
+  const isDarkMode = (colors.background.primary as string) !== LIGHT_CANVAS;
   const themeMode = isDarkMode ? 'dark' : 'light';
   /** glass/blur/default → soft כמו כרטיסי אקדמיה (אטום, בלי stroke). */
   const resolvedVariant: UiCardVariant =

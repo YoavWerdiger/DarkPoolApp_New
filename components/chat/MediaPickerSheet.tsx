@@ -699,7 +699,7 @@ export default function MediaPickerSheet({
                 ListFooterComponent={
                   loadingMore ? (
                     <ActivityIndicator style={styles.more} color={tokens.colors.text.tertiary} />
-                  ) : null
+                  ) : undefined
                 }
               />
             )}

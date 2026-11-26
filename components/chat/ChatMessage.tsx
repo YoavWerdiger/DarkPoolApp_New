@@ -2284,7 +2284,7 @@ function AudioPlayer({
   }, [storedWaveform, message.local_media_uri]);
 
   const waveformData = storedWaveform ?? recoveredWaveform;
-  const lightBubble = tokens.colors.background.primary === LIGHT_CANVAS;
+  const lightBubble = (tokens.colors.background.primary as string) === LIGHT_CANVAS;
   const waveThumb = lightBubble ? tokens.colors.text.primary : 'rgba(255,255,255,0.92)';
   const waveActive = lightBubble
     ? tokens.colors.text.primary
@@ -2472,7 +2472,7 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
 // ============================================
 
 const createStyles = (tokens: any) => {
-  const isDarkMode = tokens.colors.background.primary !== LIGHT_CANVAS;
+  const isDarkMode = (tokens.colors.background.primary as string) !== LIGHT_CANVAS;
   return StyleSheet.create({
   /* מרווחים בסגנון WhatsApp: צפיפות בין הודעות אותו שולח;
      מרווח גדול מול older בהחלפת שולח — senderGapStyle.marginTop (isAfterSenderChange) */

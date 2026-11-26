@@ -43,8 +43,8 @@ export {
   sheetSafeBottomInset,
   sheetSystemBarFillHeight,
   SheetActionButton,
-} from './BottomSheet';
-export type { SheetActionVariant, SheetActionButtonProps } from './BottomSheet';
+} from './BottomSheet/index';
+export type { SheetActionVariant, SheetActionButtonProps } from './BottomSheet/index';
 
 // Design Tokens
 export { default as DesignTokens, SoftUI } from './DesignTokens';

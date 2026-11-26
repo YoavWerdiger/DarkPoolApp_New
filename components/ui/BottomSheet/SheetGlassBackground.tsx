@@ -41,7 +41,7 @@ export function SheetGlassBackground({
   deferMs = 0,
 }: SheetGlassBackgroundProps) {
   const tokens = useDesignTokens();
-  const isDark = tokens.colors.background.primary !== LIGHT_CANVAS;
+  const isDark = (tokens.colors.background.primary as string) !== LIGHT_CANVAS;
   const sheetFill = tokens.colors.background.cardSolid;
   const resolvedOverlay = overlayColor === SHEET_GLASS_OVERLAY ? sheetFill : overlayColor;
   const [hasLayout, setHasLayout] = useState(false);

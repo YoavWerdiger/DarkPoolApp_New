@@ -653,7 +653,7 @@ export default function AddTransactionScreen() {
     [tokens]
   );
 
-  const pickerTheme = tokens.colors.background.primary === LIGHT_CANVAS ? 'light' : 'dark';
+  const pickerTheme = (tokens.colors.background.primary as string) === LIGHT_CANVAS ? 'light' : 'dark';
   // לוח שנה inline (~350) + שורת שעה + כפתור + כותרת
   const { height: windowHeight } = useWindowDimensions();
   const dateSheetSnap = Math.min(0.92, 570 / windowHeight);

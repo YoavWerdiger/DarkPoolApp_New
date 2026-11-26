@@ -378,7 +378,7 @@ function MessageCommentsSheetBody({
         ListEmptyComponent={
           !loading ? (
             <EmptyState compact icon="chatbubble-outline" title={i18n.t('auto.components__chat__MessageCommentsSheet.s4')} />
-          ) : null
+          ) : undefined
         }
         ListHeaderComponent={
           loading && replies.length > 0 ? (
@@ -388,7 +388,7 @@ function MessageCommentsSheetBody({
                 color={tokens.colors.primary.main}
               />
             </View>
-          ) : null
+          ) : undefined
         }
         renderItem={({ item }) => {
           const isMine = !!user && item.userId === user.id;

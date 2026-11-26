@@ -308,7 +308,7 @@ export default function GroupMediaGalleryScreen() {
             <View style={styles.footerLoader}>
               <ActivityIndicator size="small" color={DesignTokens.colors.primary.main} />
             </View>
-          ) : null
+          ) : undefined
         }
       />
     );

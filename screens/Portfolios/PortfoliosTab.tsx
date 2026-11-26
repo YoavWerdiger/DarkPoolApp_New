@@ -515,7 +515,7 @@ export default function PortfoliosTab() {
               />
               <Text style={styles.emptyResultsText}>{i18n.t('auto.screens__Portfolios__PortfoliosTab.s16', { v0: searchQuery.trim() })}</Text>
             </View>
-          ) : null
+          ) : undefined
         }
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"

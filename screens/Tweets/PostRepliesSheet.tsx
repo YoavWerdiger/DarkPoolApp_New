@@ -383,7 +383,7 @@ function PostRepliesSheetBody({
         ListEmptyComponent={
           !loading ? (
             <EmptyState compact icon="chatbubble-outline" title={i18n.t('auto.screens__Tweets__PostRepliesSheet.s4')} />
-          ) : null
+          ) : undefined
         }
         ListHeaderComponent={
           loading && replies.length > 0 ? (
@@ -393,7 +393,7 @@ function PostRepliesSheetBody({
                 color={tokens.colors.primary.main}
               />
             </View>
-          ) : null
+          ) : undefined
         }
         renderItem={({ item }) => {
           const isMine = !!user && item.userId === user.id;

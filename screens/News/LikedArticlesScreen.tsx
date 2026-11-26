@@ -405,7 +405,7 @@ export default function LikedArticlesScreen() {
         data={likedArticles}
         keyExtractor={(item) => item.id}
         renderItem={renderArticle}
-        ListHeaderComponent={listHeaderMeta}
+        ListHeaderComponent={listHeaderMeta ?? undefined}
         refreshControl={
           <RefreshControl hideNative
             refreshing={refreshing}

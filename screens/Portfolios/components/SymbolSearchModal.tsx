@@ -252,7 +252,7 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
                   placeholder={i18n.t('auto.screens__Portfolios__components__SymbolSearchModal.s3')}
                   placeholderTextColor={tokens.colors.text.tertiary}
                   keyboardAppearance={
-                    tokens.colors.background.primary === LIGHT_CANVAS
+                    (tokens.colors.background.primary as string) === LIGHT_CANVAS
                       ? "light"
                       : "dark"
                   }

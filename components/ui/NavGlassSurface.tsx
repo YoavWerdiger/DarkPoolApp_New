@@ -50,7 +50,7 @@ export function NavGlassSurface({
   haptic = true,
 }: NavGlassSurfaceProps) {
   const tokens = useDesignTokens();
-  const isDarkMode = tokens.colors.background.primary !== LIGHT_CANVAS;
+  const isDarkMode = (tokens.colors.background.primary as string) !== LIGHT_CANVAS;
   const flat = StyleSheet.flatten(style) as ViewStyle | undefined;
   const radius = (flat?.borderRadius as number | undefined) ?? tokens.borderRadius.full;
 

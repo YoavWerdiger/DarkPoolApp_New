@@ -586,7 +586,7 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
               >
                 <Text style={[styles.loadMoreText, { color: tokens.colors.primary.main }]}>{i18n.t('auto.screens__Admin__AdminPaymentsScreen.s48')}</Text>
               </TouchableOpacity>
-            ) : null
+            ) : undefined
           }
         /><RefreshRing ring={refreshRing} /></>
       ) : tab === 'active' ? (
@@ -646,7 +646,7 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
               >
                 <Text style={[styles.loadMoreText, { color: tokens.colors.primary.main }]}>{i18n.t('auto.screens__Admin__AdminPaymentsScreen.s48')}</Text>
               </TouchableOpacity>
-            ) : null
+            ) : undefined
           }
         /><RefreshRing ring={refreshRing2} /></>
       ) : (

@@ -21,6 +21,7 @@ import {
   appCardTitleStyle,
   appPhysicalRightText,
 } from '../ui/appType';
+import type { ScrollViewInstance } from 'react-native';
 
 export type PlanPickerMode = 'registration' | 'upgrade';
 
@@ -215,7 +216,7 @@ export default function PlanPicker({
   // ── קרוסלה ──
   const CARD_GAP = 12;
   const [carouselW, setCarouselW] = React.useState(0);
-  const carouselRef = React.useRef<ScrollView>(null);
+  const carouselRef = React.useRef<ScrollViewInstance>(null);
   const didInitialScroll = React.useRef(false);
   // השכן מציץ ~16px; הכרטיס הפעיל ממורכז
   // סדר LTR: חינמי משמאל, פרימיום מימין (הראשון בקריאה מימין לשמאל) — פותחים על פרימיום

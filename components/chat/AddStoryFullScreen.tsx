@@ -53,6 +53,7 @@ import { uploadStoryImage, uploadStoryVideo, createStory } from '../../services/
 import { chatPalette } from './chatDesignTokens';
 import { useCaptureCameraMode } from '../../hooks/useCaptureCameraMode';
 import { ensureUgcTermsAccepted } from '../moderation/ugcTermsGate';
+import type { TextInputInstance, ViewInstance } from 'react-native';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const GALLERY_THUMB = 52;
@@ -433,7 +434,7 @@ function TextEditorOverlay({
   const [bold, setBold] = useState(initial?.bold ?? true);
   const [bgStyle, setBgStyle] = useState<BgStyle>(initial?.bgStyle || 'none');
   const [fontSize, setFontSize] = useState(initial?.fontSize || 28);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -1091,7 +1092,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
   );
   const [galleryExpanded, setGalleryExpanded] = useState(false);
 
-  const textInputRef = useRef<TextInput>(null);
+  const textInputRef = useRef<TextInputInstance>(null);
   const cameraRef = useRef<CameraView>(null);
   // Android: במצב 'video' אין צילום תמונה — 'picture' כברירת מחדל, 'video' רק להקלטה
   const camMode = useCaptureCameraMode();
@@ -1100,7 +1101,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
   const [overlays, setOverlays] = useState<TextOverlayItem[]>([]);
   const [showTextEditor, setShowTextEditor] = useState(false);
   const [editingOverlayId, setEditingOverlayId] = useState<string | null>(null);
-  const captureAreaRef = useRef<View>(null);
+  const captureAreaRef = useRef<ViewInstance>(null);
 
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [drawPaths, setDrawPaths] = useState<DrawPath[]>([]);

@@ -90,6 +90,7 @@ import { SkeletonBox, SkeletonLine } from '../../components/ui/SkeletonLoader';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { maybeAskForPushPermission } from '../../components/notifications/pushPrimer';
+import type { ScrollViewInstance, TextInputInstance } from 'react-native';
 
 // RTL is configured once inside the component via useEffect (not at module level)
 
@@ -260,7 +261,7 @@ export default function ChatGroupsListScreen() {
   // בלי שורות מה-cache — שלד מהפריים הראשון (לא הבזק של «אין קבוצות» עד שהטעינה מתחילה)
   const [isLoading, setIsLoading] = useState(() => allGroupsInitiallyEmptyRef.current);
   const imageErrorsRef = useRef<Set<string>>(new Set());
-  const searchInputRef = useRef<TextInput>(null);
+  const searchInputRef = useRef<TextInputInstance>(null);
   const isLoadingRef = useRef(false);
   const [imageErrorCount, setImageErrorCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
@@ -289,7 +290,7 @@ export default function ChatGroupsListScreen() {
       ExpoImage.prefetch(uri, 'memory-disk').catch(() => {});
     });
   }, [usersWithStories]);
-  const storiesScrollRef = useRef<ScrollView>(null);
+  const storiesScrollRef = useRef<ScrollViewInstance>(null);
   const [createGroupSheetVisible, setCreateGroupSheetVisible] = useState(false);
 
   // בדיקת admin — האם המשתמש admin בלפחות קבוצה אחת

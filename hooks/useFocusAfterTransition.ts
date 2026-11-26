@@ -1,13 +1,14 @@
 import { useEffect, useRef } from 'react';
 import type { TextInput } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import type { TextInputInstance } from 'react-native';
 
 /**
  * פוקוס לשדה רק אחרי שמעבר המסך הסתיים — autoFocus מעלה מקלדת באמצע ההחלקה,
  * ושתי האנימציות יחד נראות תקועות.
  */
 export function useFocusAfterTransition(enabled: boolean) {
-  const ref = useRef<TextInput>(null);
+  const ref = useRef<TextInputInstance>(null);
   const navigation = useNavigation();
 
   useEffect(() => {

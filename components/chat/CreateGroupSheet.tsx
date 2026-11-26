@@ -34,6 +34,7 @@ import {
   formFieldPlaceholderColor,
   formFieldShellStyle,
 } from '../ui/formControl';
+import type { TextInputInstance } from 'react-native';
 
 type Tier = 'free' | 'premium';
 const TIERS: { key: Tier; label: string }[] = [
@@ -54,7 +55,7 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const descRef = useRef<TextInput>(null);
+  const descRef = useRef<TextInputInstance>(null);
   const [isAnnouncement, setIsAnnouncement] = useState(false);
   const [imageUri, setImageUri] = useState<string | null>(null);
   /** מסלולים שרואים ויכולים להצטרף */

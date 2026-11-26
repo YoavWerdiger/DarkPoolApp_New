@@ -27,6 +27,7 @@ import { getChatMessagePreview } from '../../utils/chatMessagePreview';
 import { format, isToday, isYesterday } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { APP_TYPE, appPhysicalRightText, appSectionTitleStyle } from '../ui/appType';
+import type { TextInputInstance } from 'react-native';
 
 interface ChatSearchBottomSheetProps {
   visible: boolean;
@@ -54,7 +55,7 @@ export default function ChatSearchBottomSheet({
   const [searchResults, setSearchResults] = useState<ChatMessage[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
-  const searchInputRef = useRef<TextInput>(null);
+  const searchInputRef = useRef<TextInputInstance>(null);
   const isMountedRef = useRef(true);
 
   useEffect(() => {

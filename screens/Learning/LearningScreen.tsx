@@ -67,6 +67,7 @@ import { BlurTargetView } from 'expo-blur';
 import * as NavigationBar from 'expo-navigation-bar';
 import { StatusBar as RNStatusBar } from 'react-native';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
+import type { ScrollViewInstance, TextInputInstance, ViewInstance } from 'react-native';
 
 /** מסך מלא בנגן (QA 8.4): באנדרואיד מסתירים סרגל ניווט + סטטוס (immersive), ומחזירים ביציאה */
 function setAndroidImmersive(on: boolean) {
@@ -247,7 +248,7 @@ function LearningScreen() {
   const notesBaselineRef = useRef(''); // הטקסט האחרון שנשמר / נטען
   const notesLessonIdRef = useRef<string | null>(null); // השיעור שההערות הנוכחיות שייכות אליו
   const notesPendingRef = useRef<{ lessonId: string; text: string } | null>(null);
-  const textInputRef = useRef<TextInput>(null);
+  const textInputRef = useRef<TextInputInstance>(null);
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkText, setLinkText] = useState('');
@@ -280,7 +281,7 @@ function LearningScreen() {
   const lastProgressSaveTimeRef = useRef<number>(0); // מעקב אחרי הזמן האחרון שעודכן במסד נתונים
   const lastProgressPercentageRef = useRef<number>(0); // מעקב אחרי האחוז האחרון (למניעת קפיצות ל-0)
   // רשימת השיעורים: כפתור גלילה לראש (מופיע אחרי גלילה)
-  const courseListScrollRef = useRef<ScrollView>(null);
+  const courseListScrollRef = useRef<ScrollViewInstance>(null);
   const [showCourseScrollTop, setShowCourseScrollTop] = useState(false);
   const courseScrollTopOpacity = useRef(new Animated.Value(0)).current;
   const courseScrollTopShownRef = useRef(false);
@@ -300,7 +301,7 @@ function LearningScreen() {
   // כפתור הקפיצה: לשיעור האחרון שהושלם (ההתקדמות). בלי התקדמות — לראש הרשימה.
   const courseScrollYRef = useRef(0);
   const courseViewportHRef = useRef(0);
-  const courseContentRef = useRef<View>(null);
+  const courseContentRef = useRef<ViewInstance>(null);
   const lessonNodeRefs = useRef(new Map<string, View>());
   const progressTargetYRef = useRef<number | null>(null);
   const [courseJumpDir, setCourseJumpDir] = useState<'up' | 'down'>('up');

@@ -80,6 +80,7 @@ import {
   type MediaRecentsKind,
   type PickedRecentMedia,
 } from '../../lib/mediaRecentsCache';
+import type { ViewInstance } from 'react-native';
 
 export type { PickedRecentMedia };
 
@@ -485,7 +486,7 @@ export default function MediaPickerSheet({
       mediaAttachActionsBlockHeightPx(secondaryCount, showCameraButton ? 2 : 1) +
       12;
   // בגלריה המלאה הפאנל של השיט גבוה מהחלק הנראה — מודדים כמה ממנו מתחת לקצה המסך
-  const rootRef = useRef<View>(null);
+  const rootRef = useRef<ViewInstance>(null);
   const [hiddenBelow, setHiddenBelow] = useState(0);
   useEffect(() => {
     if (!expanded) {

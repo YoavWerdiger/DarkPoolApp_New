@@ -31,6 +31,7 @@ import EarningsService, { EarningsReport } from '../../services/earningsService'
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 import { sessionPillColors } from './sessionPillColors';
 import { useTheme } from '../../context/ThemeContext';
+import type { ScrollViewInstance } from 'react-native';
 
 // ניקוי סימבול לתצוגה — מסיר סיומת ".US" ומינוס מתחילת הקוד. משותף עם התצוגה היומית.
 export function getSymbolDisplay(code: string | null | undefined): string {
@@ -469,7 +470,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
   const DesignTokens = useDesignTokens();
   const screenPad = APP_LAYOUT.screenPaddingHorizontal;
   const listRef = useRef<FlatList<WeekDay>>(null);
-  const searchListRef = useRef<ScrollView>(null);
+  const searchListRef = useRef<ScrollViewInstance>(null);
   const [showScrollToTop, setShowScrollToTop] = useState(false);
   const scrollButtonOpacity = useRef(new Animated.Value(0)).current;
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

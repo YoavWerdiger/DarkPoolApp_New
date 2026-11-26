@@ -58,6 +58,7 @@ import ForwardMessageModal from './ForwardMessageModal';
 import ChatComposerBar from './ChatComposerBar';
 import ReactionPicker from './ReactionPicker';
 import { MediaBlurBackdrop, MediaKeyboardDim } from './MediaViewerChrome';
+import type { ScrollViewInstance } from 'react-native';
 
 /** צילום מסך של טלפון: גבוה וצר (h/w ≥ 1.9 — מכשירים מודרניים 19.5:9) */
 function isPhoneScreenshotRatio(w: number, h: number): boolean {
@@ -178,7 +179,7 @@ function MediaPreviewBody({
   );
 
   const currentMedia = localFiles[currentIndex];
-  const thumbStripRef = useRef<ScrollView>(null);
+  const thumbStripRef = useRef<ScrollViewInstance>(null);
 
   const { zoomGesture, animatedStyle: animatedImageStyle, resetZoomImmediate, prevPagerStyle, nextPagerStyle } =
     useMediaZoomGestures({

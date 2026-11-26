@@ -44,6 +44,7 @@ import {
   type YahooHistoryInterval,
   type YahooHistoryRange,
 } from '../../services/portfolios/portfolioPriceFeed';
+import type { ViewInstance } from 'react-native';
 
 /** נתונים מינימליים לכרטיס שיתוף ויזואלי */
 export type ExportableTrade = {
@@ -319,7 +320,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
   const DesignTokens = useDesignTokens();
   const insets = useSafeAreaInsets();
   const animatedClose = useBottomSheetClose();
-  const viewShotRef = useRef<View>(null);
+  const viewShotRef = useRef<ViewInstance>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [layoutReady, setLayoutReady] = useState(false);
   const [options, setOptions] = useState<ShareOptions>(DEFAULT_SHARE_OPTIONS);

@@ -571,6 +571,7 @@ function ChatInputImpl({
     if (sendInFlightRef.current) return;
     if (!(await ensureUgcTermsAccepted())) return;
     track('message_sent');
+    void HapticFeedback.impactLight();
     const messageText = text.trim();
     armKeepComposerFocus();
 

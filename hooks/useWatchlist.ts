@@ -35,6 +35,7 @@ import {
 } from '../services/portfolios/portfolioPriceFeed';
 import { realtimeQuotes } from '../services/portfolios/realtimeQuotes';
 import type { PriceQuote } from '../screens/Portfolios/portfolioTypes';
+import { HapticFeedback } from '../utils/hapticFeedback';
 
 const EMPTY_QUOTES: Record<string, PriceQuote> = Object.freeze({});
 const EMPTY_RANGE_STATS: Record<string, SymbolRangeStats> = Object.freeze({});
@@ -390,11 +391,17 @@ export function useWatchlist() {
   const addSymbol = useCallback(
     async (symbol: string, companyName?: string | null) => {
       if (!activeWatchlistId) return;
-      await addWatchlistItem({
-        watchlistId: activeWatchlistId,
-        symbol,
-        companyName,
-      });
+      try {
+        await addWatchlistItem({
+          watchlistId: activeWatchlistId,
+          symbol,
+          companyName,
+        });
+        void HapticFeedback.success();
+      } catch (e) {
+        void HapticFeedback.error();
+        throw e;
+      }
       await invalidateItems();
       await queryClient.invalidateQueries({
         queryKey: appQueryKeys.watchlistInsights(symbolsKey),

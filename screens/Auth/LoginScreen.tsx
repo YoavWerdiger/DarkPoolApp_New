@@ -262,35 +262,54 @@ export default function LoginScreen({ navigation }: any) {
                 />
               </View>
 
-              {/* One way in for everyone: Apple or Google, new or returning — sign-up continues into the questionnaire */}
+              {/* «התחל כאן» opens onboarding; returning users sign in with Apple / Google right here */}
               <View style={styles.buttonStack}>
-                {appleAvailable ? (
-                  <UIButton
-                    title={i18n.t(K + 'appleContinue')}
-                    variant="secondary"
-                    size="lg"
-                    icon="logo-apple"
-                    iconPosition={ICON_AFTER_TEXT}
-                    fullWidth
-                    loading={appleLoading}
-                    disabled={isLoading || appleLoading}
-                    style={{ borderRadius: tokens.borderRadius.full }}
-                    onPress={() => void handleAppleSignIn()}
-                  />
-                ) : null}
                 <UIButton
-                  title={i18n.t(K + 'googleContinue')}
-                  variant="secondary"
+                  title={i18n.t(K + 's5')}
+                  variant="primary"
                   size="lg"
-                  icon="logo-google"
-                  iconPosition={ICON_AFTER_TEXT}
                   fullWidth
-                  loading={googleLoading}
-                  disabled={isLoading || googleLoading}
-                  style={{ borderRadius: tokens.borderRadius.full }}
-                  onPress={() => void handleGoogleSignIn()}
+                  onPress={() => navigation.navigate('Register')}
                 />
-                <Text style={[appCaptionStyle, styles.terms, { color: colors.text.tertiary }]}>{i18n.t(K + 's18')}</Text>
+
+                <View style={[styles.dividerRow, styles.dividerTight]}>
+                  <View style={[styles.dividerLine, { backgroundColor: colors.border.divider }]} />
+                  <Text style={[appCaptionStyle, styles.dividerText, { color: colors.text.tertiary }]}>{i18n.t(K + 'orSignInWith')}</Text>
+                  <View style={[styles.dividerLine, { backgroundColor: colors.border.divider }]} />
+                </View>
+
+                <View style={styles.socialRow}>
+                  {appleAvailable ? (
+                    <View style={styles.socialCell}>
+                      <UIButton
+                        title="Apple"
+                        variant="secondary"
+                        size="lg"
+                        icon="logo-apple"
+                        iconPosition={ICON_AFTER_TEXT}
+                        fullWidth
+                        loading={appleLoading}
+                        disabled={isLoading || appleLoading}
+                        style={{ borderRadius: tokens.borderRadius.full }}
+                        onPress={() => void handleAppleSignIn()}
+                      />
+                    </View>
+                  ) : null}
+                  <View style={styles.socialCell}>
+                    <UIButton
+                      title="Google"
+                      variant="secondary"
+                      size="lg"
+                      icon="logo-google"
+                      iconPosition={ICON_AFTER_TEXT}
+                      fullWidth
+                      loading={googleLoading}
+                      disabled={isLoading || googleLoading}
+                      style={{ borderRadius: tokens.borderRadius.full }}
+                      onPress={() => void handleGoogleSignIn()}
+                    />
+                  </View>
+                </View>
               </View>
             </ScrollView>
           </SafeAreaView>

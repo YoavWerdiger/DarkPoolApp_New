@@ -17,6 +17,7 @@ import SubscriptionWelcomeScreen from '../screens/Profile/SubscriptionWelcomeScr
 import { useTheme } from '../context/ThemeContext';
 import { ChatSessionBackdrop } from '../components/chat/ChatSessionBackdrop';
 import { chatStackScreenListeners, createChatStackScreenOptions } from './chatStackTransition';
+import CompleteProfileScreen from '../screens/Profile/CompleteProfileScreen';
 
 /** אותו רקע כמו מערכת הצ'אט — שחור + שור ודוב */
 function withProfileChatShell<P extends object>(ScreenComponent: React.ComponentType<P>): React.FC<P> {
@@ -38,6 +39,7 @@ const SubscriptionPlansWithShell = withProfileChatShell(SubscriptionPlansScreen)
 const ChangePasswordWithShell = withProfileChatShell(ChangePasswordScreen);
 const BillingWithShell = withProfileChatShell(BillingScreen);
 const ContactSupportWithShell = withProfileChatShell(ContactSupportScreen);
+const CompleteProfileWithShell = withProfileChatShell(CompleteProfileScreen);
 const LegalWebViewWithShell = withProfileChatShell(LegalWebViewScreen);
 const InvoiceDocumentPreviewWithShell = withProfileChatShell(InvoiceDocumentPreviewScreen);
 const DeleteAccountWithShell = withProfileChatShell(DeleteAccountScreen);
@@ -58,6 +60,7 @@ export default function ProfileStack() {
     >
       <Stack.Screen name="ProfileMain" component={ProfileMainScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileWithShell} />
+      <Stack.Screen name="CompleteProfile" component={CompleteProfileWithShell} />
       <Stack.Screen name="Notifications" component={NotificationsWithShell} />
       <Stack.Screen name="Settings" component={SettingsWithShell} />
       <Stack.Screen name="ChangePassword" component={ChangePasswordWithShell} />

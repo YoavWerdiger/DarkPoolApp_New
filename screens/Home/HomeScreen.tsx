@@ -18,6 +18,7 @@ import { triggerDrawerMenuHaptic, HapticFeedback } from '../../utils/hapticFeedb
 import { formatUntil, getMarketSession, israelTime, MARKET_PHASE_LABEL, type MarketSession } from '../../utils/marketSession';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import MarketStatusPill from '../../components/ui/MarketStatusPill';
+import { hasIntroDataAnswers } from '../../constants/onboardingQuestionnaire';
 
 const INDICES: { symbol: string; label: string }[] = [
   { symbol: 'SPY', label: 'S&P 500' },
@@ -215,6 +216,21 @@ export default function HomeScreen() {
               </UICard>
             </Pressable>
           </>
+        ) : null}
+
+        {/* השלמת פרופיל — שאלות ההרשמה שיצאו מהזרימה הקצרה */}
+        {user && !hasIntroDataAnswers(user.intro_data) ? (
+          <Pressable onPress={() => go('Profile', { screen: 'CompleteProfile' })} accessibilityRole="button">
+            <UICard variant="soft" padding="md" style={{ marginTop: 14 }}>
+              <View style={styles.row}>
+                <Ionicons name="person-add-outline" size={20} color={c.text.primary} />
+                <Text style={[styles.title, { color: c.text.primary }]}>השלימו את הפרופיל</Text>
+              </View>
+              <Text style={[styles.sub, { color: c.text.secondary }]}>
+                5 שאלות קצרות על ניסיון וסגנון מסחר — כדי שנתאים לכם תוכן והתראות.
+              </Text>
+            </UICard>
+          </Pressable>
         ) : null}
 
         {/* קיצורים */}

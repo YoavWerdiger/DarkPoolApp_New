@@ -1,8 +1,9 @@
 import i18n from '../../lib/i18n';
-import { TEXT_DIR } from '../../lib/i18n/language';
+import { TEXT_DIR, getStoredLanguage, isRtlLanguage } from '../../lib/i18n/language';
+
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Dimensions, Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, ScrollView, Animated, Easing, StyleSheet } from 'react-native';
+import { I18nManager, View, Text, TextInput, TouchableOpacity, Dimensions, Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, ScrollView, Animated, Easing, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -31,6 +32,12 @@ import {
   formFieldShellStyle,
 } from '../../components/ui/formControl';
 import { PasswordVisibilityToggle } from '../../components/ui/PasswordVisibilityToggle';
+
+// The logo goes after the words, in reading order: left of Hebrew/Arabic text, right of English.
+// UIButton places it by source order, which the layout flips only when RTL is actually active
+// (it isn't in Expo Go), so take both into account.
+const ICON_AFTER_TEXT: 'left' | 'right' =
+  isRtlLanguage(getStoredLanguage()) === I18nManager.isRTL ? 'right' : 'left';
 
 const { width } = Dimensions.get('window');
 const WELCOME_LOGO_URI = 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/app-media/image%20(3).png';
@@ -380,7 +387,7 @@ export default function LoginScreen({ navigation }: any) {
                         variant="secondary"
                         size="lg"
                         icon="logo-apple"
-                        iconPosition="right"
+                        iconPosition={ICON_AFTER_TEXT}
                         fullWidth
                         loading={appleLoading}
                         disabled={isLoading || appleLoading}
@@ -393,7 +400,7 @@ export default function LoginScreen({ navigation }: any) {
                       variant="secondary"
                       size="lg"
                       icon="logo-google"
-                      iconPosition="right"
+                      iconPosition={ICON_AFTER_TEXT}
                       fullWidth
                       loading={googleLoading}
                       disabled={isLoading || googleLoading}

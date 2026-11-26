@@ -823,6 +823,12 @@ const VideoCompat = expoVideo
 
 /** Real playback when expo-audio / expo-av exists; otherwise no-op stubs. */
 export const Audio: any = audioFacade;
+/** טיפוסים לשימוש ב-refs / פרמטרים — Audio / Video הם ערכים (facade), לא namespace */
+export type AudioSoundHandle = any;
+export type AudioRecordingHandle = any;
+export type AudioRecordingOptions = any;
+export type AudioRecordingStatus = any;
+export type VideoHandle = any;
 export const Video: any = VideoCompat;
 
 export const EXPO_AV_UNAVAILABLE_MESSAGE =

@@ -26,7 +26,7 @@ import { LIGHT_CANVAS } from '../ui/designTokensStatic';
 import { ChatMessage as ChatMessageType, ChatMessageType as MessageType } from '../../types/chat.types';
 import { format } from 'date-fns';
 import { Ionicons } from '@expo/vector-icons';
-import { Audio, isExpoAvAvailable } from '../../lib/expoAvSafe';
+import { Audio, isExpoAvAvailable, type AudioSoundHandle } from '../../lib/expoAvSafe';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -1778,7 +1778,7 @@ function AudioPlayer({
   isEdited,
   onStatusPress,
 }: AudioPlayerProps) {
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const soundRef = useRef<AudioSoundHandle | null>(null);
   /** URI אחרי ניסיון חידוש חתימה (מפחית 400 כשהטוקן בקאש פג) */
   const currentUriRef = useRef(audioUrl);
   const [isPlaying, setIsPlaying] = useState(false);

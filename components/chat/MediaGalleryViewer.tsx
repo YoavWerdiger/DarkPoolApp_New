@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { ActivityIndicator } from '../ui/AppSpinner';
 import { initialWindowMetrics, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Video, ResizeMode } from '../../lib/expoAvSafe';
+import { Video, ResizeMode, type VideoHandle } from '../../lib/expoAvSafe';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useSharedValue,
@@ -129,7 +129,7 @@ export default function MediaGalleryViewer({
   const insets = useSafeAreaInsets();
   const [chromeVisible, setChromeVisible] = useState(true);
   const chromeOpacity = useSharedValue(1);
-  const videoRef = useRef<Video>(null);
+  const videoRef = useRef<VideoHandle>(null);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [isPlaying, setIsPlaying] = useState(false);

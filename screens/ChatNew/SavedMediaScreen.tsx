@@ -19,7 +19,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
 import { scheduleAfterNavigationTransition } from '../../hooks/afterNavigationTransition';
 import { Ionicons } from '@expo/vector-icons';
-import { Video, ResizeMode } from '../../lib/expoAvSafe';
+import { Video, ResizeMode, type VideoHandle } from '../../lib/expoAvSafe';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
 import { chatMessageService } from '../../services/chat';
@@ -48,7 +48,7 @@ export default function SavedMediaScreen() {
   const [savedMedia, setSavedMedia] = useState<SavedMediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMedia, setSelectedMedia] = useState<{ url: string; type: string } | null>(null);
-  const videoRef = useRef<Video>(null);
+  const videoRef = useRef<VideoHandle>(null);
 
   const handleCloseModal = useCallback(async () => {
     if (videoRef.current) {

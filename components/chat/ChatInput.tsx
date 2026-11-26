@@ -33,7 +33,7 @@ import {
 
 // ImagePicker media types - using new array format for Expo SDK 52+
 import * as DocumentPicker from 'expo-document-picker';
-import { Audio, isExpoAvAvailable, EXPO_AV_UNAVAILABLE_MESSAGE } from '../../lib/expoAvSafe';
+import { Audio, isExpoAvAvailable, EXPO_AV_UNAVAILABLE_MESSAGE, type AudioRecordingHandle, type AudioRecordingOptions, type AudioRecordingStatus, type AudioSoundHandle } from '../../lib/expoAvSafe';
 import { ChatMessage, ChatMessageType } from '../../types/chat.types';
 import { chatMediaService, sendChatMessage } from '../../services/chat';
 import { Ionicons } from '@expo/vector-icons';
@@ -129,7 +129,7 @@ function replaceOrAppendMentionTag(prev: string, tag: string): string {
  * הוויבפורם נבנה מה-metering החי בזמן ההקלטה (handleRecordingStatus) — לא מהקובץ.
  * הודעות WAV ישנות ממשיכות להתנגן (הנגן לא תלוי בפורמט).
  */
-const VOICE_RECORDING_OPTIONS: Audio.RecordingOptions = {
+const VOICE_RECORDING_OPTIONS: AudioRecordingOptions = {
   isMeteringEnabled: true,
   android: {
     extension: '.m4a',
@@ -322,8 +322,8 @@ function ChatInputImpl({
 
   const textInputRef = useRef<TextInput>(null);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
-  const recordingRef = useRef<Audio.Recording | null>(null);
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const recordingRef = useRef<AudioRecordingHandle | null>(null);
+  const soundRef = useRef<AudioSoundHandle | null>(null);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const waveformIntervalRef = useRef<NodeJS.Timeout | null>(null);
   // ערכי metering חיים בלי לגרום ל-re-render של ChatInput (חוסך עומס JS thread)
@@ -1388,7 +1388,7 @@ function ChatInputImpl({
    * Metering חי כל ~32ms: raw לשמירה, envelope עם attack מיידי + decay מהיר ל־UI.
    * בלי smoothing משותף — כדי שהברים יקפצו ויפלו עם הקול (לא נתקעים בשיא).
    */
-  const handleRecordingStatus = useCallback((status: Audio.RecordingStatus) => {
+  const handleRecordingStatus = useCallback((status: AudioRecordingStatus) => {
     if (!status.isRecording || !recordingClockActiveRef.current) return;
     if (typeof status.durationMillis === 'number' && status.durationMillis >= 0) {
       // משך הדיבור מהרקורדר — לא כולל השהיה

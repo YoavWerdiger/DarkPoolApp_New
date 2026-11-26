@@ -6,7 +6,7 @@ import { Collapsible } from '../../components/ui/Collapsible';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Pressable, Dimensions, TextInput, AppState } from 'react-native';
 import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { Video, ResizeMode } from '../../lib/expoAvSafe';
+import { Video, ResizeMode, type VideoHandle } from '../../lib/expoAvSafe';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -66,7 +66,7 @@ export const LessonPlayerScreen: React.FC = () => {
   const [showSpeedPicker, setShowSpeedPicker] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [resumePosition, setResumePosition] = useState<number | null>(null);
-  const videoRef = useRef<Video>(null);
+  const videoRef = useRef<VideoHandle>(null);
   const allowHeavy = useAllowAfterNavigationTransition();
 
   const { data: lesson, isLoading, error } = useLesson(lessonId, { enabled: allowHeavy });

@@ -22,7 +22,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { initialWindowMetrics, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { X, Play, Pause } from 'lucide-react-native';
-import { Audio, Video, ResizeMode } from '../../lib/expoAvSafe';
+import { Audio, Video, ResizeMode, type AudioSoundHandle } from '../../lib/expoAvSafe';
 import { MediaFile } from '../../services/mediaService';
 import { logger } from '../../utils/logger';
 import { GestureHandlerRootView, Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -104,7 +104,7 @@ function MediaPreviewBody({
   );
   const [isPlaying, setIsPlaying] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(false); // ⚡ expo-image handles loading - no need to show spinner
-  const audioRefs = useRef<Record<string, Audio.Sound>>({});
+  const audioRefs = useRef<Record<string, AudioSoundHandle>>({});
   const videoRef = useRef<any>(null);
   const [videoPlaying, setVideoPlaying] = useState(false);
   const [videoPosition, setVideoPosition] = useState(0);

@@ -1,7 +1,7 @@
 import { SegmentedTabs } from '../../components/ui/SegmentedTabs';
 import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
-import { TEXT_DIR } from '../../lib/i18n/language';
+import { TEXT_DIR, getStoredLanguage, isRtlLanguage } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 // ============================================
 // Chat Groups List Screen - Modern Design (Exact Copy)
@@ -22,6 +22,7 @@ import {
   ScrollView,
   Animated,
   type ImageSourcePropType,
+  I18nManager,
 } from 'react-native';
 import { RefreshControl } from '../../components/ui/AppRefreshControl';
 import { ActivityIndicator } from '../../components/ui/AppSpinner';
@@ -1449,8 +1450,9 @@ export default function ChatGroupsListScreen() {
                 activeOpacity={0.75}
                 accessibilityRole="button"
               >
-                <Ionicons name="lock-closed" size={11} color="#FFFFFF" />
+                {/* The lock comes after the words, in reading order */}
                 <Text style={styles.premiumPillText}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.prem2')}</Text>
+                <Ionicons name="lock-closed" size={11} color="#FFFFFF" />
               </TouchableOpacity>
             ) : (
             <TouchableOpacity
@@ -2370,7 +2372,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.primary.main,
   },
   premiumPill: {
-    flexDirection: 'row',
+    // Text then lock in reading order: the layout only flips when RTL is really active (not in Expo Go)
+    flexDirection: isRtlLanguage(getStoredLanguage()) === I18nManager.isRTL ? 'row' : 'row-reverse',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,

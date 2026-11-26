@@ -15,6 +15,17 @@ import { useFocusAfterTransition } from '../../hooks/useFocusAfterTransition';
 import { appCaptionStyle, appFormFieldHelperStyle } from '../ui/appType';
 import { APP_LAYOUT } from '../ui/appLayout';
 
+/** מילוי אוטומטי (Keychain / מנהל סיסמאות / קוד SMS) לפי סוג השדה — אפשר לדרוס בפרופס */
+export function autofillDefaults(
+  keyboardType: TextInputProps['keyboardType'],
+  isPassword: boolean,
+): Pick<TextInputProps, 'textContentType' | 'autoComplete'> {
+  if (isPassword) return { textContentType: 'password', autoComplete: 'current-password' };
+  if (keyboardType === 'email-address') return { textContentType: 'emailAddress', autoComplete: 'email' };
+  if (keyboardType === 'phone-pad') return { textContentType: 'telephoneNumber', autoComplete: 'tel' };
+  return {};
+}
+
 interface OnboardingInputProps extends TextInputProps {
   label: string;
   error?: string;
@@ -80,6 +91,7 @@ const OnboardingInput: React.FC<OnboardingInputProps> = ({
           ]}
           placeholderTextColor={formFieldPlaceholderColor(tokens)}
           multiline={multiline}
+          {...autofillDefaults(textInputProps.keyboardType, isPassword)}
           {...textInputProps}
           secureTextEntry={isPassword ? !passwordVisible : secureTextEntry}
           onFocus={(e) => {

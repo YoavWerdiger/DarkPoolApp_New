@@ -248,7 +248,16 @@ export class NotificationService {
     }
   }
 
-  static async registerDeviceToken(): Promise<boolean> {
+  /**
+   * prompt=false — רושם טוקן רק אם ההרשאה כבר ניתנה, בלי להקפיץ את חלון ההרשאה של המערכת
+   * (בהתחברות לא שואלים; שואלים אחרי מסך הסבר / רגע של ערך — ראו pushPrimer).
+   */
+  static async registerDeviceToken(opts: { prompt?: boolean } = {}): Promise<boolean> {
+    const prompt = opts.prompt ?? true;
+    if (!prompt) {
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== 'granted') return false;
+    }
     if (this.registrationInProgress) {
       return this.registrationInProgress;
     }

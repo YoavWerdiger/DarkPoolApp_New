@@ -61,6 +61,8 @@ const RegistrationNameScreen = ({ navigation }: { navigation: any }) => {
       }
     >
       <CashAppInput
+        textContentType="name"
+        autoComplete="name"
         label={i18n.t('auto.screens__Auth__RegistrationNameScreen.s4')}
         placeholder={i18n.t('auto.screens__Auth__RegistrationNameScreen.s5')}
         value={name}

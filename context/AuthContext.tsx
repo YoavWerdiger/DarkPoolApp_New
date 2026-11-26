@@ -144,7 +144,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (deviceTokenRegistered.current) return;
     deviceTokenRegistered.current = true;
     try {
-      await NotificationService.registerDeviceToken();
+      // בלי להקפיץ בקשת הרשאה בהתחברות — רק אם כבר אושרה
+      await NotificationService.registerDeviceToken({ prompt: false });
     } catch (e) {
       logger.warn('AuthContext', 'Failed to register device token');
       deviceTokenRegistered.current = false;

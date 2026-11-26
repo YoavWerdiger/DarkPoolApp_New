@@ -152,6 +152,8 @@ const ForgotPasswordNewScreen = ({ navigation, route }: { navigation: any; route
       <OnboardingErrorBanner message={error} />
 
       <OnboardingInput
+        textContentType="newPassword"
+        autoComplete="new-password"
         label={i18n.t('auto.screens__Auth__ForgotPasswordNewScreen.s9')}
         placeholder={i18n.t('auto.screens__Auth__ForgotPasswordNewScreen.s13', { v0: PASSWORD_MIN_LENGTH })}
         value={password}

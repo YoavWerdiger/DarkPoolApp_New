@@ -95,6 +95,9 @@ const Field: React.FC<FieldProps> = ({
           onChangeText={onChangeText}
           secureTextEntry={isPassword ? !passwordVisible : secureTextEntry}
           keyboardType={keyboardType}
+          textContentType={isPassword ? 'password' : keyboardType === 'email-address' ? 'username' : undefined}
+          autoComplete={isPassword ? 'current-password' : keyboardType === 'email-address' ? 'email' : undefined}
+          returnKeyType={isPassword ? 'go' : 'next'}
           autoCapitalize={autoCapitalize}
           autoCorrect={false}
           onFocus={() => setFocused(true)}

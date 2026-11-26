@@ -121,6 +121,8 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
 
       <View style={{ gap: tokens.spacing.lg }}>
         <CashAppInput
+          textContentType="newPassword"
+          autoComplete="new-password"
           label={i18n.t('auto.screens__Auth__RegistrationPasswordScreen.s6')}
           placeholder={i18n.t('auto.screens__Auth__RegistrationPasswordScreen.s7')}
           value={password}

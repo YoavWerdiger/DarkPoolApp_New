@@ -12,6 +12,7 @@ import type {
 import { normalizeItem } from './watchlistInsights';
 import { getQuote } from '../portfolios/portfolioPriceFeed';
 import { recordPositiveMoment } from '../../utils/storeReview';
+import { maybeAskForPushPermission } from '../../components/notifications/pushPrimer';
 
 async function requireUserId(): Promise<string> {
   const { data, error } = await supabase.auth.getUser();
@@ -191,6 +192,8 @@ export async function addWatchlistItem(params: {
     .single();
   if (error) throw error;
   void recordPositiveMoment();
+  // רגע של ערך — הצעה להפעיל התראות (עם הסבר, לא חלון המערכת ישר)
+  setTimeout(() => void maybeAskForPushPermission('watchlist'), 800);
   return normalizeItem(data as Record<string, unknown>);
 }
 

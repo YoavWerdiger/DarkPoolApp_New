@@ -88,6 +88,7 @@ import { APP_TYPE, appPhysicalRightText } from '../../components/ui/appType';
 import { SkeletonBox, SkeletonLine } from '../../components/ui/SkeletonLoader';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { maybeAskForPushPermission } from '../../components/notifications/pushPrimer';
 
 // RTL is configured once inside the component via useEffect (not at module level)
 
@@ -193,6 +194,12 @@ export default function ChatGroupsListScreen() {
   const diagRenders = useRef(0);
   diagRenders.current += 1;
   if (__DEV__ && diagRenders.current % 5 === 1) console.log('[story] community render', diagRenders.current, 'focused=', diagFocused);
+  // כניסה לצ'אט — הצעה להפעיל התראות להודעות (פעם ב-14 יום לכל היותר, אחרי הסבר)
+  useEffect(() => {
+    const t = setTimeout(() => void maybeAskForPushPermission('chat'), 1500);
+    return () => clearTimeout(t);
+  }, []);
+
   useEffect(() => {
     if (__DEV__) console.log('[story] community focus ->', diagFocused);
   }, [diagFocused]);

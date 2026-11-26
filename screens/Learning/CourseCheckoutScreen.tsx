@@ -24,7 +24,7 @@ import {
 } from '../../services/coursePurchaseService';
 import { appQueryKeys } from '../../lib/appQueryKeys';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import { IAP_ENABLED } from '../../lib/iapProducts';
+import { COURSE_IAP_ENABLED } from '../../lib/iapProducts';
 import { purchasePlan } from '../../services/iapService';
 import { useStorePrices } from '../../hooks/useStorePrices';
 
@@ -87,7 +87,7 @@ export function CourseCheckoutScreen({ navigation, route }: any) {
   const storePrices = useStorePrices();
   const storePrice = storePrices[`course:${courseId}`]?.displayPrice ?? null;
   // מובייל: המחיר מהחנות; ווב: המחיר מהמסד (CardCom)
-  const displayPrice = IAP_ENABLED ? storePrice ?? '—' : `₪${(course?.price ?? 0).toLocaleString('he-IL')}`;
+  const displayPrice = COURSE_IAP_ENABLED ? storePrice ?? '—' : `₪${(course?.price ?? 0).toLocaleString('he-IL')}`;
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const outcomeHandledRef = useRef(false);
@@ -154,7 +154,7 @@ export function CourseCheckoutScreen({ navigation, route }: any) {
     }
     setPhase('preparing');
     // מובייל: רכישה דרך Apple / Google — השרת (iap-verify) כותב course_purchases
-    if (IAP_ENABLED) {
+    if (COURSE_IAP_ENABLED) {
       const outcome = await purchasePlan(`course:${courseId}`, user.id);
       if (outcome.kind === 'success') {
         grantAndFinish();
@@ -329,13 +329,13 @@ export function CourseCheckoutScreen({ navigation, route }: any) {
         </UICard>
         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, paddingHorizontal: 4 }}>
           <Ionicons name="lock-closed-outline" size={16} color={colors.text.secondary} />
-          <Text style={[APP_TYPE.caption, textStyle, { color: colors.text.secondary, flex: 1 }]}>{IAP_ENABLED ? `התשלום מתבצע דרך ${Platform.OS === 'ios' ? 'App Store' : 'Google Play'}. הגישה לקורס נפתחת מיד אחרי אישור הרכישה.` : t('s17')}</Text>
+          <Text style={[APP_TYPE.caption, textStyle, { color: colors.text.secondary, flex: 1 }]}>{COURSE_IAP_ENABLED ? `התשלום מתבצע דרך ${Platform.OS === 'ios' ? 'App Store' : 'Google Play'}. הגישה לקורס נפתחת מיד אחרי אישור הרכישה.` : t('s17')}</Text>
         </View>
         <UIButton
           title={course ? `לתשלום · ${displayPrice}` : t('s4')}
           variant="primary"
           fullWidth
-          disabled={!course || !(course.price > 0) || (IAP_ENABLED && !storePrice)}
+          disabled={!course || !(course.price > 0) || (COURSE_IAP_ENABLED && !storePrice)}
           onPress={() => void startPayment()}
         />
       </ScrollView>

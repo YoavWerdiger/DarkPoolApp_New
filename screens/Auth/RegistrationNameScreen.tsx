@@ -33,7 +33,7 @@ const RegistrationNameScreen = ({ navigation }: { navigation: any }) => {
   const handleNext = () => {
     if (!canContinue) return;
     setData({ ...data, fullName: name.trim() });
-    navigation.navigate('RegistrationPhone');
+    navigation.navigate('RegistrationProfileImage');
   };
 
   const handleBack = () => {

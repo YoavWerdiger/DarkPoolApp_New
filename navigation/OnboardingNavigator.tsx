@@ -86,8 +86,9 @@ const OnboardingNavigator = () => {
   // אחרת remount אחרי OTP משאיר Age בלי היסטוריה ו-goBack קורס).
   // Google: כבר יש תמונה — מתחילים בשאלון מגיל.
   const initialRoute = useMemo(() => {
+    // Google / Apple: אימייל כבר מאומת — רק שם ותמונה
     if (data.isGoogleSignUp || data.googleUserId) {
-      return 'RegistrationAge';
+      return 'RegistrationName';
     }
     if (data.emailVerified && !data.password) {
       return 'RegistrationPassword';
@@ -97,9 +98,9 @@ const OnboardingNavigator = () => {
       (!!data.pendingAuthUserId && !!data.password) ||
       (!!user && !isRegistrationComplete(user) && !!data.password)
     ) {
-      return 'RegistrationProfileImage';
+      return 'RegistrationName';
     }
-    return 'RegistrationName';
+    return 'RegistrationEmail';
   }, [
     data.isGoogleSignUp,
     data.googleUserId,

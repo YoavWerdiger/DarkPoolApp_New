@@ -165,10 +165,8 @@ const RegistrationEmailScreen = ({ navigation }: { navigation: any }) => {
       showBack
       onBack={() => {
         void HapticFeedback.impactLight();
-        safeRegistrationBack(navigation, {
-          exit: exitRegistration,
-          fallbackRoute: 'RegistrationPhone',
-        });
+        // המסך הראשון בהרשמה — חזרה יוצאת מההרשמה
+        safeRegistrationBack(navigation, { exit: exitRegistration });
       }}
       footer={
         <CashAppButton

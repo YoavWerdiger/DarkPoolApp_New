@@ -58,7 +58,7 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
 
       setData({ ...data, password });
       void HapticFeedback.success();
-      navigation.navigate('RegistrationProfileImage');
+      navigation.navigate('RegistrationName');
     } finally {
       setLoading(false);
     }

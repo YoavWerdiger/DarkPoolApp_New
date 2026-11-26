@@ -64,6 +64,7 @@ import {
   darkPoolTransparentFill,
 } from './darkPoolLayout';
 import InvestmentDisclaimer from '../../components/legal/InvestmentDisclaimer';
+import ErrorState from '../../components/ui/ErrorState';
 
 type Nav = NativeStackNavigationProp<DarkPoolStackParamList, 'DarkPoolPosition'>;
 type RP = RouteProp<DarkPoolStackParamList, 'DarkPoolPosition'>;
@@ -288,6 +289,8 @@ function TradesPositionView() {
                 ))}
               </UICard>
             </View>
+          ) : tradesQuery.isError ? (
+            <ErrorState compact onRetry={() => void tradesQuery.refetch()} />
           ) : null}
         </ScrollView>
       </SafeAreaView>

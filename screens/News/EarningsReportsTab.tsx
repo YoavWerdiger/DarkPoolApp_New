@@ -31,6 +31,7 @@ import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/Refr
 import { sessionPillColors, type TradingSession } from './sessionPillColors';
 import { useTheme } from '../../context/ThemeContext';
 import { EmptyState } from '../../components/ui/EmptyState';
+import ErrorState from '../../components/ui/ErrorState';
 
 export type EarningsViewMode = 'daily' | 'weekly';
 
@@ -529,6 +530,7 @@ export default function EarningsReportsTab({
   );
   // tracking של אילו ימים כבר נטענו, כדי למנוע קריאות כפולות.
   const loadedDatesRef = useRef<Set<string>>(new Set());
+  const [loadFailed, setLoadFailed] = useState(false);
   const [loading, setLoading] = useState(
     () => Object.keys(queryClient.getQueryData<ReportsByDate>(EARNINGS_QUERY_KEY) ?? {}).length === 0
   );
@@ -687,13 +689,14 @@ export default function EarningsReportsTab({
       const merged = opts.forceReload ? byDate : { ...prevCached, ...byDate };
       queryClient.setQueryData(EARNINGS_QUERY_KEY, merged);
       setReportsByDate(prev => (opts.forceReload ? byDate : { ...prev, ...byDate }));
+      setLoadFailed(false);
 
       if (__DEV__) {
         console.log(`[EarningsReportsTab] window around ${centerStr}: ${reports.length} rows in ${Date.now() - t0}ms`);
       }
     } catch (error) {
       console.error('[EarningsReportsTab] load window failed:', error instanceof Error ? error.message : error);
-      legacyAlert(i18n.t('auto.screens__News__EarningsReportsTab.s10'), i18n.t('auto.screens__News__EarningsReportsTab.s11'));
+      setLoadFailed(true); // ErrorState עם «נסה שוב» במקום Alert
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -720,9 +723,10 @@ export default function EarningsReportsTab({
       const prevCached = queryClient.getQueryData<ReportsByDate>(EARNINGS_QUERY_KEY) ?? {};
       queryClient.setQueryData(EARNINGS_QUERY_KEY, { ...prevCached, ...byDate });
       setReportsByDate(prev => ({ ...prev, ...byDate }));
+      setLoadFailed(false);
     } catch (error) {
       console.error('[EarningsReportsTab] load week failed:', error instanceof Error ? error.message : error);
-      legacyAlert(i18n.t('auto.screens__News__EarningsReportsTab.s10'), i18n.t('auto.screens__News__EarningsReportsTab.s11'));
+      setLoadFailed(true); // ErrorState עם «נסה שוב» במקום Alert
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -1252,6 +1256,7 @@ export default function EarningsReportsTab({
 
   // רינדור רשימה ריקה
   const renderEmptyState = () => {
+    if (loadFailed) return <ErrorState onRetry={() => void handleRefresh()} />;
     const isToday = selectedDate.toDateString() === new Date().toDateString();
     const dateStr = selectedDate.toLocaleDateString(appLocale(), { 
       weekday: 'long',

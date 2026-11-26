@@ -123,6 +123,7 @@ import {
   type TradeDetailFieldIcon,
 } from './utils/tradeDetailSummary';
 import InvestmentDisclaimer from '../../components/legal/InvestmentDisclaimer';
+import ErrorState from '../../components/ui/ErrorState';
 
 type Nav = NativeStackNavigationProp<DarkPoolStackParamList, 'DarkPoolTradeDetail'>;
 type RP = RouteProp<DarkPoolStackParamList, 'DarkPoolTradeDetail'>;
@@ -346,6 +347,7 @@ export default function DarkPoolTradeDetailScreen() {
   const historyLoading = isCongress
     ? congressHistoryQuery.isLoading
     : insiderHistoryQuery.isLoading;
+  const historyQuery = isCongress ? congressHistoryQuery : insiderHistoryQuery;
   const historyCount = isCongress
     ? otherCongressTrades.length
     : otherInsiderTrades.length;
@@ -503,6 +505,9 @@ export default function DarkPoolTradeDetailScreen() {
             </UICard>
           </View>
 
+          {historyQuery.isError ? (
+            <ErrorState compact onRetry={() => void historyQuery.refetch()} />
+          ) : null}
           {historyLoading || historyCount > 0 ? (
             <View style={styles.historySection}>
               <DarkPoolSectionHeader

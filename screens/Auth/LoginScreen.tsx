@@ -355,6 +355,17 @@ export default function LoginScreen({ navigation }: any) {
                 </>
               ) : (
                 <View style={styles.form}>
+                  {/* The welcome logo, smaller and floating the same way — the form continues the welcome screen */}
+                  <View style={styles.formLogoWrap}>
+                    <Animated.View style={{ transform: [{ translateY: logoFloat }] }}>
+                      <Image
+                        source={isDarkMode ? { uri: WELCOME_LOGO_URI } : WELCOME_LOGO_LIGHT}
+                        style={{ width: width * 0.42, height: width * 0.42 }}
+                        contentFit="contain"
+                      />
+                    </Animated.View>
+                  </View>
+
                   <View style={styles.titleBlock}>
                     <Text style={[appFlowTitleStyle, { color: colors.text.primary }]}>{i18n.t('auto.screens__Auth__LoginScreen.s7')}</Text>
                     <Text style={[appFlowSubtitleStyle, { color: colors.text.secondary }]}>{i18n.t('auto.screens__Auth__LoginScreen.s8')}</Text>
@@ -480,6 +491,7 @@ const styles = StyleSheet.create({
   form: {
     width: '100%',
   },
+  formLogoWrap: { alignItems: 'center', marginBottom: APP_LAYOUT.componentGap },
   titleBlock: {
     marginBottom: APP_LAYOUT.sectionGap / 2 + 4,
   },

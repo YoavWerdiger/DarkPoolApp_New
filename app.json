@@ -118,7 +118,13 @@
       "expo-apple-authentication",
       "expo-iap"
     ],
-    "owner": "darkpoolapp"
+    "owner": "darkpoolapp",
+    "runtimeVersion": "1.0.2",
+    "updates": {
+      "url": "https://u.expo.dev/c6140546-bf96-4ca0-85a5-26807f0742f6",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    }
   },
   "locales": {
     "he": {

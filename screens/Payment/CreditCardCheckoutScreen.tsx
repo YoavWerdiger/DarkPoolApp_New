@@ -18,6 +18,7 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 import { appQueryKeys } from '../../lib/appQueryKeys';
 import { IAP_ENABLED } from '../../lib/iapProducts';
 import { purchasePlan } from '../../services/iapService';
+import { recordPositiveMoment } from '../../utils/storeReview';
 
 /**
  * reCAPTCHA / "אני לא רובוט" נשבר ב-RN WebView כשה-UA כולל `; wv`
@@ -292,6 +293,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
           return;
         }
 
+        void recordPositiveMoment();
         navigation.replace('SubscriptionWelcome', {
           planId: selectedPlan,
           planName: plan?.name,

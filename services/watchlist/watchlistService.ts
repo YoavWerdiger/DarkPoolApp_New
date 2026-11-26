@@ -11,6 +11,7 @@ import type {
 } from './watchlistTypes';
 import { normalizeItem } from './watchlistInsights';
 import { getQuote } from '../portfolios/portfolioPriceFeed';
+import { recordPositiveMoment } from '../../utils/storeReview';
 
 async function requireUserId(): Promise<string> {
   const { data, error } = await supabase.auth.getUser();
@@ -189,6 +190,7 @@ export async function addWatchlistItem(params: {
     .select('*')
     .single();
   if (error) throw error;
+  void recordPositiveMoment();
   return normalizeItem(data as Record<string, unknown>);
 }
 

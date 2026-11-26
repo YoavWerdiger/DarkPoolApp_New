@@ -21,6 +21,7 @@ import {
   CourseProgress,
   LearningError
 } from '../types/learning';
+import { recordPositiveMoment } from '../utils/storeReview';
 
 export class LearningService {
   // Course queries
@@ -606,6 +607,8 @@ export class LearningService {
         details: error
       });
     }
+
+    if (request.status === 'completed') void recordPositiveMoment();
 
     return {
       id: data.id,

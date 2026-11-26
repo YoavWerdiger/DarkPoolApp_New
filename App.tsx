@@ -28,6 +28,7 @@ import { AppDialogProvider } from './components/ui/AppDialogProvider';
 import { logger } from './utils/logger';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppLaunchScreen } from './components/AppLaunchScreen';
+import ForceUpdateGate from './components/ForceUpdateGate';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { HapticFeedback } from './utils/hapticFeedback';
@@ -565,7 +566,9 @@ export default function App() {
                   <AppDialogProvider>
                     {/* ErrorBoundary פנימי — קריסת UI לא מפרקת AuthProvider באמצע signOut */}
                     <ErrorBoundary>
-                      <AppContent />
+                      <ForceUpdateGate>
+                        <AppContent />
+                      </ForceUpdateGate>
                     </ErrorBoundary>
                   </AppDialogProvider>
                 </ToastProvider>

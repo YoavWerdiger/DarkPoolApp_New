@@ -6,10 +6,12 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "channel": "development"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
@@ -28,7 +30,8 @@
       },
       "cache": {
         "key": "production-cache-v3-sdk58"
-      }
+      },
+      "channel": "production"
     }
   },
   "submit": {

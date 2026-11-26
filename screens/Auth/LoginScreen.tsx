@@ -3,8 +3,7 @@ import { TEXT_DIR, getStoredLanguage, isRtlLanguage } from '../../lib/i18n/langu
 
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { I18nManager, View, Text, TextInput, TouchableOpacity, Dimensions, Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, ScrollView, Animated, Easing, StyleSheet } from 'react-native';
-import { Image } from 'expo-image';
+import { I18nManager, View, Text, TextInput, TouchableOpacity, Dimensions, Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
@@ -16,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useTheme } from '../../context/ThemeContext';
 import UIButton from '../../components/ui/UIButton';
+import { WelcomePrints } from '../../components/auth/WelcomePrints';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
 import {
   APP_TYPE,
@@ -41,9 +41,6 @@ const ICON_AFTER_TEXT: 'left' | 'right' =
   isRtlLanguage(getStoredLanguage()) === I18nManager.isRTL ? 'right' : 'left';
 
 const { width } = Dimensions.get('window');
-const WELCOME_LOGO_URI = 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/app-media/image%20(3).png';
-/** בבהיר — כיתוב «קהילת הסוחרים» בשחור (בלוגו הכהה הוא לבן ונעלם על קנבס בהיר) */
-const WELCOME_LOGO_LIGHT = require('../../assets/branding/welcome-logo-light.png');
 
 // ─── Reusable input ────────────────────────────────────────────────────────
 interface FieldProps {
@@ -133,7 +130,6 @@ export default function LoginScreen({ navigation }: any) {
     void AppleAuthentication.isAvailableAsync().then(setAppleAvailable).catch(() => setAppleAvailable(false));
   }, []);
   const [showForm, setShowForm] = useState(false);
-  const logoFloat = useRef(new Animated.Value(0)).current;
 
   const { signIn, signInWithGoogle, signInWithApple, isLoading, setUser, passwordRecoveryMode, setPasswordRecoveryMode } = useAuth();
   const { setGoogleUserData } = useRegistration();
@@ -151,26 +147,6 @@ export default function LoginScreen({ navigation }: any) {
     }, [passwordRecoveryMode, setPasswordRecoveryMode])
   );
 
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(logoFloat, {
-          toValue: -8,
-          duration: 1500,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(logoFloat, {
-          toValue: 0,
-          duration: 1500,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [logoFloat]);
 
   const loadSavedCredentials = async () => {
     try {
@@ -264,7 +240,7 @@ export default function LoginScreen({ navigation }: any) {
         style={{ flex: 1 }}
       >
         <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-          <ScreenGradientBackground />
+          <ScreenGradientBackground animated={false} />
 
           <SafeAreaView style={{ flex: 1 }}>
             <ScrollView
@@ -277,67 +253,47 @@ export default function LoginScreen({ navigation }: any) {
             >
               {!showForm ? (
                 <>
-                  <View style={styles.logoWrap}>
-                    <Animated.View style={{ transform: [{ translateY: logoFloat }] }}>
-                      <Image
-                        source={isDarkMode ? { uri: WELCOME_LOGO_URI } : WELCOME_LOGO_LIGHT}
-                        style={{ width: width * 0.78, height: width * 0.78 }}
-                        contentFit="contain"
-                      />
-                    </Animated.View>
+                  {/* What DarkPool is, then the one rich moment: prints as the app shows them */}
+                  <View style={styles.welcomeTop}>
+                    <Text style={[styles.welcomeTitle, { color: colors.text.primary }]}>{i18n.t(K + 'welcomeTitle')}</Text>
+                    <Text style={[styles.welcomeSub, { color: colors.text.secondary }]}>{i18n.t(K + 'welcomeSub')}</Text>
+                    <WelcomePrints />
                   </View>
 
-                  {/* Welcome: one main CTA, then "or" and the two quick sign-ins right here — no detour to the form */}
                   <View style={styles.buttonStack}>
                     <UIButton
-                      title={i18n.t('auto.screens__Auth__LoginScreen.s5')}
+                      title={i18n.t(K + 's5')}
                       variant="primary"
                       size="lg"
                       fullWidth
                       onPress={() => navigation.navigate('Register')}
                     />
-
-                    <View style={[styles.dividerRow, styles.dividerTight]}>
-                      <View style={[styles.dividerLine, { backgroundColor: colors.border.divider }]} />
-                      <Text style={[appCaptionStyle, styles.dividerText, { color: colors.text.tertiary }]}>{i18n.t('auto.screens__Auth__LoginScreen.orSignInWith')}</Text>
-                      <View style={[styles.dividerLine, { backgroundColor: colors.border.divider }]} />
-                    </View>
-
-                    {/* Apple and Google side by side, half the width each — brand names fit, and neither outranks the other */}
-                    <View style={styles.socialRow}>
-                      {appleAvailable ? (
-                        <View style={styles.socialCell}>
-                          <UIButton
-                            title="Apple"
-                            variant="secondary"
-                            size="lg"
-                            icon="logo-apple"
-                            iconPosition={ICON_AFTER_TEXT}
-                            fullWidth
-                            loading={appleLoading}
-                            disabled={isLoading || appleLoading}
-                            style={{ borderRadius: tokens.borderRadius.full }}
-                            onPress={() => void handleAppleSignIn()}
-                          />
-                        </View>
-                      ) : null}
-                      <View style={styles.socialCell}>
-                        <UIButton
-                          title="Google"
-                          variant="secondary"
-                          size="lg"
-                          icon="logo-google"
-                          iconPosition={ICON_AFTER_TEXT}
-                          fullWidth
-                          loading={googleLoading}
-                          disabled={isLoading || googleLoading}
-                          style={{ borderRadius: tokens.borderRadius.full }}
-                          onPress={() => void handleGoogleSignIn()}
-                        />
-                      </View>
-                    </View>
-
-                    {/* Email accounts: a quiet link, not a third big button */}
+                    {appleAvailable ? (
+                      <UIButton
+                        title={i18n.t(K + 'appleContinue')}
+                        variant="secondary"
+                        size="lg"
+                        icon="logo-apple"
+                        iconPosition={ICON_AFTER_TEXT}
+                        fullWidth
+                        loading={appleLoading}
+                        disabled={isLoading || appleLoading}
+                        style={{ borderRadius: tokens.borderRadius.full }}
+                        onPress={() => void handleAppleSignIn()}
+                      />
+                    ) : null}
+                    <UIButton
+                      title={i18n.t(K + 'googleContinue')}
+                      variant="secondary"
+                      size="lg"
+                      icon="logo-google"
+                      iconPosition={ICON_AFTER_TEXT}
+                      fullWidth
+                      loading={googleLoading}
+                      disabled={isLoading || googleLoading}
+                      style={{ borderRadius: tokens.borderRadius.full }}
+                      onPress={() => void handleGoogleSignIn()}
+                    />
                     <TouchableOpacity
                       onPress={() => {
                         void HapticFeedback.selection();
@@ -347,9 +303,7 @@ export default function LoginScreen({ navigation }: any) {
                       style={styles.emailLink}
                       accessibilityRole="button"
                     >
-                      <Text style={[appCaptionStyle, styles.emailLinkText, { color: colors.text.secondary }]}>
-                        {i18n.t('auto.screens__Auth__LoginScreen.emailSignInLink')}
-                      </Text>
+                      <Text style={[appCaptionStyle, styles.emailLinkText, { color: colors.text.secondary }]}>{i18n.t(K + 'emailSignInLink')}</Text>
                     </TouchableOpacity>
                   </View>
                 </>
@@ -438,13 +392,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingTop: APP_LAYOUT.componentGap,
   },
-  logoWrap: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   backBtn: { alignSelf: 'flex-start', width: 44, height: 44, justifyContent: 'center', marginBottom: 8 },
   forgot: { alignSelf: 'flex-end', marginTop: -4, marginBottom: 20 },
+  welcomeTop: { flex: 1, justifyContent: 'center', gap: 12, paddingBottom: 24 },
+  welcomeTitle: { fontSize: 34, lineHeight: 40, fontWeight: '700', letterSpacing: -0.6, textAlign: 'right', writingDirection: TEXT_DIR },
+  welcomeSub: { fontSize: 17, lineHeight: 24, textAlign: 'right', writingDirection: TEXT_DIR, marginBottom: 12 },
   buttonStack: {
     gap: APP_LAYOUT.stackGapTight,
   },
@@ -454,12 +406,8 @@ const styles = StyleSheet.create({
   titleBlock: {
     marginBottom: APP_LAYOUT.sectionGap / 2 + 4,
   },
-  dividerTight: { marginVertical: 6 },
   emailLink: { alignSelf: 'center', paddingVertical: 6, marginTop: 4 },
   emailLinkText: { textDecorationLine: 'underline' },
-  socialRow: { flexDirection: 'row', gap: 12, alignSelf: 'stretch' },
-  // Each cell takes half the row; the button fills it (fullWidth) and centres its content
-  socialCell: { flex: 1 },
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',

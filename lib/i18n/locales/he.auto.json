@@ -522,7 +522,12 @@
     "formSub": "עם האימייל שנרשמת איתו",
     "signInBtn": "כניסה",
     "noAccount": "אין לך חשבון? הרשמה",
-    "back": "חזרה"
+    "back": "חזרה",
+    "printsLabel": "עסקאות דארק פול אחרונות",
+    "welcomeTitle": "רואים מה הכסף הגדול קונה",
+    "welcomeSub": "עסקאות דארק פול, בעלי עניין וחברי קונגרס, במקום אחד",
+    "appleContinue": "המשך עם Apple",
+    "googleContinue": "המשך עם Google"
   },
   "screens__Payment__CheckoutScreen": {
     "s1": "שגיאה",

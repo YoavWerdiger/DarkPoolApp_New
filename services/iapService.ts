@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { requireOptionalNativeModule } from 'expo';
 import {
   deepLinkToSubscriptions,
   ErrorCode,
@@ -41,8 +42,19 @@ const waiters = new Map<string, (o: IapPurchaseOutcome) => void>();
 const handledIds = new Set<string>();
 const priceCache = new Map<string, StorePrice>();
 
+// ב-Expo Go אין את המודול הנייטיב של expo-iap — בלי בדיקה כל ניסיון חיבור נכשל ונשלח ל-Sentry
+const IAP_NATIVE_AVAILABLE = requireOptionalNativeModule('ExpoIap') != null;
+let warnedNoNative = false;
+
 function ensureConnection(): Promise<boolean> {
   if (!IAP_ENABLED) return Promise.resolve(false);
+  if (!IAP_NATIVE_AVAILABLE) {
+    if (__DEV__ && !warnedNoNative) {
+      warnedNoNative = true;
+      logger.warn(TAG, 'expo-iap native module missing (Expo Go?) — purchases disabled in this build');
+    }
+    return Promise.resolve(false);
+  }
   if (!connectPromise) {
     connectPromise = initConnection().then(
       () => true,

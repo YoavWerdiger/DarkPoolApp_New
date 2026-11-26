@@ -105,17 +105,17 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
 
   const skipImage = () => {
     setData({ ...data, profileImage: null });
-    navigation.navigate('RegistrationSummary');
+    navigation.navigate('RegistrationAge');
   };
 
   const continueWithImage = () => {
     setData({ ...data, profileImage: image });
-    navigation.navigate('RegistrationSummary');
+    navigation.navigate('RegistrationAge');
   };
 
   const handleBack = () => {
     void HapticFeedback.impactLight();
-    safeRegistrationBack(navigation, { fallbackRoute: 'RegistrationName' });
+    safeRegistrationBack(navigation, { fallbackRoute: 'RegistrationPassword' });
   };
 
   return (

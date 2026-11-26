@@ -15,15 +15,20 @@
  */
 export const PHONE_VERIFICATION_ENABLED = false;
 
-// הרשמה קצרה (פריט 25): אימייל → קוד → סיסמה → שם → תמונה (לא חובה) → כניסה.
-// שאלון (גיל, ניסיון, תחום, פלטפורמה, תיק), טלפון ובחירת מסלול עברו לכרטיס «השלם פרופיל» / לשדרוג מאוחר.
-// המסכים נשארים רשומים ב-OnboardingNavigator (קישורים ישנים) אבל לא בזרימה.
 const STEP_ORDER = [
+  'name',
+  'phone',
+  ...(PHONE_VERIFICATION_ENABLED ? (['phoneVerification'] as const) : []),
   'email',
   'emailVerification',
   'password',
-  'name',
   'profileImage',
+  'age',
+  'experience',
+  'tradingFocus',
+  'platform',
+  'portfolio',
+  'track',
   'summary',
 ] as const;
 
@@ -52,9 +57,6 @@ export const ONBOARDING_STEPS: Record<OnboardingStepKey, number> = (() => {
   });
   // The verification screen stays mounted in the navigator while disabled, so it still
   // needs a number to render; it borrows email's rather than pushing the count.
-  // מסכים שמחוץ לזרימה הקצרה עדיין מקבלים מספר (אם מגיעים אליהם מקישור ישן)
-  for (const key of ['phone', 'phoneVerification', 'age', 'experience', 'tradingFocus', 'platform', 'portfolio', 'track'] as const) {
-    if (steps[key] == null) steps[key] = steps.name;
-  }
+  if (!PHONE_VERIFICATION_ENABLED) steps.phoneVerification = steps.email;
   return steps;
 })();

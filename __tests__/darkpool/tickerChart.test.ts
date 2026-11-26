@@ -103,8 +103,8 @@ function weekdaySessionsEnding(endIso: string, sessions: number, startClose = 10
 describe('yahooRequestForTickerRange', () => {
   it('maps 1M to daily 1mo — never max / 1wk / 1mo buckets', () => {
     expect(yahooRequestForTickerRange('1D')).toEqual({ yahooRange: '1d', interval: '5m' });
-    expect(yahooRequestForTickerRange('1W')).toEqual({ yahooRange: '5d', interval: '1h' });
-    expect(yahooRequestForTickerRange('1M')).toEqual({ yahooRange: '1mo', interval: '1h' });
+    expect(yahooRequestForTickerRange('1W')).toEqual({ yahooRange: '5d', interval: '5m' });
+    expect(yahooRequestForTickerRange('1M')).toEqual({ yahooRange: '1mo', interval: '30m' });
     expect(yahooRequestForTickerRange('3M')).toEqual({ yahooRange: '3mo', interval: '1d' });
     expect(yahooRequestForTickerRange('YTD')).toEqual({ yahooRange: 'ytd', interval: '1d' });
     expect(yahooRequestForTickerRange('1Y')).toEqual({ yahooRange: '1y', interval: '1d' });
@@ -114,7 +114,7 @@ describe('yahooRequestForTickerRange', () => {
     expect(tickerHistoryRangeForChip('1M')).toBe('1M');
     expect(yahooRequestForTickerRange(tickerHistoryRangeForChip('1M'))).toEqual({
       yahooRange: '1mo',
-      interval: '1h',
+      interval: '30m',
     });
     const ranges: TickerChartRange[] = ['1D', '1W', '1M', '3M', 'YTD', '1Y', '5Y', 'ALL'];
     for (const range of ranges) {

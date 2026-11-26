@@ -34,13 +34,14 @@ describe('chartSeriesSampling', () => {
       d.setUTCDate(d.getUTCDate() + 1);
     }
     const out = sampleChartSeriesForPeriod(series, '5Y');
+    // 5Y = נקודה לשבוע (9f098c2e) — בערך 52 בשנה
     expect(out.length).toBeLessThanOrEqual(360);
-    expect(out.length).toBeGreaterThan(300);
+    expect(out.length).toBeGreaterThan(50);
     expect(out[0].date).toBe('2020-01-02');
     expect(out[out.length - 1].date).toBe(series[series.length - 1].date);
   });
 
-  it('keeps a 2h snapshot on the latest session of a daily chart', () => {
+  it('1Y is daily: the latest intraday session collapses to its last point (9f098c2e)', () => {
     const daily = Array.from({ length: 40 }, (_, i) => ({
       date: `2026-08-${String(i + 1).padStart(2, '0')}`,
       value: 1000 + i,
@@ -51,7 +52,8 @@ describe('chartSeriesSampling', () => {
     }));
     const out = sampleChartSeriesForPeriod([...daily, ...hours], '1Y');
     const session = out.filter((p) => p.date.startsWith('2026-09-10T'));
-    expect(session.length).toBeGreaterThanOrEqual(3);
+    expect(session).toHaveLength(1);
+    expect(out[out.length - 1]).toEqual(hours[hours.length - 1]);
     const oneD = filterChartSeriesByPeriod([...daily, ...hours], '1D');
     expect(oneD.length).toBe(hours.length);
   });
@@ -83,10 +85,12 @@ describe('chartSeriesSampling', () => {
 
   it('chartSampleGapMs matches product spec', () => {
     expect(chartSampleGapMs('1D')).toBe(5 * 60_000);
-    expect(chartSampleGapMs('1W')).toBe(15 * 60_000);
+    // spec מ-9f098c2e: 1D 5 דק׳, 1W 30 דק׳, 1M שעה, 3M 3 שעות, YTD/1Y יום, 5Y/All שבוע
+    expect(chartSampleGapMs('1W')).toBe(30 * 60_000);
     expect(chartSampleGapMs('1M')).toBe(60 * 60_000);
-    expect(chartSampleGapMs('3M')).toBe(24 * 60 * 60_000);
-    expect(chartSampleGapMs('5Y')).toBe(24 * 60 * 60_000);
-    expect(chartSampleGapMs('All')).toBe(24 * 60 * 60_000);
+    expect(chartSampleGapMs('3M')).toBe(3 * 60 * 60_000);
+    expect(chartSampleGapMs('1Y')).toBe(24 * 60 * 60_000);
+    expect(chartSampleGapMs('5Y')).toBe(7 * 24 * 60 * 60_000);
+    expect(chartSampleGapMs('All')).toBe(7 * 24 * 60 * 60_000);
   });
 });

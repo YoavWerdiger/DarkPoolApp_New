@@ -8,7 +8,7 @@ import {
 
 describe('DarkGreenAuroraBackground palette', () => {
   it('locks the Figma Make thumbnail greens and true-black base', () => {
-    expect(AURORA_BASE).toBe('#000000');
+    expect(AURORA_BASE).toBe('#111111');
     expect(AURORA_GREEN).toBe('#00B531');
     expect(AURORA_GREEN_DEEP).toBe('#013B13');
     expect(AURORA_GREEN_BRAND).toBe('#00C805');

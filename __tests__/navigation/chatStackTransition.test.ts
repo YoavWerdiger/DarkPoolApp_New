@@ -38,7 +38,7 @@ describe('chat stack transitions', () => {
     expect(options.animationDuration).toBeUndefined();
     expect(options.freezeOnBlur).toBe(false);
     expect(options.contentStyle).toEqual({ backgroundColor: '#F4F2F1' });
-    expect(createChatStackScreenOptions(true).contentStyle).toEqual({ backgroundColor: '#000000' });
+    expect(createChatStackScreenOptions(true).contentStyle).toEqual({ backgroundColor: '#111111' });
     expect(CHAT_STACK_ANIMATION_MS).toBeGreaterThanOrEqual(350);
     expect(chatStackSrc).not.toContain("animation: 'fade'");
     expect(chatStackSrc).not.toContain('animationDuration: 90');

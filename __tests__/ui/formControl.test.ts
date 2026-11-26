@@ -35,28 +35,28 @@ describe('formControl', () => {
   it('labels and inputs use primary light-on-dark text in dark theme', () => {
     const dark = createDesignTokensForTheme(true);
     expect(dark.colors.text.primary).toBe(SoftUI.textPrimary);
-    expect(dark.colors.text.primary).toBe('#FFFFFF');
+    expect(dark.colors.text.primary).toBe('#F2F2F2');
     expect(dark.colors.text.secondary).toBe(SoftUI.textSecondary);
-    expect(dark.colors.text.secondary).toBe('#8E8E93');
+    expect(dark.colors.text.secondary).toBe('#A0A0A0');
 
     const label = formFieldLabelStyle({
       tokens: dark as ReturnType<typeof import('../../components/ui/DesignTokens').useDesignTokens>,
       focused: false,
       error: false,
     });
-    expect(label.color).toBe('#FFFFFF');
+    expect(label.color).toBe('#F2F2F2');
 
     const input = formFieldInputStyle(
       dark as ReturnType<typeof import('../../components/ui/DesignTokens').useDesignTokens>,
     );
-    expect(input.color).toBe('#FFFFFF');
+    expect(input.color).toBe('#F2F2F2');
     expect(input.textAlign).toBe('right');
     expect(input.writingDirection).toBe('rtl');
     expect(
       formFieldPlaceholderColor(
         dark as ReturnType<typeof import('../../components/ui/DesignTokens').useDesignTokens>,
       ),
-    ).toBe('#8E8E93');
+    ).toBe('#A0A0A0');
   });
 
   it('numeric inputs keep LTR glyphs but sit on the physical right', () => {

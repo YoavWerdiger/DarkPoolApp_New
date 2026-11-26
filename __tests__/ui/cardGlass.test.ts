@@ -81,6 +81,6 @@ describe('card glass language', () => {
   it('keeps inputGlass fallback on soft surface (solid, not aurora tint)', () => {
     const fallback = DesignTokens.onboardingInputSurface.androidFallback;
     expect(fallback).toBe(DesignTokens.colors.background.secondary);
-    expect(DesignTokens.onboardingInputSurface.borderColor).toMatch(/0\.06/);
+    expect(DesignTokens.onboardingInputSurface.borderColor).toMatch(/0\.07/);
   });
 });

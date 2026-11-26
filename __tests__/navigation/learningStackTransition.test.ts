@@ -24,7 +24,7 @@ describe('learning stack transitions', () => {
     expect(options.animation).toBe(CHAT_STACK_ANIMATION);
     expect(options.animationDuration).toBeUndefined();
     expect(options.freezeOnBlur).toBe(false);
-    expect(options.contentStyle).toEqual({ backgroundColor: '#000000' });
+    expect(options.contentStyle).toEqual({ backgroundColor: '#111111' });
     expect(CHAT_STACK_ANIMATION_MS).toBeGreaterThanOrEqual(350);
     expect(CHAT_STACK_ANIMATION_MS).toBe(Platform.OS === 'android' ? 400 : 350);
   });

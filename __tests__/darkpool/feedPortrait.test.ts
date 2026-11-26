@@ -66,14 +66,15 @@ describe('resolveFeedPortraitUrl', () => {
   });
 
   it('never returns a ticker logo for an insider', () => {
-    expect(
-      resolveFeedPortraitUrl({
-        storedUrl: 'https://logo.clearbit.com/tesla.com',
-        personKind: 'insider',
-        personId: 'TSLA:Elon Musk',
-        personName: 'Elon Musk',
-      })
-    ).toBeNull();
+    // בכיר מוכר מקבל דיוקן מהרשימה — העיקר שלא הלוגו של החברה
+    const url = resolveFeedPortraitUrl({
+      storedUrl: 'https://logo.clearbit.com/tesla.com',
+      personKind: 'insider',
+      personId: 'TSLA:Elon Musk',
+      personName: 'Elon Musk',
+    });
+    expect(url).not.toBe('https://logo.clearbit.com/tesla.com');
+    expect(url ?? '').not.toMatch(/clearbit|\/tickers\//);
   });
 
   it('keeps a UW insider face when it is not a ticker asset', () => {

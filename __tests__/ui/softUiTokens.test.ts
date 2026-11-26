@@ -6,11 +6,11 @@ import { APP_SYSTEM_BACKGROUND } from '../../lib/androidSystemUI';
 
 describe('Soft UI design tokens', () => {
   it('locks black canvas, card surface, and three text levels', () => {
-    expect(SoftUI.canvas).toBe('#000000');
-    expect(SoftUI.surface1).toBe('#1C1C1E');
-    expect(SoftUI.textPrimary).toBe('#FFFFFF');
-    expect(SoftUI.textSecondary).toBe('#8E8E93');
-    expect(SoftUI.textMuted).toBe('#636366');
+    expect(SoftUI.canvas).toBe('#111111');
+    expect(SoftUI.surface1).toBe('#1C1C1C');
+    expect(SoftUI.textPrimary).toBe('#F2F2F2');
+    expect(SoftUI.textSecondary).toBe('#A0A0A0');
+    expect(SoftUI.textMuted).toBe('#6B6B6B');
   });
 
   it('uses classic DarkPool green for primary and success', () => {
@@ -49,12 +49,12 @@ describe('Soft UI design tokens', () => {
     expect(DesignTokens.colors.primary.lightCta).toBe('#FFFFFF');
     expect(DesignTokens.colors.primary.main).toBe('#00C805');
     expect(DesignTokens.colors.text.inverse).toBe('#1A1918');
-    expect(DesignTokens.colors.background.cardSolid).toBe('#1C1C1E');
+    expect(DesignTokens.colors.background.cardSolid).toBe('#1C1C1C');
     expect(DesignTokens.colors.background.navChrome).toBe(SoftUI.surface2);
   });
 
   it('uses a theme-aware hairline for row dividers', () => {
-    expect(DesignTokens.colors.border.divider).toBe('rgba(255, 255, 255, 0.13)');
+    expect(DesignTokens.colors.border.divider).toBe('rgba(255, 255, 255, 0.10)');
     const light = createDesignTokensForTheme(false);
     expect(light.colors.border.divider).toBe('rgba(0, 0, 0, 0.10)');
   });

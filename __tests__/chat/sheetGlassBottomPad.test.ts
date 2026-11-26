@@ -50,7 +50,7 @@ describe('sheet glass stays opaque during motion', () => {
 describe('sheet glass surface tokens', () => {
   it('uses solid light-gray grabber fill with no hairline border on shared styles', () => {
     expect(SHEET_HANDLE_FILL).toMatch(/^#[0-9A-Fa-f]{6}$/);
-    expect(SHEET_HANDLE_FILL).toBe('#8E8E93');
+    expect(SHEET_HANDLE_FILL).toBe('#A0A0A0');
     expect(SHEET_HANDLE_FILL).toBe(DesignTokens.colors.text.secondary);
     const stylesSrc = readFileSync(
       join(__dirname, '../../components/ui/BottomSheet/BottomSheet.styles.ts'),

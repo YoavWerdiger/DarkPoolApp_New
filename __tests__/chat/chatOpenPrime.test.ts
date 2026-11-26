@@ -116,7 +116,8 @@ describe('chatOpenPrime', () => {
   it('builds navigate params so the header paints during the slide', () => {
     expect(chatGroupOpenParams(group({ name: 'צוות' }))).toEqual({
       groupId: 'g1',
-      groupName: 'צוות',
+      // שם הקבוצה מקבל RLM בהתחלה — כיוון נכון בכותרת (בידוד bidi)
+      groupName: '\u200Fצוות',
       avatarUrl: undefined,
       unreadCount: 2,
       lastReadMessageId: 'm-read',

@@ -172,7 +172,10 @@ function AppContent() {
   //    בזמן האימות ושנייה וחצי אחריו.
   // 3) חזרה מרקע נועלת רק אחרי שהיה ברקע לפחות BIOMETRIC_GRACE_MS — מעבר קצר (התראה, החלפת אפליקציה לרגע)
   //    לא מקפיץ אימות שוב ושוב.
-  const BIOMETRIC_GRACE_MS = 30_000;
+  // 4) «סשן» נזכר גם אחרי שהמערכת הורגת את האפליקציה ברקע (אנדרואיד: בוחר תמונות / מצלמה / רכישה בחנות):
+  //    זמן הפעילות / האימות האחרון נשמר ב-AsyncStorage, ובהפעלה מחדש בתוך החלון לא מבקשים שוב.
+  const BIOMETRIC_GRACE_MS = 5 * 60_000;
+  const BIOMETRIC_SESSION_KEY = 'biometric_session_last_active_at';
   const userId = user?.id ?? null;
   const biometricAuthInFlightRef = useRef(false);
   const biometricAuthEndedAtRef = useRef(0);
@@ -197,7 +200,10 @@ function AppContent() {
         cancelLabel: i18n.t('auto.App.s2'),
         disableDeviceFallback: false,
       });
-      if (result.success) setBiometricLocked(false);
+      if (result.success) {
+        setBiometricLocked(false);
+        void AsyncStorage.setItem(BIOMETRIC_SESSION_KEY, String(Date.now())).catch(() => {});
+      }
     } catch {
       /* נשאר נעול — כפתור «פתח» בתוך מסך הנעילה */
     } finally {
@@ -218,6 +224,12 @@ function AppContent() {
     void (async () => {
       const enabled = await isBiometricEnabled();
       if (enabled) {
+        // אומת / היה פעיל לפני פחות מ-5 דקות (גם אם המערכת סגרה את האפליקציה בינתיים) — בלי לבקש שוב
+        const last = Number((await AsyncStorage.getItem(BIOMETRIC_SESSION_KEY).catch(() => null)) || 0);
+        if (last && Date.now() - last < BIOMETRIC_GRACE_MS) {
+          setBiometricChecked(true);
+          return;
+        }
         setBiometricLocked(true);
         setBiometricChecked(true);
         await runBiometricAuth();
@@ -241,7 +253,6 @@ function AppContent() {
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', async (nextState) => {
-      const prev = appState.current;
       appState.current = nextState;
       // מעבר שנגרם מחלון האימות עצמו (או שנייה וחצי אחריו) — לא יציאה אמיתית מהאפליקציה
       if (biometricAuthInFlightRef.current || Date.now() - biometricAuthEndedAtRef.current < 1500) return;
@@ -249,24 +260,28 @@ function AppContent() {
 
       if (nextState === 'background') {
         backgroundAtRef.current = Date.now();
+        // הסשן נמדד מהיציאה — נשמר גם אם המערכת תהרוג את האפליקציה ברקע
+        void AsyncStorage.setItem(BIOMETRIC_SESSION_KEY, String(Date.now())).catch(() => {});
         void NotificationService.syncPermissionOnResume();
         // נועלים כבר ביציאה — בלי הבזק תוכן בחזרה / ב-app switcher
         if (await isBiometricEnabled()) setBiometricLocked(true);
         return;
       }
-      // רק חזרה מרקע אמיתי — לא מ-inactive (חלונות מערכת ב-iOS)
-      if (prev === 'background' && nextState === 'active') {
+      // חזרה לחזית — לפי «היינו ברקע», לא לפי המצב הקודם (בחלק מהמכשירים יש inactive באמצע,
+      // ואז הנעילה נשארה והאימות נשאל שוב ושוב)
+      if (nextState === 'active' && backgroundAtRef.current != null) {
         void NotificationService.syncPermissionOnResume();
-        const awayMs = backgroundAtRef.current ? Date.now() - backgroundAtRef.current : 0;
+        const awayMs = Date.now() - backgroundAtRef.current;
         backgroundAtRef.current = null;
         if (awayMs < BIOMETRIC_GRACE_MS) {
-          // חזרה מהירה — משחררים בלי לבקש אימות
           setBiometricLocked(false);
           return;
         }
         if (await isBiometricEnabled()) {
           setBiometricLocked(true);
           await runBiometricAuth();
+        } else {
+          setBiometricLocked(false);
         }
       }
     });

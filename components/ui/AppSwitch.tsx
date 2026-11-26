@@ -9,6 +9,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useTheme } from '../../context/ThemeContext';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 const TRACK_W = 51;
 const TRACK_H = 31;
@@ -68,7 +69,9 @@ function AndroidSwitch({
   return (
     <Pressable
       onPress={() => {
-        if (!disabled) onValueChange?.(!value);
+        if (disabled) return;
+        void HapticFeedback.selection();
+        onValueChange?.(!value);
       }}
       disabled={disabled}
       hitSlop={8}

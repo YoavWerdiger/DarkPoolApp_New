@@ -4,6 +4,7 @@ import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FlatList,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -13,6 +14,7 @@ import {
 } from 'react-native';
 import { ActivityIndicator } from '../ui/AppSpinner';
 import { Image as ExpoImage } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -54,7 +56,50 @@ type Props = {
  * גלריית המכשיר בתוך מסך המצלמה (צ'אט / סטורי) — במקום בוחר התמונות של המערכת,
  * כך שלא יוצאים מהמסך. עולה מלמטה מעל המצלמה; בחירה אחת סוגרת וממשיכה לפריוויו.
  */
-export function InAppGalleryPanel({ visible, onClose, onPick }: Props) {
+export function InAppGalleryPanel(props: Props) {
+  return Platform.OS === 'android' ? <AndroidSystemGallery {...props} /> : <DeviceGalleryPanel {...props} />;
+}
+
+/**
+ * אנדרואיד: אין הרשאת קריאה לגלריה (מדיניות Google Play) — פותחים את Photo Picker של המערכת,
+ * שלא דורש הרשאה, ומחזירים את הבחירה באותו פורמט.
+ */
+function AndroidSystemGallery({ visible, onClose, onPick }: Props) {
+  const onPickRef = useRef(onPick);
+  const onCloseRef = useRef(onClose);
+  onPickRef.current = onPick;
+  onCloseRef.current = onClose;
+  useEffect(() => {
+    if (!visible) return;
+    let cancelled = false;
+    void (async () => {
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 1 }).catch(
+        () => null,
+      );
+      if (cancelled) return;
+      const a = res && !res.canceled ? res.assets[0] : undefined;
+      if (!a) {
+        onCloseRef.current();
+        return;
+      }
+      void HapticFeedback.selection();
+      const isVideo = a.type === 'video';
+      onPickRef.current({
+        uri: a.uri,
+        width: a.width || undefined,
+        height: a.height || undefined,
+        mediaType: isVideo ? 'video' : 'image',
+        durationMs: isVideo && a.duration ? Math.round(a.duration) : undefined,
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [visible]);
+  return null;
+}
+
+function DeviceGalleryPanel({ visible, onClose, onPick }: Props) {
   const insets = useSafeAreaInsets();
   const { width: screenW, height: screenH } = useWindowDimensions();
   const cell = Math.floor((screenW - GAP * (COLS - 1)) / COLS);

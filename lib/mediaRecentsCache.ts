@@ -2,6 +2,13 @@ import { runAfterInteractions } from '../utils/runAfterInteractions';
 import { Image as ExpoImage } from 'expo-image';
 import * as MediaLibrary from 'expo-media-library/legacy';
 import * as FileSystem from 'expo-file-system/legacy';
+import { Platform } from 'react-native';
+
+/**
+ * אנדרואיד: הרשאות READ_MEDIA_* הוסרו מהמניפסט (מדיניות Google Play, פריט 7).
+ * לא קוראים את הגלריה ישירות ולא מבקשים הרשאה — כל בחירה עוברת דרך Photo Picker של המערכת.
+ */
+const LIBRARY_READ_SUPPORTED = Platform.OS !== 'android';
 
 /** עמוד ראשון קטן — מספיק לגריד, בלי לחכות לכל האלבום. */
 export const MEDIA_RECENTS_PAGE_SIZE = 30;
@@ -115,6 +122,7 @@ export async function getMediaLibraryReadStatus(): Promise<{
   canAskAgain: boolean;
   status: string;
 }> {
+  if (!LIBRARY_READ_SUPPORTED) return { readable: false, canAskAgain: false, status: 'unsupported' };
   try {
     const perm = await MediaLibrary.getPermissionsAsync();
     return {
@@ -128,6 +136,7 @@ export async function getMediaLibraryReadStatus(): Promise<{
 }
 
 export async function requestMediaLibraryRead(): Promise<boolean> {
+  if (!LIBRARY_READ_SUPPORTED) return false;
   try {
     const perm = await MediaLibrary.requestPermissionsAsync();
     return isMediaLibraryReadable(perm);

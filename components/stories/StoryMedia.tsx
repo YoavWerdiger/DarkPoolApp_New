@@ -9,6 +9,7 @@ import {
   storyAuthoredFrame,
 } from './storyLayout';
 import StaticDesignTokens from '../../components/ui/DesignTokens';
+import { blackAlpha } from '../../components/ui/designTokensStatic';
 
 /**
  * מדיה של סטורי — בלי שום אנימציה/שקיפות: מה שנטען מוצג באטימות מלאה מהפריים הראשון.
@@ -183,7 +184,7 @@ export function StoryOverlays({ content }: { content: string | null | undefined 
           : o.bgStyle === 'solid'
             ? (o.color === '#FFFFFF' ? '#000000' : '#FFFFFF')
             : o.bgStyle === 'semi'
-              ? 'rgba(0,0,0,0.45)'
+              ? blackAlpha(0.45)
               : 'transparent';
         const tx = (typeof o.x === 'number' ? o.x : 0) * fit;
         const ty = (typeof o.y === 'number' ? o.y : 0) * fit;
@@ -249,7 +250,7 @@ const mediaStyles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
     lineHeight: 40,
-    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowColor: blackAlpha(0.3),
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },

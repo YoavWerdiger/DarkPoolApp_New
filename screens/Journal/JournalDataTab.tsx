@@ -46,6 +46,7 @@ import {
   journalRtlContent,
   journalSectionTitleStyle,
 } from './journalLayout';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 type PnlBar = { key: string; label: string; pnl: number };
 
@@ -990,7 +991,7 @@ export default function JournalDataTab() {
 
   const chartColors: ChartColors = useMemo(
     () => ({
-      zero: 'rgba(255,255,255,0.25)',
+      zero: whiteAlpha(0.25),
       pos: DesignTokens.colors.primary.main,
       neg: DesignTokens.colors.text.danger,
       label: DesignTokens.colors.text.tertiary,
@@ -1002,7 +1003,7 @@ export default function JournalDataTab() {
     () => ({
       line: DesignTokens.colors.primary.main,
       grid: DesignTokens.colors.border.primary,
-      zero: 'rgba(255,255,255,0.25)',
+      zero: whiteAlpha(0.25),
       label: DesignTokens.colors.text.tertiary,
     }),
     [DesignTokens]

@@ -35,6 +35,7 @@ import {
   headerExitButtonFill,
 } from '../ui/DayNavBlurButton';
 import { useRegistrationExitOptional } from '../../hooks/useExitRegistration';
+import { blackAlpha } from '../../components/ui/designTokensStatic';
 
 export type OnboardingDensity = 'focused' | 'compact';
 
@@ -234,7 +235,7 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
         <View style={{ flex: 1, backgroundColor: 'transparent' }}>
           {isDarkMode ? (
             <LinearGradient
-              colors={['rgba(0,0,0,0.28)', 'transparent', 'rgba(0,0,0,0.22)']}
+              colors={[blackAlpha(0.28), 'transparent', blackAlpha(0.22)]}
               start={{ x: 1, y: 0 }}
               end={{ x: 0, y: 1 }}
               pointerEvents="none"

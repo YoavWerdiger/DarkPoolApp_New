@@ -45,6 +45,7 @@ import {
   portfolioAmountDisplayColor,
   resolvePortfolioChartHeaderValue,
 } from '../utils/chartDisplay';
+import { whiteAlpha } from '../../../components/ui/designTokensStatic';
 interface ChartPoint {
   date: string;
   value: number;
@@ -580,7 +581,7 @@ export function PortfolioValueChart({
     backgroundColor: interpolateColor(downSV.value, [0, 1], [upColor, downColor]),
   }));
   const lightChart = String(tokens.colors.background.primary) === LIGHT_CANVAS;
-  const cursorLineColor = lightChart ? 'rgba(30,26,36,0.38)' : 'rgba(255,255,255,0.45)';
+  const cursorLineColor = lightChart ? 'rgba(30,26,36,0.38)' : whiteAlpha(0.45);
   const cursorRingColor = lightChart ? '#FFFFFF' : tokens.colors.background.primary;
   const headerAmountColor = (amount: number) =>
     portfolioAmountDisplayColor(amount, tokens.colors.text.primary, tokens.colors.text.danger);

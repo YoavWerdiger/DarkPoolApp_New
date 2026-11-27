@@ -40,6 +40,7 @@ import { APP_TYPE, appFormFieldLabelStyle } from '../../components/ui/appType';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { silent } from '../../utils/silentError';
 import StaticDesignTokens from '../../components/ui/DesignTokens';
+import { blackAlpha } from '../../components/ui/designTokensStatic';
 
 export type EditableNews = {
   id: string;
@@ -618,7 +619,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     imageUploadingOverlay: {
       ...StyleSheet.absoluteFill,
-      backgroundColor: 'rgba(0,0,0,0.45)',
+      backgroundColor: blackAlpha(0.45),
       alignItems: 'center',
       justifyContent: 'center',
     },

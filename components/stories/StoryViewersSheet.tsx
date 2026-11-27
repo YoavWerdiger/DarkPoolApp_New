@@ -18,6 +18,7 @@ import { SlidingPillGroup } from '../ui/DayDividerPill';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { UserNameRow } from '../ui/badges/UserBadges';
 import { STORY_SCREEN_HEIGHT as H } from './storyLayout';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 /* ── Viewers / reactions sheet (inline, no nested Modal) ── */
 type ViewersSheetProps = {
@@ -244,17 +245,17 @@ const sheetStyles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 10,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: whiteAlpha(0.06),
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.10)',
+    borderColor: whiteAlpha(0.1),
     gap: 6,
   },
   tabActive: {
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    borderColor: 'rgba(255,255,255,0.28)',
+    backgroundColor: whiteAlpha(0.14),
+    borderColor: whiteAlpha(0.28),
   },
   tabText: {
-    color: 'rgba(255,255,255,0.6)',
+    color: whiteAlpha(0.6),
     fontSize: 14,
     fontWeight: '600',
   },

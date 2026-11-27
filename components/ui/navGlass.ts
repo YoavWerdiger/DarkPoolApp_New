@@ -6,6 +6,7 @@ import {
   cardGlassBlurTint,
   type GlassIntensity,
 } from './cardGlass';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 export type NavGlassIntensity = GlassIntensity;
 
@@ -20,21 +21,21 @@ export function navGlassOverlay(isDarkMode: boolean, intensity: NavGlassIntensit
   }
   switch (intensity) {
     case 'subtle':
-      return 'rgba(255, 255, 255, 0.13)';
+      return whiteAlpha(0.13);
     case 'medium':
-      return 'rgba(255, 255, 255, 0.18)';
+      return whiteAlpha(0.18);
     case 'strong':
-      return 'rgba(255, 255, 255, 0.22)';
+      return whiteAlpha(0.22);
     case 'light':
     default:
-      return 'rgba(255, 255, 255, 0.15)';
+      return whiteAlpha(0.15);
   }
 }
 
 /** רצפה דקה כשה-blur חלש — לא slab אטום שמסתיר את הזכוכית. */
 export function navGlassBaseFill(isDarkMode: boolean): string {
   // דארק: רצפה בהירה מעט (לא כהה) — הכפתורים בולטים מעל הקנבס
-  return isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.18)';
+  return isDarkMode ? whiteAlpha(0.05) : whiteAlpha(0.18);
 }
 
 export function navGlassBorderStyle(

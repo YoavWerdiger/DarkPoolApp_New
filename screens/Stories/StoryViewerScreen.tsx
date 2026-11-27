@@ -87,6 +87,7 @@ import { StoryViewersSheet } from '../../components/stories/StoryViewersSheet';
 import { openContentActionsOverModal } from '../../components/moderation/contentActions';
 import { silent } from '../../utils/silentError';
 import StaticDesignTokens from '../../components/ui/DesignTokens';
+import { blackAlpha, whiteAlpha } from '../../components/ui/designTokensStatic';
 
 /** כרום מעל מדיה (מצלמה / סטורי) — טוקנים קבועים, פריט 44 */
 const M = StaticDesignTokens.colors.onMedia;
@@ -774,7 +775,7 @@ function StoryViewerScreenInner() {
     const list = storiesMap?.[id] ?? [];
     return (
       <LinearGradient
-        colors={[M.scrimStrong, 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0)']}
+        colors={[M.scrimStrong, blackAlpha(0.3), blackAlpha(0)]}
         locations={[0, 0.6, 1]}
         style={[styles.topGradient, { paddingTop: insets.top + 10 }]}
         pointerEvents="none"
@@ -804,7 +805,7 @@ function StoryViewerScreenInner() {
               <Image source={{ uri: avatar }} style={styles.headerAvatar} />
             ) : (
               <View style={[styles.headerAvatar, styles.headerAvatarPlaceholder]}>
-                <Ionicons name="person" size={18} color="rgba(255,255,255,0.7)" />
+                <Ionicons name="person" size={18} color={whiteAlpha(0.7)} />
               </View>
             )}
           </View>
@@ -818,7 +819,7 @@ function StoryViewerScreenInner() {
     if (isOwnStory) {
       return (
         <LinearGradient
-          colors={['rgba(0,0,0,0)', StaticDesignTokens.colors.onMedia.scrimHalf]}
+          colors={[blackAlpha(0), StaticDesignTokens.colors.onMedia.scrimHalf]}
           style={[styles.bottomGradient, { paddingBottom: insets.bottom + 20 }]}
           pointerEvents="box-none"
         >
@@ -900,7 +901,7 @@ function StoryViewerScreenInner() {
           )}
           {active && mediaFailed && (
             <View style={[styles.center, StyleSheet.absoluteFill]}>
-              <Ionicons name="cloud-offline-outline" size={48} color="rgba(255,255,255,0.4)" />
+              <Ionicons name="cloud-offline-outline" size={48} color={whiteAlpha(0.4)} />
               <Text style={styles.errorText}>{i18n.t('auto.screens__Stories__StoryViewerScreen.s5')}</Text>
             </View>
           )}
@@ -926,7 +927,7 @@ function StoryViewerScreenInner() {
       <GestureHandlerRootView style={styles.root}>
         <StatusBar hidden />
         <Pressable style={[styles.center, styles.emptyRoot]} onPress={close}>
-          <Ionicons name={loadError ? 'cloud-offline-outline' : 'images-outline'} size={48} color="rgba(255,255,255,0.3)" />
+          <Ionicons name={loadError ? 'cloud-offline-outline' : 'images-outline'} size={48} color={whiteAlpha(0.3)} />
           <Text style={styles.emptyText}>{loadError ? i18n.t('auto.screens__Stories__StoryViewerScreen.s6') : i18n.t('auto.screens__Stories__StoryViewerScreen.s7')}</Text>
         </Pressable>
       </GestureHandlerRootView>
@@ -1059,13 +1060,13 @@ const styles = StyleSheet.create({
     opacity: 0,
   },
   blurDim: {
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: blackAlpha(0.35),
   },
   staticBarTrack: {
     flex: 1,
     marginHorizontal: 1.5,
     height: 3.5,
-    backgroundColor: 'rgba(255,255,255,0.35)',
+    backgroundColor: whiteAlpha(0.35),
     borderRadius: 2,
     overflow: 'hidden',
   },
@@ -1092,12 +1093,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    color: 'rgba(255,255,255,0.5)',
+    color: whiteAlpha(0.5),
     fontSize: 16,
     marginTop: 12,
   },
   errorText: {
-    color: 'rgba(255,255,255,0.5)',
+    color: whiteAlpha(0.5),
     marginTop: 8,
     fontSize: 14,
   },
@@ -1133,10 +1134,10 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     marginLeft: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: whiteAlpha(0.2),
   },
   headerAvatarPlaceholder: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: whiteAlpha(0.15),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1150,7 +1151,7 @@ const styles = StyleSheet.create({
     maxWidth: 180,
   },
   headerTime: {
-    color: 'rgba(255,255,255,0.6)',
+    color: whiteAlpha(0.6),
     fontSize: 13,
     marginRight: 8,
   },
@@ -1160,7 +1161,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.38)',
+    backgroundColor: blackAlpha(0.38),
   },
   closeHit: {
     position: 'absolute',

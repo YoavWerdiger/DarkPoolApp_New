@@ -11,6 +11,7 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 import { APP_LAYOUT } from '../ui/appLayout';
 import { ACADEMY_CARD_RADIUS } from './academyCardLayout';
 import { ACADEMY_TYPE } from './academyLayout';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 const channelAvatar = require('../../assets/youtube-channel-avatar.png');
 
@@ -223,7 +224,7 @@ const createStyles = (T: ReturnType<typeof useDesignTokens>) =>
       borderRadius: 999,
       overflow: 'hidden',
       borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.18)',
+      borderColor: whiteAlpha(0.18),
     },
     ctaText: {
       ...ACADEMY_TYPE.footnote,

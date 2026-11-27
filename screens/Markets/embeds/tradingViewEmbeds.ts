@@ -1,5 +1,6 @@
 import i18n from '../../../lib/i18n';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { blackAlpha, whiteAlpha } from '../../../components/ui/designTokensStatic';
 
 export type MarketsTokens = ReturnType<typeof useDesignTokens>;
 
@@ -339,7 +340,7 @@ export function getTradingViewSymbolChartHTML(symbol: string) {
     style: '1',
     locale: 'he_IL',
     backgroundColor: 'rgba(10, 14, 10, 0)',
-    gridColor: 'rgba(255,255,255,0.06)',
+    gridColor: whiteAlpha(0.06),
     enable_publishing: false,
     hide_top_toolbar: true,
     hide_side_toolbar: true,
@@ -393,7 +394,7 @@ export function getTradingViewTradeChartHTML(symbol: string, entryDate: string, 
     style: '1',
     locale: 'en',
     backgroundColor: 'rgba(10, 14, 10, 0)',
-    gridColor: 'rgba(255,255,255,0.05)',
+    gridColor: whiteAlpha(0.05),
     enable_publishing: false,
     hide_top_toolbar: true,
     hide_legend: false,
@@ -443,8 +444,8 @@ export function getTradingViewEarningsChartHTML(
     theme: isDarkMode ? 'dark' : 'light',
     style: '1',
     locale: 'he_IL',
-    backgroundColor: 'rgba(0, 0, 0, 0)',
-    gridColor: isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+    backgroundColor: blackAlpha(0),
+    gridColor: isDarkMode ? whiteAlpha(0.06) : blackAlpha(0.06),
     enable_publishing: false,
     hide_top_toolbar: true,
     hide_side_toolbar: true,

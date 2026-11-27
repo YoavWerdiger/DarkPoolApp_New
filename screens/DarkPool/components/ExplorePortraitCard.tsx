@@ -22,6 +22,7 @@ import { DARK_POOL_TYPE } from '../darkPoolLayout';
 import { EXPLORE_PROFILE_CARD } from '../utils/exploreGrid';
 import { congressMemberLabel, isKnownCongressMember } from '../utils/congressGender';
 import StaticDesignTokens from '../../../components/ui/DesignTokens';
+import { blackAlpha } from '../../../components/ui/designTokensStatic';
 
 const HEBREW_LETTER = /[\u0590-\u05FF]/;
 
@@ -93,7 +94,7 @@ export const ExplorePortraitCard = memo(function ExplorePortraitCard({
         priority="high"
       >
         <LinearGradient
-          colors={['transparent', StaticDesignTokens.colors.onMedia.scrimHalf, 'rgba(0,0,0,0.94)']}
+          colors={['transparent', StaticDesignTokens.colors.onMedia.scrimHalf, blackAlpha(0.94)]}
           locations={[0.08, 0.46, 1]}
           start={{ x: 0.5, y: 0 }}
           end={{ x: 0.5, y: 1 }}

@@ -3,11 +3,12 @@ import type { ViewStyle, TextStyle } from 'react-native';
 import type { useDesignTokens } from './DesignTokens';
 import { APP_TYPE, appPhysicalRightText } from './appType';
 import { SoftUI } from './softUiPalette';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 type Tokens = ReturnType<typeof useDesignTokens>;
 
 /** גבול שדה בפוקוס — לא ירוק; הדגשה נейтральית (Soft UI). */
-export const FORM_FIELD_FOCUS_BORDER = 'rgba(255, 255, 255, 0.22)';
+export const FORM_FIELD_FOCUS_BORDER = whiteAlpha(0.22);
 
 export function formFieldBorderColor(input: {
   tokens: Tokens;

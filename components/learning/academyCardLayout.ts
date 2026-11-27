@@ -1,6 +1,7 @@
 import type { ViewStyle } from 'react-native';
 import { UI_CARD_RADIUS } from '../ui/appLayout';
 import { MAIN_SCREEN_HEADER_HP } from '../ui/MainDrawerScreenHeader';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 /** padding אופקי משותף לכל כרטיסיות האקדמיה */
 export const ACADEMY_CARD_HP = MAIN_SCREEN_HEADER_HP;
@@ -20,7 +21,7 @@ export function academyFrameBorderColor(tier: AcademyFrameTier): string {
     case 'youtube':
       return 'rgba(255, 0, 51, 0.45)';
     default:
-      return 'rgba(255, 255, 255, 0.16)';
+      return whiteAlpha(0.16);
   }
 }
 

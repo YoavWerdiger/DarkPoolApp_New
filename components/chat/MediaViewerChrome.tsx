@@ -19,13 +19,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import StaticDesignTokens from '../../components/ui/DesignTokens';
+import { blackAlpha } from '../../components/ui/designTokensStatic';
 
 /** כרום מעל מדיה — טוקנים קבועים (פריט 44) */
 const M = StaticDesignTokens.colors.onMedia;
 const ICON = M.text;
 /** תמונה בהירה בולעת אייקונים לבנים — הדעיכה והעיגול נותנים ניגוד בלי פס אטום. */
-const SCRIM_TOP = [StaticDesignTokens.colors.onMedia.scrimMedium, 'rgba(0,0,0,0)'] as const;
-const SCRIM_BOTTOM = ['rgba(0,0,0,0)', StaticDesignTokens.colors.overlay] as const;
+const SCRIM_TOP = [StaticDesignTokens.colors.onMedia.scrimMedium, blackAlpha(0)] as const;
+const SCRIM_BOTTOM = [blackAlpha(0), StaticDesignTokens.colors.overlay] as const;
 const TEXT_SHADOW = {
   textShadowColor: StaticDesignTokens.colors.overlay,
   textShadowOffset: { width: 0, height: 1 },
@@ -222,7 +223,7 @@ const styles = StyleSheet.create({
   },
   blurDim: {
     // הטשטוש צריך להיראות — רק החשכה קלה לקריאות הכפתורים
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: blackAlpha(0.35),
   },
   keyboardDim: {
     backgroundColor: StaticDesignTokens.colors.onMedia.scrimMedium,

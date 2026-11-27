@@ -28,6 +28,7 @@ import {
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { openAppSettings } from '../../lib/cameraSession';
 import StaticDesignTokens from '../../components/ui/DesignTokens';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 /** כרום מעל מדיה — טוקנים קבועים (פריט 44) */
 const M = StaticDesignTokens.colors.onMedia;
@@ -244,7 +245,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: whiteAlpha(0.14),
   },
   circleSpacer: {
     width: 44,
@@ -265,7 +266,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   message: {
-    color: 'rgba(255,255,255,0.75)',
+    color: whiteAlpha(0.75),
     fontSize: APP_TYPE.cardBody.fontSize,
     lineHeight: APP_TYPE.cardBody.lineHeight,
     textAlign: 'center',
@@ -283,7 +284,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 12,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: whiteAlpha(0.16),
   },
   settingsBtnText: {
     color: M.text,

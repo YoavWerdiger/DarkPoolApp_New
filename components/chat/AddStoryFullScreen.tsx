@@ -86,6 +86,7 @@ import {
   ScreenPhase,
 } from './addStory/storyEditorParts';
 import { s } from './addStory/addStoryStyles';
+import { blackAlpha, whiteAlpha } from '../../components/ui/designTokensStatic';
 
 export default function AddStoryFullScreen({ visible, onClose, onAdded, presentation = 'modal' }: AddStoryFullScreenProps) {
   const { user } = useAuth();
@@ -901,7 +902,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
                 />
               ) : (
                 <View style={[StyleSheet.absoluteFill, { backgroundColor: M.base, justifyContent: 'center', alignItems: 'center' }]}>
-                  <Ionicons name="camera-outline" size={64} color="rgba(255,255,255,0.2)" />
+                  <Ionicons name="camera-outline" size={64} color={whiteAlpha(0.2)} />
                 </View>
               )}
 
@@ -911,7 +912,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
                 pointerEvents="none"
               />
               <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.65)']}
+                colors={['transparent', blackAlpha(0.65)]}
                 style={s.vignetteBottom}
                 pointerEvents="none"
               />
@@ -950,7 +951,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
                   ref={textInputRef}
                   style={s.textBigInput}
                   placeholder={i18n.t('auto.components__chat__AddStoryFullScreen.s14')}
-                  placeholderTextColor="rgba(255,255,255,0.45)"
+                  placeholderTextColor={whiteAlpha(0.45)}
                   value={textContent}
                   onChangeText={setTextContent}
                   multiline
@@ -1346,7 +1347,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
       {/* Bottom upload – ממורכז כמו FAB «תיק חדש» ב-PortfoliosHub */}
       {!drawMode && (
         <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.65)']}
+          colors={['transparent', blackAlpha(0.65)]}
           style={[s.previewBottomGrad, s.chromeLayer, { paddingBottom: insets.bottom + 16 }]}
           pointerEvents="box-none"
         >

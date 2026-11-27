@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { DesignTokens } from '../DesignTokens';
+import { whiteAlpha } from '../../../components/ui/designTokensStatic';
 
 /**
  * טוקני זכוכית אחידים לכל BottomSheet / ChatBottomSheet.
@@ -129,7 +130,7 @@ export function sheetActionColors(tokens: {
   { backgroundColor: string; borderColor: string; color: string; borderWidth: number }
 > {
   const dangerBg = tokens.colors.danger?.main ?? '#EF4444';
-  const glassBg = tokens.colors.glass?.card?.bg ?? 'rgba(255,255,255,0.06)';
+  const glassBg = tokens.colors.glass?.card?.bg ?? whiteAlpha(0.06);
   const glassBorder = tokens.colors.glass?.card?.border ?? tokens.colors.border.primary;
   const onCardFill = tokens.colors.background?.primary ?? glassBg;
 

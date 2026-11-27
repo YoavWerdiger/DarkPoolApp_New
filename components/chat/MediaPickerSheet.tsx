@@ -81,6 +81,7 @@ import {
   type PickedRecentMedia,
 } from '../../lib/mediaRecentsCache';
 import type { ViewInstance } from 'react-native';
+import { blackAlpha, whiteAlpha } from '../../components/ui/designTokensStatic';
 
 export type { PickedRecentMedia };
 
@@ -878,7 +879,7 @@ const createStyles = (
       position: 'absolute',
       left: 6,
       bottom: 6,
-      backgroundColor: 'rgba(0,0,0,0.58)',
+      backgroundColor: blackAlpha(0.58),
       borderRadius: 6,
       paddingHorizontal: 5,
       paddingVertical: 2,
@@ -896,8 +897,8 @@ const createStyles = (
       height: 22,
       borderRadius: 11,
       borderWidth: 1.5,
-      borderColor: 'rgba(255,255,255,0.92)',
-      backgroundColor: 'rgba(0,0,0,0.18)',
+      borderColor: whiteAlpha(0.92),
+      backgroundColor: blackAlpha(0.18),
       alignItems: 'center',
       justifyContent: 'center',
     },

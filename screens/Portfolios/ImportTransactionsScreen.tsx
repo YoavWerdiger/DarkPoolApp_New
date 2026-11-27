@@ -38,6 +38,7 @@ import {
 } from '../Journal/journalLayout';
 import { PORTFOLIO_FORM } from './portfolioLayout';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { blackAlpha, whiteAlpha } from '../../components/ui/designTokensStatic';
 
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'ImportTransactions'>;
 type Route = RouteProp<PortfoliosStackParamList, 'ImportTransactions'>;
@@ -128,7 +129,7 @@ export default function ImportTransactionsScreen() {
           alignSelf: 'stretch',
         },
         codeBox: {
-          backgroundColor: 'rgba(0, 0, 0, 0.30)',
+          backgroundColor: blackAlpha(0.3),
           borderRadius: 16,
           padding: 12,
           marginTop: 10,
@@ -364,7 +365,7 @@ export default function ImportTransactionsScreen() {
                     styles.summaryCard,
                     {
                       borderColor: tokens.colors.border.subtle,
-                      backgroundColor: 'rgba(255,255,255,0.04)',
+                      backgroundColor: whiteAlpha(0.04),
                     },
                   ]}
                 >

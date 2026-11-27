@@ -5,6 +5,7 @@ import {
   SHEET_HANDLE_HEIGHT,
   SHEET_HANDLE_WIDTH,
 } from './sheetGlass';
+import { whiteAlpha } from '../../../components/ui/designTokensStatic';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -16,8 +17,8 @@ const sheetChrome = {
   overflow: 'hidden' as const,
   zIndex: 2,
   borderWidth: StyleSheet.hairlineWidth,
-  borderColor: 'rgba(255, 255, 255, 0.08)',
-  borderTopColor: 'rgba(255, 255, 255, 0.12)',
+  borderColor: whiteAlpha(0.08),
+  borderTopColor: whiteAlpha(0.12),
   borderBottomWidth: 0,
   ...Platform.select({
     android: {

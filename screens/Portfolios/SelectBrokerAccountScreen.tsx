@@ -32,6 +32,7 @@ import {
 import type { BrokerAccount } from '../../services/brokers';
 import type { PortfoliosStackParamList } from '../../navigation/PortfoliosStack';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'SelectBrokerAccount'>;
 type RouteParams = RouteProp<PortfoliosStackParamList, 'SelectBrokerAccount'>;
@@ -148,7 +149,7 @@ export default function SelectBrokerAccountScreen() {
           paddingVertical: 3,
           paddingHorizontal: 8,
           borderRadius: 12,
-          backgroundColor: 'rgba(255,255,255,0.07)',
+          backgroundColor: whiteAlpha(0.07),
         },
         chipText: {
           ...journalPhysicalRightText,

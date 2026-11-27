@@ -41,6 +41,7 @@ import {
   settingsMetaType,
 } from '../../components/profile/settingsType';
 import { useGroupNotificationMute } from '../../hooks/useGroupNotificationMute';
+import { blackAlpha } from '../../components/ui/designTokensStatic';
 
 export default function ChatGroupSettingsScreen() {
   const navigation = useNavigation();
@@ -511,7 +512,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     avatarBusy: {
       ...StyleSheet.absoluteFill,
       borderRadius: 28,
-      backgroundColor: 'rgba(0,0,0,0.45)',
+      backgroundColor: blackAlpha(0.45),
       justifyContent: 'center',
       alignItems: 'center',
     },

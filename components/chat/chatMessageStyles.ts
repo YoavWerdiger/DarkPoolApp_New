@@ -6,6 +6,7 @@ import { GestureDetector } from 'react-native-gesture-handler';
 import { LIGHT_CANVAS } from '../ui/designTokensStatic';
 import MessageReactions from './MessageReactions';
 import { APP_TYPE, appPhysicalRightText } from '../ui/appType';
+import { blackAlpha, whiteAlpha } from '../../components/ui/designTokensStatic';
 
 export const BUBBLE_TAIL_W = 8;
 
@@ -228,10 +229,10 @@ export const createStyles = (tokens: any) => {
   },
   // בלייט שחור שקוף על הבועה הירוקה יוצא אפור-ירקרק כהה — שם לבן שקוף (ובבועת הצד השני אפור עדין)
   replyContainerMe: {
-    backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.55)',
+    backgroundColor: isDarkMode ? blackAlpha(0.2) : whiteAlpha(0.55),
   },
   replyContainerThem: {
-    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.045)',
+    backgroundColor: isDarkMode ? whiteAlpha(0.15) : blackAlpha(0.045),
   },
   replyBar: {
     width: 3,
@@ -399,21 +400,21 @@ export const createStyles = (tokens: any) => {
     right: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.48)',
+    backgroundColor: blackAlpha(0.48),
     borderRadius: 10,
     paddingHorizontal: 6,
     paddingVertical: 2,
     gap: 3,
   },
   imageTimeText: {
-    color: 'rgba(255,255,255,0.93)',
+    color: whiteAlpha(0.93),
     fontSize: 11,
     fontWeight: '500',
     writingDirection: 'ltr',
   },
   videoOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0, 0, 0, 0.12)',
+    backgroundColor: blackAlpha(0.12),
   },
   playButtonContainer: {
     ...StyleSheet.absoluteFill,
@@ -450,13 +451,13 @@ export const createStyles = (tokens: any) => {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: blackAlpha(0.45),
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 10,
   },
   videoDurationText: {
-    color: 'rgba(255,255,255,0.93)',
+    color: whiteAlpha(0.93),
     fontSize: 11,
     fontWeight: '500',
     writingDirection: 'ltr',

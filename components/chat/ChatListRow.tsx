@@ -7,6 +7,7 @@ import { useDesignTokens } from '../ui/DesignTokens';
 import UICard from '../ui/UICard';
 import { CHROME_UICARD, chromeSurfaceCardStyle } from '../ui/chromeControl';
 import type { ChatMessage as ChatMessageType } from '../../types/chat.types';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 const DateDivider = memo(function DateDivider({ label }: { label: string }) {
   const tokens = useDesignTokens();
@@ -14,7 +15,7 @@ const DateDivider = memo(function DateDivider({ label }: { label: string }) {
     () =>
       StyleSheet.create({
         wrap: { flexDirection: 'row', alignItems: 'center', marginVertical: 12, paddingHorizontal: 16 },
-        line: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.12)' },
+        line: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: whiteAlpha(0.12) },
         badge: {
           borderRadius: 14,
           marginHorizontal: 10,

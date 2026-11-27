@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import UICard from '../ui/UICard';
 import { DesignTokens } from '../ui/DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { blackAlpha, whiteAlpha } from '../../components/ui/designTokensStatic';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = Math.min(SCREEN_WIDTH - 96, 300);
@@ -79,16 +80,16 @@ const OnboardingSwipeCards: React.FC<OnboardingSwipeCardsProps> = ({
         width: 52,
         height: 52,
         borderRadius: 26,
-        backgroundColor: disabled ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 200, 5, 0.12)',
+        backgroundColor: disabled ? whiteAlpha(0.05) : 'rgba(0, 200, 5, 0.12)',
         borderWidth: 1,
-        borderColor: disabled ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 200, 5, 0.3)',
+        borderColor: disabled ? whiteAlpha(0.08) : 'rgba(0, 200, 5, 0.3)',
         justifyContent: 'center',
         alignItems: 'center',
         opacity: pressed ? 0.7 : 1,
         transform: [{ scale: pressed ? 0.95 : 1 }],
       })}
     >
-      <Ionicons name={iconName} size={26} color={disabled ? 'rgba(255, 255, 255, 0.3)' : '#00C805'} />
+      <Ionicons name={iconName} size={26} color={disabled ? whiteAlpha(0.3) : '#00C805'} />
     </Pressable>
   );
 
@@ -131,7 +132,7 @@ const OnboardingSwipeCards: React.FC<OnboardingSwipeCardsProps> = ({
                 style={{
                   fontSize: 64,
                   marginBottom: 20,
-                  textShadowColor: 'rgba(0, 0, 0, 0.25)',
+                  textShadowColor: blackAlpha(0.25),
                   textShadowOffset: { width: 0, height: 4 },
                   textShadowRadius: 12,
                 }}
@@ -162,7 +163,7 @@ const OnboardingSwipeCards: React.FC<OnboardingSwipeCardsProps> = ({
                 textAlign: 'center',
                 lineHeight: 28,
                 writingDirection: TEXT_DIR,
-                textShadowColor: 'rgba(0, 0, 0, 0.3)',
+                textShadowColor: blackAlpha(0.3),
                 textShadowOffset: { width: 0, height: 2 },
                 textShadowRadius: 8,
               }}
@@ -210,7 +211,7 @@ const OnboardingSwipeCards: React.FC<OnboardingSwipeCardsProps> = ({
                 borderRadius: 4,
                 backgroundColor: isActive
                   ? DesignTokens.colors.primary.main
-                  : 'rgba(255, 255, 255, 0.2)',
+                  : whiteAlpha(0.2),
               }}
             />
           );

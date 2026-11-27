@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { ACADEMY_TYPE } from './academyLayout';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 interface ProgressRingProps {
   progress: number; // 0-100
@@ -19,7 +20,7 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
   size = 60,
   strokeWidth = 4,
   color,
-  backgroundColor = 'rgba(255,255,255,0.1)',
+  backgroundColor = whiteAlpha(0.1),
   centerLabel,
 }) => {
   const DesignTokens = useDesignTokens();

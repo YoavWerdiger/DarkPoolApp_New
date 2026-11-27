@@ -13,6 +13,7 @@ import { appCardSubtitleStyle, appCardTitleStyle } from '../ui/appType';
 import { ACADEMY_TYPE } from './academyLayout';
 import { isLessonLockedForUser } from './academyCourses';
 import type { CourseWithProgress } from '../../types/learning';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 interface ModuleSectionProps {
   module: ModuleWithLessons;
@@ -83,7 +84,7 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
     progressBar: {
       width: 40,
       height: 4,
-      backgroundColor: 'rgba(255,255,255,0.12)',
+      backgroundColor: whiteAlpha(0.12),
       borderRadius: DesignTokens.borderRadius.sm,
       overflow: 'hidden',
       marginBottom: DesignTokens.spacing.xs,

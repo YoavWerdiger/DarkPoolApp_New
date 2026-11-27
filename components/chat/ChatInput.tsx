@@ -77,6 +77,7 @@ import { ensureUgcTermsAccepted } from '../moderation/ugcTermsGate';
 import { track } from '../../lib/analytics';
 import type { TextInputInstance } from 'react-native';
 import { createStyles } from './chatInputStyles';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 const PREVIEW_PLAYER_ID = 'chat-input-preview';
 const MAX_CHAT_MENTIONS = 10;
@@ -2574,10 +2575,10 @@ function ChatInputImpl({
                     onScrubStart={onPreviewScrubStart}
                     onScrubUpdate={onPreviewScrubUpdate}
                     onScrubEnd={onPreviewScrubEnd}
-                    thumbColor={isDarkMode ? 'rgba(255, 255, 255, 0.92)' : DesignTokens.colors.text.primary}
-                    activeColor={isDarkMode ? 'rgba(255, 255, 255, 0.72)' : DesignTokens.colors.text.primary}
-                    inactiveColor={isDarkMode ? 'rgba(255, 255, 255, 0.28)' : 'rgba(30, 26, 36, 0.9)'}
-                    nearActiveColor={isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(30, 26, 36, 0.72)'}
+                    thumbColor={isDarkMode ? whiteAlpha(0.92) : DesignTokens.colors.text.primary}
+                    activeColor={isDarkMode ? whiteAlpha(0.72) : DesignTokens.colors.text.primary}
+                    inactiveColor={isDarkMode ? whiteAlpha(0.28) : 'rgba(30, 26, 36, 0.9)'}
+                    nearActiveColor={isDarkMode ? whiteAlpha(0.5) : 'rgba(30, 26, 36, 0.72)'}
                   />
                 </View>
                 <View style={styles.timerContainer}>

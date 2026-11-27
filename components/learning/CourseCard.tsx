@@ -38,6 +38,7 @@ import {
   getCourseLessonStats,
 } from './academyCourses';
 import StaticDesignTokens from '../../components/ui/DesignTokens';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 /** @deprecated השתמשו ב־academyCardWidth — נשמר לתאימות */
 export const CARD_WIDTH = academyCardWidth(Dimensions.get('window').width);
@@ -274,7 +275,7 @@ const createStyles = (
       width: '100%',
       height: coverHeight,
       position: 'relative',
-      backgroundColor: 'rgba(255,255,255,0.04)',
+      backgroundColor: whiteAlpha(0.04),
       overflow: 'hidden',
     },
     coverImg: {

@@ -18,6 +18,7 @@ import { APP_LAYOUT, UI_CARD_RADIUS } from '../ui/appLayout';
 import { useTheme } from '../../context/ThemeContext';
 import { getAcademyCourseAudience } from './academyCourses';
 import StaticDesignTokens from '../../components/ui/DesignTokens';
+import { blackAlpha } from '../../components/ui/designTokensStatic';
 
 /**
  * קורסים שעדיין לא פתוחים — נכנסים לקורס, תמונת הקורס נשארת חדה, רשימת השיעורים מטושטשת,
@@ -118,11 +119,11 @@ export function CourseTeaserLock({
   const androidNoRealBlur = Platform.OS === 'android' && (!blurTarget || Number(Platform.Version) < 31);
   const dimColor = androidNoRealBlur
     ? isDarkMode
-      ? 'rgba(0,0,0,0.82)'
+      ? blackAlpha(0.82)
       : StaticDesignTokens.colors.overlay
     : isDarkMode
-      ? 'rgba(0,0,0,0.30)'
-      : 'rgba(0,0,0,0.18)';
+      ? blackAlpha(0.3)
+      : blackAlpha(0.18);
   const goPurchase = () => {
     void HapticFeedback.impactLight();
     if (purchaseTeaser) {

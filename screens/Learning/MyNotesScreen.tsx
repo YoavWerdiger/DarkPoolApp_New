@@ -35,6 +35,7 @@ import {
 import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 interface NoteWithDetails {
   id?: string;
@@ -317,7 +318,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: tokens.spacing.lg,
-      backgroundColor: 'rgba(255,255,255,0.04)',
+      backgroundColor: whiteAlpha(0.04),
     },
     emptyTitle: {
       ...ACADEMY_TYPE.cardTitle,

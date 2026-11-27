@@ -46,6 +46,7 @@ import {
 } from '../../services/portfolios/portfolioPriceFeed';
 import type { ViewInstance } from 'react-native';
 import { silent } from '../../utils/silentError';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 /** נתונים מינימליים לכרטיס שיתוף ויזואלי */
 export type ExportableTrade = {
@@ -812,7 +813,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       overflow: 'hidden',
       backgroundColor: '#1A1D1C',
       borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.08)',
+      borderColor: whiteAlpha(0.08),
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -893,7 +894,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     priceDivider: {
       width: 1,
       height: 12,
-      backgroundColor: 'rgba(255,255,255,0.18)',
+      backgroundColor: whiteAlpha(0.18),
     },
     priceLabel: {
       color: INK_2,

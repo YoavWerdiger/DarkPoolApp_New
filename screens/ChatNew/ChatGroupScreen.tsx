@@ -81,6 +81,7 @@ import {
 import { blockFlow, reportFlow } from '../../components/moderation/contentActions';
 import { useBlockedUsers } from '../../hooks/useBlockedUsers';
 import { createChatGroupStyles, HP, CHAT_GROUP_HEADER_HEIGHT } from './chatGroupScreenStyles';
+import { blackAlpha, whiteAlpha } from '../../components/ui/designTokensStatic';
 
 // ── בועת שלד — בזמן טעינת ההודעות ──────────────────────
 // באותה גאומטריה כמו ChatMessage: אווטאר 24 לצד בועות של אחרים, בועה עד 80% עם פינה 4 בצד הזנב,
@@ -2485,7 +2486,7 @@ export default function ChatGroupScreen() {
           flex: 1,
           justifyContent: 'center',
           alignItems: 'center',
-          backgroundColor: DesignTokens.colors.background.overlay || 'rgba(0,0,0,0.75)',
+          backgroundColor: DesignTokens.colors.background.overlay || blackAlpha(0.75),
         }}>
           <View style={{
             backgroundColor: DesignTokens.colors.background.elevated2 || DesignTokens.colors.background.tertiary,
@@ -2494,7 +2495,7 @@ export default function ChatGroupScreen() {
             width: '85%',
             maxWidth: 400,
             borderWidth: 1,
-            borderColor: DesignTokens.colors.border?.primary || 'rgba(255,255,255,0.08)',
+            borderColor: DesignTokens.colors.border?.primary || whiteAlpha(0.08),
           }}>
             <Text style={{
               color: DesignTokens.colors.text.primary,
@@ -2517,7 +2518,7 @@ export default function ChatGroupScreen() {
                 textAlignVertical: 'top',
                 textAlign: 'right',
                 borderWidth: 1,
-                borderColor: DesignTokens.colors.border?.main || 'rgba(255,255,255,0.12)',
+                borderColor: DesignTokens.colors.border?.main || whiteAlpha(0.12),
               }}
               multiline
               autoFocus
@@ -2537,12 +2538,12 @@ export default function ChatGroupScreen() {
               <TouchableOpacity
                 onPress={() => setEditModalVisible(false)}
                 style={{
-                  backgroundColor: (DesignTokens.colors.background as any).surface || 'rgba(255,255,255,0.1)',
+                  backgroundColor: (DesignTokens.colors.background as any).surface || whiteAlpha(0.1),
                   borderRadius: 12,
                   paddingHorizontal: 24,
                   paddingVertical: 12,
                   borderWidth: 1,
-                  borderColor: DesignTokens.colors.border?.primary || 'rgba(255,255,255,0.12)',
+                  borderColor: DesignTokens.colors.border?.primary || whiteAlpha(0.12),
                 }}
               >
                 <Text style={{

@@ -16,6 +16,7 @@ import {
   signMediaGroupItemsForDisplay,
 } from '../../services/chat/chatSignedMediaUrl';
 import StaticDesignTokens from '../../components/ui/DesignTokens';
+import { blackAlpha, whiteAlpha } from '../../components/ui/designTokensStatic';
 
 /** כרום מעל מדיה — טוקנים קבועים (פריט 44) */
 const M = StaticDesignTokens.colors.onMedia;
@@ -204,9 +205,9 @@ function MediaGridBubble({
         ) : (
           <View style={[styles.mediaImage, styles.mediaPlaceholder]}>
             {isSigning ? (
-              <ActivityIndicator size="small" color="rgba(255,255,255,0.7)" />
+              <ActivityIndicator size="small" color={whiteAlpha(0.7)} />
             ) : (
-              <Ionicons name="image-outline" size={28} color="rgba(255,255,255,0.45)" />
+              <Ionicons name="image-outline" size={28} color={whiteAlpha(0.45)} />
             )}
           </View>
         )}
@@ -306,20 +307,20 @@ const styles = StyleSheet.create({
   mediaItem: {
     borderRadius: 4,
     overflow: 'hidden',
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    backgroundColor: blackAlpha(0.1),
   },
   mediaImage: {
     width: '100%',
     height: '100%',
   },
   mediaPlaceholder: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: whiteAlpha(0.06),
     alignItems: 'center',
     justifyContent: 'center',
   },
   videoOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: blackAlpha(0.3),
     alignItems: 'center',
     justifyContent: 'center',
   },

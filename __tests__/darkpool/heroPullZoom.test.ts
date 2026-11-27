@@ -75,7 +75,7 @@ describe('PersonProfileHero photo', () => {
 
   it('anchors the name on the photo bottom with a strong bottom vignette', () => {
     expect(heroSrc).toMatch(/bottom: 0/);
-    expect(heroSrc).toMatch(/'rgba\(0,0,0,0\.92\)'/);
+    expect(heroSrc).toMatch(/blackAlpha\(0\.92\)/);
     expect(heroSrc).toMatch(/locations=\{\[0, 0\.28, 0\.52, 0\.78, 1\]\}/);
     expect(heroSrc).not.toMatch(/'transparent',\s*\n\s*\]\}\s*\n\s*locations=\{\[0, 0\.22, 0\.58, 0\.86, 1\]\}/);
   });

@@ -37,6 +37,7 @@ import {
   settingsMetaType,
   settingsCaptionType,
 } from '../../components/profile/settingsType';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 function DateDivider({ label }: { label: string }) {
   const tokens = useDesignTokens();
@@ -44,7 +45,7 @@ function DateDivider({ label }: { label: string }) {
     () =>
       StyleSheet.create({
         wrap: { flexDirection: 'row', alignItems: 'center', marginVertical: 12, paddingHorizontal: 16 },
-        line: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.12)' },
+        line: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: whiteAlpha(0.12) },
         badge: {
           borderRadius: 14,
           marginHorizontal: 10,

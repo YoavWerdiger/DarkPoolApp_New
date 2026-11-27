@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native';
 import { chatPalette } from '../chatDesignTokens';
 import { M, SW, SH, GALLERY_THUMB, CAPTURE_SIZE, CAPTURE_RING, PILL_W, PILL_GAP, CHROME_FILL, CHROME_LINE } from './storyEditorParts';
 import StaticDesignTokens from '../../../components/ui/DesignTokens';
+import { blackAlpha, whiteAlpha } from '../../../components/ui/designTokensStatic';
 
 export const s = StyleSheet.create({
   fullFlex: { flex: 1 },
@@ -113,7 +114,7 @@ export const s = StyleSheet.create({
   },
 
   galleryExpanded: {
-    backgroundColor: 'rgba(0,0,0,0.85)',
+    backgroundColor: blackAlpha(0.85),
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
   },
@@ -127,7 +128,7 @@ export const s = StyleSheet.create({
     margin: 2,
     borderRadius: 8,
     overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: whiteAlpha(0.05),
   },
   galleryGridImg: {
     width: '100%',
@@ -165,7 +166,7 @@ export const s = StyleSheet.create({
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.9)',
+    borderColor: whiteAlpha(0.9),
     backgroundColor: CHROME_FILL,
     justifyContent: 'center',
     alignItems: 'center',
@@ -236,7 +237,7 @@ export const s = StyleSheet.create({
     width: PILL_W,
     height: 32,
     borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: whiteAlpha(0.22),
   },
   modePill: {
     width: PILL_W,
@@ -281,7 +282,7 @@ export const s = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 42,
     minHeight: 80,
-    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowColor: blackAlpha(0.3),
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
@@ -316,7 +317,7 @@ export const s = StyleSheet.create({
 
   /* ---- Preview ---- */
   previewBlurDim: {
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: blackAlpha(0.35),
   },
   // בלי overflow:hidden — חיתוך מעל AVPlayerLayer משאיר וידאו שחור ב-iOS (כמו המצלמה);
   // המדיה והציור כבר בגודל החלון בדיוק
@@ -465,14 +466,14 @@ export const s = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: whiteAlpha(0.1),
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: whiteAlpha(0.15),
   },
   strokeBtnActive: {
-    backgroundColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: whiteAlpha(0.22),
     borderColor: M.text,
   },
   drawColorScroll: {
@@ -485,7 +486,7 @@ export const s = StyleSheet.create({
     height: 30,
     borderRadius: 15,
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.25)',
+    borderColor: whiteAlpha(0.25),
   },
   drawColorDotActive: {
     borderColor: M.text,
@@ -507,7 +508,7 @@ export const s = StyleSheet.create({
     borderRadius: 28,
     backgroundColor: StaticDesignTokens.colors.overlay,
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: whiteAlpha(0.3),
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -33,6 +33,7 @@ import {
   journalSectionTitleStyle,
 } from './journalLayout';
 import { FlashList } from '@shopify/flash-list';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 export type { Trade } from './tradeTypes';
 
@@ -226,7 +227,7 @@ export default function TradesListTab() {
     );
   }
 
-  const placeholderColor = 'rgba(255, 255, 255, 0.4)';
+  const placeholderColor = whiteAlpha(0.4);
   const pnlColor =
     summary && summary.totalPnl >= 0
       ? DesignTokens.colors.primary.main

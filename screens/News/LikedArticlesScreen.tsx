@@ -25,6 +25,7 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { FlashList } from '@shopify/flash-list';
+import { blackAlpha, whiteAlpha } from '../../components/ui/designTokensStatic';
 
 interface LikedArticleCardProps {
   article: LikedArticle;
@@ -55,7 +56,7 @@ const LikedArticleCard: React.FC<LikedArticleCardProps> = ({ article, onPress, o
                 contentFit="cover"
               />
               <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.75)']}
+                colors={['transparent', blackAlpha(0.75)]}
                 locations={[0.25, 1]}
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
@@ -82,7 +83,7 @@ const LikedArticleCard: React.FC<LikedArticleCardProps> = ({ article, onPress, o
                 <Text
                   style={{
                     ...APP_TYPE.caption,
-                    color: 'rgba(255,255,255,0.7)',
+                    color: whiteAlpha(0.7),
                     marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
                     textAlign: 'right',
                   }}

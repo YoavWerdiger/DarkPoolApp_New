@@ -11,6 +11,7 @@ import { LIGHT_CANVAS } from './designTokensStatic';
 import UICard from './UICard';
 import { APP_LAYOUT, UI_CARD_RADIUS } from './appLayout';
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
+import { blackAlpha, whiteAlpha } from '../../components/ui/designTokensStatic';
 
 /**
  * Yoga בשורש LTR (App.tsx) גם כש-forceRTL פעיל.
@@ -98,7 +99,7 @@ export const SkeletonBox: React.FC<SkeletonBoxProps> = ({
 }) => {
   const tokens = useDesignTokens();
   // לפי ערכת הנושא — בבהיר שחור 18% (כפול הפעימה 0.3–0.65 ≈ 5–12%; ב-8% השלד כמעט לא נראה)
-  const fill = String(tokens.colors.background.primary) === LIGHT_CANVAS ? 'rgba(0, 0, 0, 0.18)' : 'rgba(255, 255, 255, 0.12)';
+  const fill = String(tokens.colors.background.primary) === LIGHT_CANVAS ? blackAlpha(0.18) : whiteAlpha(0.12);
   useEffect(() => {
     retainSharedSkeletonPulse();
     return () => {

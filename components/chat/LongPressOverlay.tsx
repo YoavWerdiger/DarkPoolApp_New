@@ -44,6 +44,7 @@ function PreviewThumb({ src, style }: { src?: string | null; style: any }) {
 
 import { logger } from '../../utils/logger';
 import StaticDesignTokens from '../../components/ui/DesignTokens';
+import { blackAlpha } from '../../components/ui/designTokensStatic';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -557,7 +558,7 @@ const createMessagePreviewStyles = (tokens: any) => {
   },
   albumMore: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: blackAlpha(0.45),
     alignItems: 'center',
     justifyContent: 'center',
   },

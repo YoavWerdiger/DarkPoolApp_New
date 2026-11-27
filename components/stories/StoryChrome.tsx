@@ -9,6 +9,7 @@ import Reanimated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { blackAlpha, whiteAlpha } from '../../components/ui/designTokensStatic';
 
 /* ── Flying reaction emoji (one instance per tap, self-removes) ── */
 export interface FlyingEmoji {
@@ -136,7 +137,7 @@ export function ProgressBarFill({ index, progress }: { index: number; progress: 
 const barStyles = StyleSheet.create({
   track: {
     height: 3.5,
-    backgroundColor: 'rgba(255,255,255,0.35)',
+    backgroundColor: whiteAlpha(0.35),
     borderRadius: 2,
     overflow: 'hidden',
   },
@@ -166,9 +167,9 @@ export const reactStyles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 6,
     paddingVertical: 4,
-    backgroundColor: 'rgba(0,0,0,0.32)',
+    backgroundColor: blackAlpha(0.32),
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.22)',
+    borderColor: whiteAlpha(0.22),
   },
   btn: {
     alignItems: 'center',
@@ -182,7 +183,7 @@ export const reactStyles = StyleSheet.create({
     alignItems: 'center',
   },
   btnInnerSelected: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: whiteAlpha(0.2),
   },
   emoji: {
     fontSize: 21,

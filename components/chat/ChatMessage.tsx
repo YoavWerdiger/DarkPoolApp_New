@@ -69,6 +69,7 @@ import { silent } from '../../utils/silentError';
 import { createStyles, BUBBLE_TAIL_W } from './chatMessageStyles';
 import { voiceWaveColors } from './chatDesignTokens';
 import StaticDesignTokens from '../../components/ui/DesignTokens';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 /** יחס תמונה בבועה — טווח רחב (פנורמי עד 2:1, אנכי עד 0.6) */
 const clampBubbleAspect = (a: number) => Math.min(2, Math.max(0.6, a || 0.9));
@@ -1378,7 +1379,7 @@ function renderMediaContent(
             >
               {message.media_duration && message.media_duration > 0 ? (
                 <View style={styles.videoDuration}>
-                  <Ionicons name="play" size={10} color="rgba(255,255,255,0.93)" />
+                  <Ionicons name="play" size={10} color={whiteAlpha(0.93)} />
                   <Text style={styles.videoDurationText}>
                     {formatDuration(message.media_duration)}
                   </Text>
@@ -1616,7 +1617,7 @@ function PollMessageContent({
     return (
       <View style={{ paddingVertical: 8, alignItems: 'center' }}>
         {loadError ? (
-          <Text style={{ color: isMe ? 'rgba(255,255,255,0.85)' : '#9CA3AF', textAlign: 'right' }}>{i18n.t('auto.components__chat__ChatMessage.s32')}</Text>
+          <Text style={{ color: isMe ? whiteAlpha(0.85) : '#9CA3AF', textAlign: 'right' }}>{i18n.t('auto.components__chat__ChatMessage.s32')}</Text>
         ) : (
           <ActivityIndicator size="small" color={isMe ? '#fff' : undefined} />
         )}

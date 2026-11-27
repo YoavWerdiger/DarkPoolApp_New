@@ -26,6 +26,7 @@ import {
   SHEET_CLOSE_TIMING,
 } from "./BottomSheet/sheetMotion";
 import { SheetSurfaceProvider } from "./BottomSheet/sheetSurface";
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -225,7 +226,7 @@ const styles = StyleSheet.create({
   dragLine: {
     width: 45,
     height: 6,
-    backgroundColor: "rgba(255,255,255,0.3)",
+    backgroundColor: whiteAlpha(0.3),
     alignSelf: "center",
     borderRadius: 3,
     marginBottom: 12,

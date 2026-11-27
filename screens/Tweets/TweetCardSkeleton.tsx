@@ -4,8 +4,9 @@ import { View, type ViewStyle } from 'react-native';
 import { SkeletonBox } from '../../components/ui/SkeletonLoader';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
-const DIVIDER = 'rgba(255, 255, 255, 0.12)';
+const DIVIDER = whiteAlpha(0.12);
 
 /**
  * אותה טופולוגיה כמו PostCard ב-TweetsFeed:

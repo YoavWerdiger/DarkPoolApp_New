@@ -9,6 +9,7 @@ import { appGroupLabelStyle } from '../../components/ui/appType';
 import { ACADEMY_TYPE, academySectionTitleStyle } from '../../components/learning/academyLayout';
 import { DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import StaticDesignTokens from '../../components/ui/DesignTokens';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 export const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
   container: {
@@ -66,7 +67,7 @@ export const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => Styl
   courseHeroSubtitle: {
     fontSize: tokens.typography.fontSize.sm,
     fontWeight: '500' as const,
-    color: 'rgba(255,255,255,0.82)',
+    color: whiteAlpha(0.82),
     textAlign: 'right',
     lineHeight: Math.round(tokens.typography.fontSize.sm * 1.4),
     writingDirection: TEXT_DIR,
@@ -1420,7 +1421,7 @@ export const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => Styl
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
+    borderColor: whiteAlpha(0.35),
     ...tokens.shadows.xs,
   },
   lessonNumberOnThumbText: {

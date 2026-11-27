@@ -27,6 +27,7 @@ import { ltrNameText } from '../utils/bidi';
 import { portraitDisplayUrl } from '../utils/investorPlaceholder';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import StaticDesignTokens from '../../../components/ui/DesignTokens';
+import { blackAlpha } from '../../../components/ui/designTokensStatic';
 
 const HERO_ICON_SIZE = DRAWER_MENU_BUTTON_SIZE;
 const HERO_ICON_GLYPH = 22;
@@ -207,11 +208,11 @@ function PersonProfileHeroInner({
       ) : null}
       <LinearGradient
         colors={[
-          'rgba(0,0,0,0.42)',
+          blackAlpha(0.42),
           'transparent',
-          'rgba(0,0,0,0.12)',
+          blackAlpha(0.12),
           StaticDesignTokens.colors.onMedia.scrimMedium,
-          'rgba(0,0,0,0.92)',
+          blackAlpha(0.92),
         ]}
         locations={[0, 0.28, 0.52, 0.78, 1]}
         style={StyleSheet.absoluteFill}

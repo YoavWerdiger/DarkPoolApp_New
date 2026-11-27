@@ -8,6 +8,7 @@ import { Search } from 'lucide-react-native';
 import { CHAT_LAYOUT, chatSectionTitleStyle } from '../../components/chat/chatLayout';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import { APP_TYPE, appPhysicalRightText } from '../../components/ui/appType';
+import { blackAlpha } from '../../components/ui/designTokensStatic';
 
 export const HP = APP_LAYOUT.screenPaddingHorizontal;
 
@@ -55,7 +56,7 @@ export const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => Styl
   statusStoryGap: { width: 7, flexShrink: 0 },
   pendingStoryOverlay: {
     borderRadius: 999,
-    backgroundColor: 'rgba(0,0,0,0.38)',
+    backgroundColor: blackAlpha(0.38),
     alignItems: 'center',
     justifyContent: 'center',
   },

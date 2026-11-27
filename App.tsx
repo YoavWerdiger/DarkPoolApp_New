@@ -58,6 +58,7 @@ import { DeviceConflictScreen } from './components/DeviceConflictScreen';
 import { checkActiveDevice, installDeviceClaimOnSignIn, subscribeActiveDevice } from './services/deviceSession';
 import { track } from './lib/analytics';
 import { silent } from './utils/silentError';
+import { whiteAlpha } from './components/ui/designTokensStatic';
 // מסכים לא-פעילים (כל ה-stacks ב-Drawer נשארים טעונים) מוקפאים ולא מתרנדרים ברקע —
 // משחרר את ה-JS thread ומשפר משמעותית את חלקות הניווט והאינטראקציות.
 enableScreens(true);
@@ -75,7 +76,7 @@ const AppNavigationTheme: NavTheme = {
     primary: '#00C805',
     background: APP_SYSTEM_BACKGROUND,
     card: APP_SYSTEM_BACKGROUND,
-    border: 'rgba(255,255,255,0.06)',
+    border: whiteAlpha(0.06),
     text: '#FFFFFF',
     notification: '#00C805',
   },

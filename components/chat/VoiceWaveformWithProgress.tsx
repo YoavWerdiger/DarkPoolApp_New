@@ -14,6 +14,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { flatWaveformBars, normalizeWaveformSamples, WAVEFORM_DISPLAY_BARS } from '../../utils/waveformSamples';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 export interface VoiceWaveformWithProgressProps {
   /** 0–1 — SharedValue על ה-UI thread */
@@ -87,12 +88,12 @@ function VoiceWaveformWithProgress({
   onScrubEnd,
   thumbColor,
   activeColor,
-  inactiveColor = 'rgba(255, 255, 255, 0.25)',
-  nearActiveColor = 'rgba(255, 255, 255, 0.45)',
+  inactiveColor = whiteAlpha(0.25),
+  nearActiveColor = whiteAlpha(0.45),
 }: VoiceWaveformWithProgressProps) {
   // ברירת מחדל סגנון WhatsApp: אפור בהיר לחלק שנוגן, לא ירוק/אקצנט מותג
-  const resolvedActive = activeColor ?? 'rgba(255, 255, 255, 0.72)';
-  const resolvedThumb = thumbColor ?? 'rgba(255, 255, 255, 0.92)';
+  const resolvedActive = activeColor ?? whiteAlpha(0.72);
+  const resolvedThumb = thumbColor ?? whiteAlpha(0.92);
 
   const trackWidthSV = useSharedValue(0);
   const scrubStartSV = useSharedValue(0);

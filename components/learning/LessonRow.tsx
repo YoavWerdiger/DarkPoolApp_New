@@ -21,6 +21,7 @@ import {
 import { ACADEMY_TYPE } from './academyLayout';
 import { formatLessonMinutes } from './academyCourses';
 import StaticDesignTokens from '../../components/ui/DesignTokens';
+import { blackAlpha, whiteAlpha } from '../../components/ui/designTokensStatic';
 
 interface LessonRowProps {
   lesson: LessonWithProgress & { completed?: boolean; thumbnail?: string | null };
@@ -126,7 +127,7 @@ export const LessonRow: React.FC<LessonRowProps> = ({
           )}
 
           <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.65)']}
+            colors={['transparent', blackAlpha(0.65)]}
             locations={[0.35, 1]}
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
@@ -250,7 +251,7 @@ function createStyles(T: ReturnType<typeof useDesignTokens>) {
     thumbWrap: {
       width: '100%',
       height: THUMB_HEIGHT,
-      backgroundColor: 'rgba(255,255,255,0.04)',
+      backgroundColor: whiteAlpha(0.04),
       overflow: 'hidden',
       position: 'relative',
     },
@@ -315,7 +316,7 @@ function createStyles(T: ReturnType<typeof useDesignTokens>) {
       ...StyleSheet.absoluteFill,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: 'rgba(0,0,0,0.35)',
+      backgroundColor: blackAlpha(0.35),
     },
     soonPill: {
       paddingHorizontal: 14,

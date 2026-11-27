@@ -30,6 +30,7 @@ import { useAuth } from '../../context/AuthContext';
 import { learningProgressService } from '../../services/learningProgressService';
 import { silent } from '../../utils/silentError';
 import StaticDesignTokens from '../../components/ui/DesignTokens';
+import { blackAlpha, whiteAlpha } from '../../components/ui/designTokensStatic';
 
 /** כרום מעל מדיה — טוקנים קבועים (פריט 44) */
 const M = StaticDesignTokens.colors.onMedia;
@@ -808,7 +809,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     flex: 1,
     height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: whiteAlpha(0.2),
     overflow: 'hidden',
     justifyContent: 'center',
   },
@@ -924,7 +925,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     marginTop: tokens.spacing.sm,
     paddingTop: tokens.spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopColor: whiteAlpha(0.1),
   },
   progressTimeRow: {
     flexDirection: 'row',
@@ -943,7 +944,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   progressBarContainer: {
     height: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: whiteAlpha(0.1),
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -971,7 +972,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     marginTop: tokens.spacing.md,
     paddingTop: tokens.spacing.md,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopColor: whiteAlpha(0.1),
   },
   notesInput: {
     fontSize: tokens.typography.fontSize.base,
@@ -983,7 +984,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   // Speed + Fullscreen controls
   speedBtn: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: whiteAlpha(0.15),
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -1002,7 +1003,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     left: 8,
     flexDirection: 'row',
     gap: 6,
-    backgroundColor: 'rgba(0,0,0,0.9)',
+    backgroundColor: blackAlpha(0.9),
     borderRadius: 10,
     padding: 8,
     zIndex: 10,
@@ -1017,7 +1018,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   speedOptionText: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.7)',
+    color: whiteAlpha(0.7),
   },
   speedOptionTextActive: {
     color: M.text,

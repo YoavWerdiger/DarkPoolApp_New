@@ -39,6 +39,7 @@ import MediaPreviewModal from './MediaPreviewModal';
 import { useCaptureCameraMode } from '../../hooks/useCaptureCameraMode';
 import type { MediaFile } from '../../services/mediaService';
 import StaticDesignTokens from '../../components/ui/DesignTokens';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 /** כרום מעל מדיה (מצלמה / סטורי) — טוקנים קבועים, פריט 44 */
 const M = StaticDesignTokens.colors.onMedia;
@@ -604,7 +605,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     // זכוכית בהירה — קריאה גם על הפסים השחורים וגם על התמונה
-    backgroundColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: whiteAlpha(0.16),
   },
   shutterOuter: {
     width: 84,
@@ -639,7 +640,7 @@ const styles = StyleSheet.create({
   modeTrack: {
     direction: 'ltr',
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: whiteAlpha(0.14),
     borderRadius: 22,
     padding: 3,
     gap: MODE_PILL_GAP,
@@ -651,7 +652,7 @@ const styles = StyleSheet.create({
     width: MODE_PILL_W,
     height: 32,
     borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: whiteAlpha(0.22),
   },
   modePill: {
     width: MODE_PILL_W,

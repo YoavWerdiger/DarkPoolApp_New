@@ -24,6 +24,7 @@ import {
 } from '../../Journal/journalLayout';
 import { ArrowLeftRight, PieChart, Scale, TrendingDown, TrendingUp, Wallet } from 'lucide-react-native';
 import { DISTRIBUTION_GROUP_BY_OPTIONS, PORTFOLIO_DETAIL_TABS } from '../portfolioConstants';
+import { blackAlpha, whiteAlpha } from '../../../components/ui/designTokensStatic';
 
 const noop = () => {};
 
@@ -104,7 +105,7 @@ export function JournalHeroChartSkeleton() {
 /** צבעי עזר משותפים לחלקי השלד */
 function useSkeletonParts() {
   const tokens = useDesignTokens();
-  const ringColor = String(tokens.colors.background.primary) === LIGHT_CANVAS ? 'rgba(0, 0, 0, 0.18)' : 'rgba(255, 255, 255, 0.12)';
+  const ringColor = String(tokens.colors.background.primary) === LIGHT_CANVAS ? blackAlpha(0.18) : whiteAlpha(0.12);
   const divider = { height: 1, backgroundColor: tokens.colors.border.divider, marginHorizontal: JOURNAL_LAYOUT.cardPadding };
   // כותרות הסקשנים קבועות — טקסט אמיתי באותו סגנון; רק הנתונים הם צורות טעינה
   const heading = (title: string) => (

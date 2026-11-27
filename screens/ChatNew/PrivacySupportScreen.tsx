@@ -20,6 +20,7 @@ import {
   settingsCaptionType,
 } from '../../components/profile/settingsType';
 import { silent } from '../../utils/silentError';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 export default function PrivacySupportScreen() {
   const navigation = useNavigation();
@@ -194,7 +195,7 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
   },
   separator: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: whiteAlpha(0.08),
     marginVertical: DesignTokens.spacing.xs,
   },
   infoRow: {

@@ -16,6 +16,7 @@ import { chatPalette } from '../chatDesignTokens';
 import type { TextInputInstance } from 'react-native';
 import { silent } from '../../../utils/silentError';
 import StaticDesignTokens from '../../ui/DesignTokens';
+import { blackAlpha, whiteAlpha } from '../../../components/ui/designTokensStatic';
 
 /** כרום מעל מדיה (מצלמה / סטורי) — טוקנים קבועים, פריט 44 */
 export const M = StaticDesignTokens.colors.onMedia;
@@ -27,8 +28,8 @@ export const CAPTURE_RING = 80;
 export const PILL_W = 76;
 export const PILL_GAP = 4;
 // זכוכית בהירה — כפתורי המצלמה יושבים על פסים שחורים (חלון הצילום), כהה נבלע ברקע
-export const CHROME_FILL = 'rgba(255,255,255,0.16)';
-export const CHROME_LINE = 'rgba(255,255,255,0.22)';
+export const CHROME_FILL = whiteAlpha(0.16);
+export const CHROME_LINE = whiteAlpha(0.22);
 
 /** Camera keeps the recording file until the session stops. Copy first so preview playback is independent. */
 export async function persistRecordedStoryVideo(uri: string): Promise<string> {
@@ -503,7 +504,7 @@ export function TextEditorOverlay({
             value={text}
             onChangeText={setText}
             placeholder={i18n.t('auto.components__chat__AddStoryFullScreen.s2')}
-            placeholderTextColor="rgba(255,255,255,0.35)"
+            placeholderTextColor={whiteAlpha(0.35)}
             multiline
             maxLength={150}
             textAlign="center"
@@ -531,7 +532,7 @@ export function TextEditorOverlay({
                   editorStyles.colorDot,
                   { backgroundColor: c },
                   // לבן — קו כהה דק כדי שייראה עגול כמו שאר הצבעים
-                  c === M.text && { borderColor: 'rgba(0,0,0,0.28)' },
+                  c === M.text && { borderColor: blackAlpha(0.28) },
                 ]}
               />
             </TouchableOpacity>
@@ -546,7 +547,7 @@ export const editorStyles = StyleSheet.create({
   root: {
     ...StyleSheet.absoluteFill,
     zIndex: 30,
-    backgroundColor: 'rgba(0,0,0,0.75)',
+    backgroundColor: blackAlpha(0.75),
   },
   backdrop: {
     ...StyleSheet.absoluteFill,
@@ -567,14 +568,14 @@ export const editorStyles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.42)',
+    backgroundColor: blackAlpha(0.42),
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: M.control,
     justifyContent: 'center',
     alignItems: 'center',
   },
   toolBtnActive: {
-    backgroundColor: 'rgba(255,255,255,0.35)',
+    backgroundColor: whiteAlpha(0.35),
   },
   toolBtnLabel: {
     color: M.text,
@@ -642,7 +643,7 @@ export const editorStyles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
+    borderColor: whiteAlpha(0.35),
   },
 });
 
@@ -712,7 +713,7 @@ export const emojiStyles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: whiteAlpha(0.3),
     alignSelf: 'center',
     marginBottom: 10,
   },
@@ -732,7 +733,7 @@ export const emojiStyles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: whiteAlpha(0.1),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -916,7 +917,7 @@ export function TrashZone({
   return (
     <>
     <Reanimated.View pointerEvents="none" style={[trashStyles.fade, fadeStyle]}>
-      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.72)']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={['transparent', blackAlpha(0.72)]} style={StyleSheet.absoluteFill} />
     </Reanimated.View>
     <Reanimated.View pointerEvents="none" style={[trashStyles.fade, dangerStyle]}>
       <LinearGradient colors={['transparent', 'rgba(229,57,53,0.38)']} style={StyleSheet.absoluteFill} />
@@ -982,9 +983,9 @@ export const trashStyles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: 'rgba(0,0,0,0.72)',
+    backgroundColor: blackAlpha(0.72),
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.4)',
+    borderColor: whiteAlpha(0.4),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -994,7 +995,7 @@ export const trashStyles = StyleSheet.create({
     borderWidth: 3,
   },
   hint: {
-    color: 'rgba(255,255,255,0.85)',
+    color: whiteAlpha(0.85),
     fontSize: 12,
     fontWeight: '600',
     marginTop: 8,

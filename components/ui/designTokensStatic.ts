@@ -142,6 +142,17 @@ const darkColors = {
   },
 };
 
+/**
+ * לבן / שחור בשקיפות — מקור אחד לבסיס (פריט 44). מחזיר בדיוק את אותה מחרוזת rgba.
+ * לאיחוד לסולם קטן יותר בהמשך (דורש בדיקה חזותית) — npm run lint מראה את כל השימושים.
+ */
+export function whiteAlpha(alpha: number): string {
+  return `rgba(255, 255, 255, ${alpha})`;
+}
+export function blackAlpha(alpha: number): string {
+  return `rgba(0, 0, 0, ${alpha})`;
+}
+
 /** קנבס מסך במצב בהיר */
 export const LIGHT_CANVAS = '#F4F2F1';
 /** כרטיס אטום במצב בהיר (UICard soft / דיאלוג) */

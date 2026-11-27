@@ -29,6 +29,7 @@ import { logger } from '../../utils/logger';
 import { settingsRowType, settingsMetaType } from '../../components/profile/settingsType';
 import { noteError } from '../../utils/silentError';
 import StaticDesignTokens from '../../components/ui/DesignTokens';
+import { blackAlpha, whiteAlpha } from '../../components/ui/designTokensStatic';
 
 /** כרום מעל מדיה — טוקנים קבועים (פריט 44) */
 const M = StaticDesignTokens.colors.onMedia;
@@ -244,7 +245,7 @@ const createStyles = (tokens: any) =>
       width: '100%',
       height: '100%',
       borderRadius: 8,
-      backgroundColor: 'rgba(255,255,255,0.08)',
+      backgroundColor: whiteAlpha(0.08),
     },
     videoBadge: {
       position: 'absolute',
@@ -256,7 +257,7 @@ const createStyles = (tokens: any) =>
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.92)',
+      backgroundColor: blackAlpha(0.92),
       justifyContent: 'center',
       alignItems: 'center',
     },

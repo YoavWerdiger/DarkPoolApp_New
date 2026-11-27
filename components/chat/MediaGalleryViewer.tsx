@@ -37,6 +37,7 @@ import { useMediaZoomGestures } from './useMediaZoomGestures';
 import { MediaBlurBackdrop, MediaViewerChrome } from './MediaViewerChrome';
 import { silent } from '../../utils/silentError';
 import StaticDesignTokens from '../../components/ui/DesignTokens';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 /** כרום מעל מדיה — טוקנים קבועים (פריט 44) */
 const M = StaticDesignTokens.colors.onMedia;
@@ -93,7 +94,7 @@ function GalleryImagePage({ url, previewUrl }: { url: string; previewUrl?: strin
       )}
       {loadError ? (
         <View style={styles.mediaErrorContainer}>
-          <Ionicons name="image-outline" size={64} color="rgba(255,255,255,0.3)" />
+          <Ionicons name="image-outline" size={64} color={whiteAlpha(0.3)} />
           <Text style={styles.mediaErrorText}>{i18n.t('auto.components__chat__MediaGalleryViewer.s1')}</Text>
           <TouchableOpacity
             style={styles.mediaErrorRetry}
@@ -419,7 +420,7 @@ export default function MediaGalleryViewer({
           )}
           {videoError ? (
             <View style={styles.mediaErrorContainer}>
-              <Ionicons name="videocam-outline" size={64} color="rgba(255,255,255,0.3)" />
+              <Ionicons name="videocam-outline" size={64} color={whiteAlpha(0.3)} />
               <Text style={styles.mediaErrorText}>{i18n.t('auto.components__chat__MediaGalleryViewer.s3')}</Text>
             </View>
           ) : isDisplayableMediaUri(uri) ? (
@@ -475,7 +476,7 @@ export default function MediaGalleryViewer({
       <Animated.View pointerEvents="none" style={[styles.neighbor, pagerStyle]}>
         {item.type === 'video' ? (
           <View style={[StyleSheet.absoluteFill, styles.videoPage, styles.neighborVideo]}>
-            <Ionicons name="play-circle" size={64} color="rgba(255,255,255,0.7)" />
+            <Ionicons name="play-circle" size={64} color={whiteAlpha(0.7)} />
           </View>
         ) : src ? (
           <Image source={{ uri: src }} style={StyleSheet.absoluteFill} resizeMode="contain" />
@@ -596,7 +597,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   mediaErrorText: {
-    color: 'rgba(255,255,255,0.6)',
+    color: whiteAlpha(0.6),
     fontSize: 15,
     textAlign: 'center',
   },
@@ -605,7 +606,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: whiteAlpha(0.3),
   },
   mediaErrorRetryText: {
     color: M.text,
@@ -622,7 +623,7 @@ const styles = StyleSheet.create({
   topBlur: {
     width: '100%',
     borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: whiteAlpha(0.1),
   },
   topContent: {
     flexDirection: 'row',
@@ -655,7 +656,7 @@ const styles = StyleSheet.create({
   bottomBlur: {
     width: '100%',
     borderTopWidth: 0.5,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopColor: whiteAlpha(0.1),
   },
   bottomContent: {
     backgroundColor: StaticDesignTokens.colors.overlay,
@@ -715,7 +716,7 @@ const styles = StyleSheet.create({
     right: 0,
     top: 7,
     height: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: whiteAlpha(0.2),
     borderRadius: 3,
   },
   actionsRow: {
@@ -729,7 +730,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: whiteAlpha(0.08),
   },
   captionContainer: {
     marginBottom: 16,

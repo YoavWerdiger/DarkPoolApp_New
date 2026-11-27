@@ -13,6 +13,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 import { useTheme } from '../context/ThemeContext';
 import { silent } from '../utils/silentError';
+import { blackAlpha, whiteAlpha } from '../components/ui/designTokensStatic';
 
 /**
  * מסך פתיחה מינימלי — Lottie (assets/launch, נבנה ע"י scripts/build-launch-lottie.py).
@@ -138,7 +139,7 @@ export function AppLaunchScreen({ ready, onRevealApp, onFinish }: Props) {
         <Animated.View
           style={[
             styles.bar,
-            { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.10)' },
+            { backgroundColor: isDarkMode ? whiteAlpha(0.14) : blackAlpha(0.1) },
             dotsStyle,
           ]}
         >

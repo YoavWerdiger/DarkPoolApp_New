@@ -34,6 +34,7 @@ import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navig
 import { HapticFeedback, triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 export const MyLearningScreen: React.FC = () => {
   const refreshRing = useRefreshRing();
@@ -271,7 +272,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     progressBarTrack: {
       flex: 1,
       height: 4,
-      backgroundColor: 'rgba(255,255,255,0.1)',
+      backgroundColor: whiteAlpha(0.1),
       borderRadius: 2,
       overflow: 'hidden',
     },

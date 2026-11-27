@@ -26,6 +26,7 @@ import { journalPhysicalRightText } from '../../Journal/journalLayout';
 import {
   APP_TYPE,
 } from '../../../components/ui/appType';
+import { whiteAlpha } from '../../../components/ui/designTokensStatic';
 
 type Mode = 'open' | 'closed';
 
@@ -139,7 +140,7 @@ export default function PortfolioTradesTable({
   const tokens = useDesignTokens();
   const light = (tokens.colors.background.primary as string) === LIGHT_CANVAS;
   /** פס עדין בצבע הערכה: בבהיר קנבס על כרטיס לבן, בכהה לבן שקוף. לא tertiary מלא. */
-  const rowStripe = light ? tokens.colors.background.primary : 'rgba(255,255,255,0.03)';
+  const rowStripe = light ? tokens.colors.background.primary : whiteAlpha(0.03);
 
   const tableMinWidth = useMemo(() => {
     if (mode === 'open') {

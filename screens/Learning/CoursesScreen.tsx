@@ -51,6 +51,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { appQueryKeys } from '../../lib/appQueryKeys';
 import { RtlHorizontalScroll } from '../../components/ui/RtlHorizontalScroll';
+import { whiteAlpha } from '../../components/ui/designTokensStatic';
 
 type Nav = { navigate: (n: string, p?: object) => void };
 
@@ -363,7 +364,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: tokens.spacing.lg,
-      backgroundColor: 'rgba(255,255,255,0.04)',
+      backgroundColor: whiteAlpha(0.04),
     },
     emptyStateTitle: {
       ...ACADEMY_TYPE.cardTitle,

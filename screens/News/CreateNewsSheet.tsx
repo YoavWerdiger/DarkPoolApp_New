@@ -39,6 +39,7 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 import { APP_TYPE, appFormFieldLabelStyle } from '../../components/ui/appType';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { silent } from '../../utils/silentError';
+import StaticDesignTokens from '../../components/ui/DesignTokens';
 
 export type EditableNews = {
   id: string;
@@ -594,7 +595,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flexDirection: 'row-reverse',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: 'rgba(0, 0, 0, 0.55)',
+      backgroundColor: StaticDesignTokens.colors.onMedia.scrimMedium,
       borderTopWidth: 1,
       borderTopColor: tokens.colors.border.divider,
     },

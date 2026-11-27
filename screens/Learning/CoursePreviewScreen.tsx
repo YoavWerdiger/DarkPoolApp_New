@@ -20,6 +20,7 @@ import { ScreenChrome } from '../../components/ui';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { AcademySubScreenBar } from '../../components/learning';
 import { ACADEMY_CARD_HP, academyCardFrameStyle } from '../../components/learning/academyCardLayout';
+import StaticDesignTokens from '../../components/ui/DesignTokens';
 
 export const CoursePreviewScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -419,7 +420,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backgroundColor: StaticDesignTokens.colors.onMedia.scrimHalf,
       justifyContent: 'center',
       alignItems: 'center',
       padding: tokens.spacing.lg,

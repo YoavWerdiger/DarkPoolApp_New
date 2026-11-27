@@ -22,6 +22,7 @@ import { APP_TYPE } from '../ui/appType';
 import { useChatFitContentSnap, useChatSheetDismiss } from './ChatBottomSheet';
 import { runAfterSheetDismiss } from './mediaPickerLaunch';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import StaticDesignTokens from '../../components/ui/DesignTokens';
 
 type Props = {
   visible: boolean;
@@ -229,7 +230,7 @@ function createStyles() {
       width: 20,
       height: 20,
       borderRadius: 10,
-      backgroundColor: 'rgba(0,0,0,0.5)',
+      backgroundColor: StaticDesignTokens.colors.onMedia.scrimHalf,
       alignItems: 'center',
       justifyContent: 'center',
     },

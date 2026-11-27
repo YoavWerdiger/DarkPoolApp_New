@@ -44,6 +44,7 @@ import MentionPickerSheet from '../../components/share/MentionPickerSheet';
 import CommunityPostImage from './CommunityPostImage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ensureUgcTermsAccepted } from '../../components/moderation/ugcTermsGate';
+import StaticDesignTokens from '../../components/ui/DesignTokens';
 
 type Props = {
   visible: boolean;
@@ -690,7 +691,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     previewOverlay: {
       ...StyleSheet.absoluteFill,
-      backgroundColor: 'rgba(0,0,0,0.4)',
+      backgroundColor: StaticDesignTokens.colors.backdrop,
       alignItems: 'center',
       justifyContent: 'center',
     },

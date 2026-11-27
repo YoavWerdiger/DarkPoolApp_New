@@ -378,7 +378,7 @@ export const dragStyles = StyleSheet.create({
   },
   text: {
     textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowColor: StaticDesignTokens.colors.onMedia.scrimHalf,
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
@@ -612,7 +612,7 @@ export const editorStyles = StyleSheet.create({
   input: {
     textAlign: 'center',
     minHeight: 50,
-    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowColor: StaticDesignTokens.colors.backdrop,
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
@@ -698,7 +698,7 @@ export const emojiStyles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: StaticDesignTokens.colors.onMedia.scrimHalf,
   },
   sheet: {
     backgroundColor: 'rgba(24,24,28,0.98)',

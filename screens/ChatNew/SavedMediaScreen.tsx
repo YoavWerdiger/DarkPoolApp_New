@@ -250,7 +250,7 @@ const createStyles = (tokens: any) =>
       position: 'absolute',
       bottom: 8,
       right: 8,
-      backgroundColor: 'rgba(0,0,0,0.55)',
+      backgroundColor: StaticDesignTokens.colors.onMedia.scrimMedium,
       borderRadius: 12,
       padding: 4,
     },

@@ -20,6 +20,7 @@ import {
 } from '../ui/appType';
 import { ACADEMY_TYPE } from './academyLayout';
 import { formatLessonMinutes } from './academyCourses';
+import StaticDesignTokens from '../../components/ui/DesignTokens';
 
 interface LessonRowProps {
   lesson: LessonWithProgress & { completed?: boolean; thumbnail?: string | null };
@@ -272,7 +273,7 @@ function createStyles(T: ReturnType<typeof useDesignTokens>) {
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: 999,
-      backgroundColor: 'rgba(0,0,0,0.55)',
+      backgroundColor: StaticDesignTokens.colors.onMedia.scrimMedium,
     },
     durationText: {
       ...ACADEMY_TYPE.cardSubtitle,
@@ -320,7 +321,7 @@ function createStyles(T: ReturnType<typeof useDesignTokens>) {
       paddingHorizontal: 14,
       paddingVertical: 6,
       borderRadius: 999,
-      backgroundColor: 'rgba(0,0,0,0.55)',
+      backgroundColor: StaticDesignTokens.colors.onMedia.scrimMedium,
     },
     soonText: {
       ...ACADEMY_TYPE.cardSubtitle,
@@ -330,7 +331,7 @@ function createStyles(T: ReturnType<typeof useDesignTokens>) {
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: 'rgba(0,0,0,0.55)',
+      backgroundColor: StaticDesignTokens.colors.onMedia.scrimMedium,
       alignItems: 'center',
       justifyContent: 'center',
     },

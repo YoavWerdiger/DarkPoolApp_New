@@ -24,10 +24,10 @@ import StaticDesignTokens from '../../components/ui/DesignTokens';
 const M = StaticDesignTokens.colors.onMedia;
 const ICON = M.text;
 /** תמונה בהירה בולעת אייקונים לבנים — הדעיכה והעיגול נותנים ניגוד בלי פס אטום. */
-const SCRIM_TOP = ['rgba(0,0,0,0.55)', 'rgba(0,0,0,0)'] as const;
-const SCRIM_BOTTOM = ['rgba(0,0,0,0)', 'rgba(0,0,0,0.6)'] as const;
+const SCRIM_TOP = [StaticDesignTokens.colors.onMedia.scrimMedium, 'rgba(0,0,0,0)'] as const;
+const SCRIM_BOTTOM = ['rgba(0,0,0,0)', StaticDesignTokens.colors.overlay] as const;
 const TEXT_SHADOW = {
-  textShadowColor: 'rgba(0,0,0,0.6)',
+  textShadowColor: StaticDesignTokens.colors.overlay,
   textShadowOffset: { width: 0, height: 1 },
   textShadowRadius: 4,
 } as const;
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.35)',
   },
   keyboardDim: {
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: StaticDesignTokens.colors.onMedia.scrimMedium,
   },
   scrimTop: {
     position: 'absolute',

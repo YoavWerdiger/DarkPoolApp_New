@@ -28,7 +28,7 @@ import EarningsDetailSheet from './EarningsDetailSheet';
 import { buildEarningsAttachment } from '../../types/shareableEntity';
 import EarningsWeeklyView, { WeekDay, getSymbolDisplay as getWeeklySymbolDisplay } from './EarningsWeeklyView';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
-import { sessionPillColors, type TradingSession } from './sessionPillColors';
+import { sessionPillColors, type TradingSession, SESSION_ACCENT } from './sessionPillColors';
 import { useTheme } from '../../context/ThemeContext';
 import { EmptyState } from '../../components/ui/EmptyState';
 import ErrorState from '../../components/ui/ErrorState';
@@ -129,10 +129,10 @@ const EarningsReportCard: React.FC<{
   const getTimeIcon = (beforeAfterMarket: string | null) => {
     const n = normalizeMarketTiming(beforeAfterMarket);
     if (n === 'BeforeMarket') {
-      return { icon: Sun, color: '#d1a11d', text: 'Pre Market' };
+      return { icon: Sun, color: SESSION_ACCENT.before, text: 'Pre Market' };
     }
     if (n === 'AfterMarket') {
-      return { icon: Moon, color: '#007AFF', text: 'After Market' };
+      return { icon: Moon, color: SESSION_ACCENT.after, text: 'After Market' };
     }
     return { icon: Clock, color: DesignTokens.colors.text.secondary, text: beforeAfterMarket || i18n.t('auto.screens__News__EarningsReportsTab.s5') };
   };

@@ -627,7 +627,7 @@ const styles = StyleSheet.create({
   topContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: StaticDesignTokens.colors.overlay,
     paddingBottom: 12,
     paddingHorizontal: 16,
   },
@@ -658,7 +658,7 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
   bottomContent: {
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: StaticDesignTokens.colors.overlay,
     paddingTop: 16,
     paddingHorizontal: 20,
   },

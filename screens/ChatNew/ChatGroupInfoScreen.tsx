@@ -77,6 +77,7 @@ import {
   settingsCaption2Type,
   settingsHebrewText,
 } from '../../components/profile/settingsType';
+import StaticDesignTokens from '../../components/ui/DesignTokens';
 
 if (
   Platform.OS === 'android' &&
@@ -925,7 +926,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   videoBadge: {
     position: 'absolute',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: StaticDesignTokens.colors.overlay,
     borderRadius: tokens.borderRadius.sm,
     padding: 4,
   },

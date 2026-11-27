@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
   },
   resolving: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: StaticDesignTokens.colors.onMedia.scrimMedium,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     paddingVertical: 2,
     borderRadius: 6,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: StaticDesignTokens.colors.onMedia.scrimMedium,
   },
   videoText: {
     color: M.text,

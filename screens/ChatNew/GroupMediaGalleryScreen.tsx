@@ -449,7 +449,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: 'rgba(0, 0, 0, 0.55)',
+      backgroundColor: StaticDesignTokens.colors.onMedia.scrimMedium,
     },
     footerLoader: {
       paddingVertical: tokens.spacing.md,

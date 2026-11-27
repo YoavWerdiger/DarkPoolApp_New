@@ -8,6 +8,7 @@ import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { appGroupLabelStyle } from '../../components/ui/appType';
 import { ACADEMY_TYPE, academySectionTitleStyle } from '../../components/learning/academyLayout';
 import { DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
+import StaticDesignTokens from '../../components/ui/DesignTokens';
 
 export const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
   container: {
@@ -58,7 +59,7 @@ export const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => Styl
     textAlign: 'right',
     lineHeight: Math.round(tokens.typography.fontSize['2xl'] * 1.2),
     writingDirection: TEXT_DIR,
-    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowColor: StaticDesignTokens.colors.overlay,
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 6,
   },

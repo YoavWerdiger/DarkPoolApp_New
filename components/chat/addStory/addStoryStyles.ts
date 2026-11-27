@@ -3,6 +3,7 @@ import { ROOT_DIR } from '../../../lib/i18n/direction';
 import { StyleSheet } from 'react-native';
 import { chatPalette } from '../chatDesignTokens';
 import { M, SW, SH, GALLERY_THUMB, CAPTURE_SIZE, CAPTURE_RING, PILL_W, PILL_GAP, CHROME_FILL, CHROME_LINE } from './storyEditorParts';
+import StaticDesignTokens from '../../../components/ui/DesignTokens';
 
 export const s = StyleSheet.create({
   fullFlex: { flex: 1 },
@@ -138,7 +139,7 @@ export const s = StyleSheet.create({
     left: 4,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: StaticDesignTokens.colors.overlay,
     borderRadius: 8,
     paddingHorizontal: 5,
     paddingVertical: 2,
@@ -451,7 +452,7 @@ export const s = StyleSheet.create({
     bottom: 0,
     zIndex: 25,
     paddingTop: 12,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: StaticDesignTokens.colors.onMedia.scrimMedium,
   },
   drawStrokeRow: {
     flexDirection: 'row',
@@ -504,7 +505,7 @@ export const s = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: StaticDesignTokens.colors.overlay,
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.3)',
     justifyContent: 'center',

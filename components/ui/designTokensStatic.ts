@@ -295,6 +295,8 @@ const staticColors = {
     control: 'rgba(255, 255, 255, 0.18)',
     controlStrong: 'rgba(255, 255, 255, 0.28)',
     scrimSoft: 'rgba(0, 0, 0, 0.25)',
+    scrimHalf: 'rgba(0, 0, 0, 0.5)',
+    scrimMedium: 'rgba(0, 0, 0, 0.55)',
     scrim: 'rgba(0, 0, 0, 0.45)',
     scrimStrong: 'rgba(0, 0, 0, 0.7)',
     base: '#000000',

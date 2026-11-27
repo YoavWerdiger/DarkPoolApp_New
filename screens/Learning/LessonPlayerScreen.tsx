@@ -773,7 +773,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   videoContainer: {
     borderRadius: 24,
     overflow: 'hidden',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: StaticDesignTokens.colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -788,7 +788,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     paddingHorizontal: tokens.spacing.md,
     paddingVertical: tokens.spacing.sm,
     gap: tokens.spacing.sm,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: StaticDesignTokens.colors.onMedia.scrimHalf,
   },
   playerPlayButton: {
     width: 44,

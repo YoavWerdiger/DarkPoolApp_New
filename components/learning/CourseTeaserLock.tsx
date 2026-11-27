@@ -17,6 +17,7 @@ import UIButton from '../ui/UIButton';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../ui/appLayout';
 import { useTheme } from '../../context/ThemeContext';
 import { getAcademyCourseAudience } from './academyCourses';
+import StaticDesignTokens from '../../components/ui/DesignTokens';
 
 /**
  * קורסים שעדיין לא פתוחים — נכנסים לקורס, תמונת הקורס נשארת חדה, רשימת השיעורים מטושטשת,
@@ -118,7 +119,7 @@ export function CourseTeaserLock({
   const dimColor = androidNoRealBlur
     ? isDarkMode
       ? 'rgba(0,0,0,0.82)'
-      : 'rgba(0,0,0,0.6)'
+      : StaticDesignTokens.colors.overlay
     : isDarkMode
       ? 'rgba(0,0,0,0.30)'
       : 'rgba(0,0,0,0.18)';

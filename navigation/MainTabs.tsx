@@ -44,6 +44,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useDesignTokens } from '../components/ui/DesignTokens';
 import { HapticFeedback } from '../utils/hapticFeedback';
+import StaticDesignTokens from '../components/ui/DesignTokens';
 
 const Drawer = createDrawerNavigator();
 
@@ -456,7 +457,7 @@ export default function MainTabs() {
             (gesture as unknown as ReturnType<typeof Gesture.Pan>).activeOffsetX(
               drawerPosition === 'right' ? [-5, 30] : [-30, 5],
             ) as unknown as typeof gesture,
-          overlayColor: 'rgba(0,0,0,0.55)',
+          overlayColor: StaticDesignTokens.colors.onMedia.scrimMedium,
           drawerStyle: {
             width: DRAWER_WIDTH,
             backgroundColor: drawerFill,

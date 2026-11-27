@@ -37,6 +37,7 @@ import {
   getCourseDurationMinutes,
   getCourseLessonStats,
 } from './academyCourses';
+import StaticDesignTokens from '../../components/ui/DesignTokens';
 
 /** @deprecated השתמשו ב־academyCardWidth — נשמר לתאימות */
 export const CARD_WIDTH = academyCardWidth(Dimensions.get('window').width);
@@ -136,7 +137,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
           )}
 
           <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.55)']}
+            colors={['transparent', StaticDesignTokens.colors.onMedia.scrimMedium]}
             locations={[0, 1]}
             style={styles.coverGradient}
             pointerEvents="none"

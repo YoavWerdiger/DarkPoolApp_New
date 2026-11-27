@@ -29,7 +29,7 @@ import { TickerLogo, prefetchTickerLogos } from '../../components/ui/TickerLogo'
 import { SkeletonBox, SkeletonLine } from '../../components/ui/SkeletonLoader';
 import EarningsService, { EarningsReport } from '../../services/earningsService';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
-import { sessionPillColors } from './sessionPillColors';
+import { sessionPillColors, SESSION_ACCENT } from './sessionPillColors';
 import { useTheme } from '../../context/ThemeContext';
 import type { ScrollViewInstance } from 'react-native';
 
@@ -76,8 +76,8 @@ export interface WeekDay {
   loaded: boolean;
 }
 
-const PRE_COLOR = '#d1a11d'; // זהב — מסחר מוקדם
-const POST_COLOR = '#007AFF'; // כחול — מסחר מאוחר
+const PRE_COLOR = SESSION_ACCENT.before; // זהב — מסחר מוקדם
+const POST_COLOR = SESSION_ACCENT.after; // כחול — מסחר מאוחר
 const TILE_LOGO = 40;
 /** טבעת תוצאה סביב הלוגו — באותו צבע של הפס בתצוגה היומית (report.percent) */
 const RESULT_RING = 2.5;

@@ -67,6 +67,8 @@ import { UserNameRow, badgeSizeForLineHeight } from '../ui/badges/UserBadges';
 import { isUsableChatDisplayName } from '../../lib/chatMessageIdentity';
 import { silent } from '../../utils/silentError';
 import { createStyles, BUBBLE_TAIL_W } from './chatMessageStyles';
+import { voiceWaveColors } from './chatDesignTokens';
+import StaticDesignTokens from '../../components/ui/DesignTokens';
 
 /** יחס תמונה בבועה — טווח רחב (פנורמי עד 2:1, אנכי עד 0.6) */
 const clampBubbleAspect = (a: number) => Math.min(2, Math.max(0.6, a || 0.9));
@@ -1369,7 +1371,7 @@ function renderMediaContent(
             )}
 
             <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.55)']}
+              colors={['transparent', StaticDesignTokens.colors.onMedia.scrimMedium]}
               locations={[0, 1]}
               style={styles.videoBottomBanner}
               pointerEvents="none"
@@ -1676,6 +1678,7 @@ function extractFileNameFromUrl(url?: string): string | null {
 }
 
 // קבלת צבע לפי סוג קובץ
+/* eslint-disable no-restricted-syntax -- צבעי המותג של סוגי הקבצים (PDF / Word / Excel / PowerPoint): נתונים, לא צבעי ממשק */
 function getDocumentColor(extension: string): string {
   const ext = extension.toUpperCase();
   switch (ext) {
@@ -1704,6 +1707,7 @@ function getDocumentColor(extension: string): string {
       return '#FF6B6B';
   }
 }
+/* eslint-enable no-restricted-syntax */
 
 // קבלת אייקון לפי סוג קובץ
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -2286,22 +2290,11 @@ function AudioPlayer({
 
   const waveformData = storedWaveform ?? recoveredWaveform;
   const lightBubble = (tokens.colors.background.primary as string) === LIGHT_CANVAS;
-  const waveThumb = lightBubble ? tokens.colors.text.primary : 'rgba(255,255,255,0.92)';
-  const waveActive = lightBubble
-    ? tokens.colors.text.primary
-    : isMe
-      ? 'rgba(255,255,255,0.78)'
-      : 'rgba(255,255,255,0.68)';
-  const waveInactive = lightBubble
-    ? 'rgba(30, 26, 36, 0.9)'
-    : isMe
-      ? 'rgba(255,255,255,0.32)'
-      : 'rgba(255,255,255,0.22)';
-  const waveNear = lightBubble
-    ? 'rgba(30, 26, 36, 0.72)'
-    : isMe
-      ? 'rgba(255,255,255,0.55)'
-      : 'rgba(255,255,255,0.42)';
+  const darkWave = isMe ? voiceWaveColors.darkMine : voiceWaveColors.darkOther;
+  const waveThumb = lightBubble ? tokens.colors.text.primary : darkWave.thumb;
+  const waveActive = lightBubble ? tokens.colors.text.primary : darkWave.active;
+  const waveInactive = lightBubble ? voiceWaveColors.light.inactive : darkWave.inactive;
+  const waveNear = lightBubble ? voiceWaveColors.light.near : darkWave.near;
 
   return (
     <View style={styles.mediaAudio}>

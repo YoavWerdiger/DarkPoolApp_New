@@ -906,7 +906,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
               )}
 
               <LinearGradient
-                colors={['rgba(0,0,0,0.55)', 'transparent']}
+                colors={[StaticDesignTokens.colors.onMedia.scrimMedium, 'transparent']}
                 style={s.vignetteTop}
                 pointerEvents="none"
               />

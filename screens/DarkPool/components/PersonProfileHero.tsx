@@ -26,6 +26,7 @@ import { APP_TYPE } from '../../../components/ui/appType';
 import { ltrNameText } from '../utils/bidi';
 import { portraitDisplayUrl } from '../utils/investorPlaceholder';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
+import StaticDesignTokens from '../../../components/ui/DesignTokens';
 
 const HERO_ICON_SIZE = DRAWER_MENU_BUTTON_SIZE;
 const HERO_ICON_GLYPH = 22;
@@ -209,7 +210,7 @@ function PersonProfileHeroInner({
           'rgba(0,0,0,0.42)',
           'transparent',
           'rgba(0,0,0,0.12)',
-          'rgba(0,0,0,0.55)',
+          StaticDesignTokens.colors.onMedia.scrimMedium,
           'rgba(0,0,0,0.92)',
         ]}
         locations={[0, 0.28, 0.52, 0.78, 1]}

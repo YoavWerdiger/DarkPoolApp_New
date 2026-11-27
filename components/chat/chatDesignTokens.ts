@@ -29,6 +29,16 @@ export const chatPalette = {
   borderDivider: c.border.divider,
 } as const;
 
+/**
+ * צורת גל בהודעה קולית — לפי סוג הבועה (בהיר / כהה-שלי / כהה-של-אחר).
+ * thumb = הנקודה הנגררת, active = מה שכבר הושמע, near = ליד הנקודה, inactive = מה שעוד לא.
+ */
+export const voiceWaveColors = {
+  light: { inactive: 'rgba(30, 26, 36, 0.9)', near: 'rgba(30, 26, 36, 0.72)' },
+  darkMine: { thumb: 'rgba(255,255,255,0.92)', active: 'rgba(255,255,255,0.78)', near: 'rgba(255,255,255,0.55)', inactive: 'rgba(255,255,255,0.32)' },
+  darkOther: { thumb: 'rgba(255,255,255,0.92)', active: 'rgba(255,255,255,0.68)', near: 'rgba(255,255,255,0.42)', inactive: 'rgba(255,255,255,0.22)' },
+} as const;
+
 /** גרדיאנט מסך כמו VideoBackground / gradients.screen */
 export const chatScreenGradientColors = [...DesignTokens.gradients.screen] as readonly string[];
 export const chatScreenGradientLocations = [0, 0.16, 0.36, 0.50, 0.74, 1] as const;

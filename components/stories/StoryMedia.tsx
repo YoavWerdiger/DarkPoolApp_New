@@ -8,6 +8,7 @@ import {
   STORY_SCREEN_WIDTH as W,
   storyAuthoredFrame,
 } from './storyLayout';
+import StaticDesignTokens from '../../components/ui/DesignTokens';
 
 /**
  * מדיה של סטורי — בלי שום אנימציה/שקיפות: מה שנטען מוצג באטימות מלאה מהפריים הראשון.
@@ -215,7 +216,7 @@ export function StoryOverlays({ content }: { content: string | null | undefined 
                   fontSize: o.fontSize || 28,
                   fontWeight: !isEmoji && o.bold ? '800' : '400',
                   textAlign: 'center',
-                  textShadowColor: 'rgba(0,0,0,0.5)',
+                  textShadowColor: StaticDesignTokens.colors.onMedia.scrimHalf,
                   textShadowOffset: { width: 0, height: 1 },
                   textShadowRadius: 4,
                 }}

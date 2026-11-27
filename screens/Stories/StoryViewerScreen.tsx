@@ -818,7 +818,7 @@ function StoryViewerScreenInner() {
     if (isOwnStory) {
       return (
         <LinearGradient
-          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.5)']}
+          colors={['rgba(0,0,0,0)', StaticDesignTokens.colors.onMedia.scrimHalf]}
           style={[styles.bottomGradient, { paddingBottom: insets.bottom + 20 }]}
           pointerEvents="box-none"
         >

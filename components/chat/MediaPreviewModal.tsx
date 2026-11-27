@@ -1165,7 +1165,7 @@ const styles = StyleSheet.create({
   },
   thumbnailVideoOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: StaticDesignTokens.colors.backdrop,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 6,

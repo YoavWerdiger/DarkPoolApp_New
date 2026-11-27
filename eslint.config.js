@@ -61,6 +61,7 @@ module.exports = defineConfig([
       'components/ui/softUiPalette.ts',
       'components/chat/chatDesignTokens.ts',
       'constants/**',
+      'screens/News/sessionPillColors.ts',
       // צבעי מותג של חברות (נתונים), ותמונת עסקה לשיתוף (עיצוב קבוע מחוץ לאפליקציה)
       'screens/DarkPool/utils/companyBrandColors.ts',
       'components/Journal/ExportTradeImage.tsx',

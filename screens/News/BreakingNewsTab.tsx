@@ -45,6 +45,7 @@ import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/Refr
 import { EmptyState } from '../../components/ui/EmptyState';
 import { FlashList } from '@shopify/flash-list';
 import { silent } from '../../utils/silentError';
+import StaticDesignTokens from '../../components/ui/DesignTokens';
 // Fear & Greed מוצג בטאב "עיקרי מדדים" בלבד
 
 const NEWS_DETAIL_IMAGE_HEIGHT = 240;
@@ -526,7 +527,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
                   width: 40,
                   height: 4,
                   borderRadius: 2,
-                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  backgroundColor: StaticDesignTokens.colors.onMedia.scrimHalf,
                   shadowColor: '#000',
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.3,

@@ -33,6 +33,7 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 import type { EarningsReport } from '../../services/earningsService';
 import ShareDestinationSheet from '../../components/share/ShareDestinationSheet';
 import { buildEarningsAttachment } from '../../types/shareableEntity';
+import { SESSION_ACCENT } from './sessionPillColors';
 
 type IonName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -80,8 +81,8 @@ function symbolOf(report: EarningsReport): string {
 }
 function timingOf(report: EarningsReport): { label: string; icon: IonName; color: string } | null {
   const t = `${report.before_after_market ?? ''} ${report.report_time ?? ''}`.toLowerCase();
-  if (t.includes('before') || t.includes('bmo')) return { label: i18n.t('auto.screens__News__EarningsDetailSheet.s4'), icon: 'sunny-outline', color: '#D1A11D' };
-  if (t.includes('after') || t.includes('amc')) return { label: i18n.t('auto.screens__News__EarningsDetailSheet.s5'), icon: 'moon-outline', color: '#007AFF' };
+  if (t.includes('before') || t.includes('bmo')) return { label: i18n.t('auto.screens__News__EarningsDetailSheet.s4'), icon: 'sunny-outline', color: SESSION_ACCENT.before };
+  if (t.includes('after') || t.includes('amc')) return { label: i18n.t('auto.screens__News__EarningsDetailSheet.s5'), icon: 'moon-outline', color: SESSION_ACCENT.after };
   return null;
 }
 function dateLabel(iso?: string | null): string {

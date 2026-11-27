@@ -43,6 +43,7 @@ function PreviewThumb({ src, style }: { src?: string | null; style: any }) {
 }
 
 import { logger } from '../../utils/logger';
+import StaticDesignTokens from '../../components/ui/DesignTokens';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -574,7 +575,7 @@ const createMessagePreviewStyles = (tokens: any) => {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: StaticDesignTokens.colors.onMedia.scrimHalf,
     alignItems: 'center',
     justifyContent: 'center',
   },

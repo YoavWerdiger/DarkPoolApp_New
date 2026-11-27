@@ -73,6 +73,7 @@ import { EmptyState } from '../../../components/ui/EmptyState';
 import { APP_TYPE } from '../../../components/ui/appType';
 import { FloatingLabelField, FieldGroupLabel } from '../../../components/ui/FloatingLabelField';
 import { useScreenActiveRef } from '../../../hooks/useScreenActiveRef';
+import StaticDesignTokens from '../../../components/ui/DesignTokens';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 /** גובה תוכן שיט הסגירה האחרון — הפתיחה הבאה עולה ישר בגובה הנכון */
@@ -520,7 +521,7 @@ export default function OpenTradesTab({
           left: 0,
           right: 0,
           top: 0,
-          backgroundColor: 'rgba(0,0,0,0.55)',
+          backgroundColor: StaticDesignTokens.colors.onMedia.scrimMedium,
           justifyContent: 'flex-end',
           zIndex: 100,
         },

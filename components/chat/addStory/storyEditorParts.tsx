@@ -45,6 +45,7 @@ export async function persistRecordedStoryVideo(uri: string): Promise<string> {
   }
 }
 
+/* eslint-disable no-restricted-syntax -- פלטות שהמשתמש בוחר לטקסט / ציור / רקע: תוכן, לא צבעי ממשק */
 export const GRADIENT_BACKGROUNDS: [string, string][] = [
   ['#0F2027', '#2C5364'],
   ['#1a1a2e', '#16213e'],
@@ -71,6 +72,7 @@ export const DRAW_COLORS = [
   '#34C759', '#00C7BE', '#007AFF', '#AF52DE', '#FF2D55',
 ];
 
+/* eslint-enable no-restricted-syntax */
 export const DRAW_STROKE_WIDTHS = [3, 6, 10, 16];
 
 /** ב-expo-camera, selectedLens תואם ל-localizedName ולא ל-deviceType — בוחרים עדשת wide 1x */

@@ -15,6 +15,10 @@ import {
   getCachedChatMediaDisplayUri,
   signMediaGroupItemsForDisplay,
 } from '../../services/chat/chatSignedMediaUrl';
+import StaticDesignTokens from '../../components/ui/DesignTokens';
+
+/** כרום מעל מדיה — טוקנים קבועים (פריט 44) */
+const M = StaticDesignTokens.colors.onMedia;
 
 interface MediaGridBubbleProps {
   mediaItems: MediaGroupItem[];
@@ -210,7 +214,7 @@ function MediaGridBubble({
         {isVideo && !showOverlay && loadable && (
           <View style={styles.videoOverlay}>
             <View style={styles.playButton}>
-              <Play size={24} color="#fff" fill="#fff" />
+              <Play size={24} color={M.text} fill={M.text} />
             </View>
           </View>
         )}
@@ -223,7 +227,7 @@ function MediaGridBubble({
 
         {isUploading && (
           <View style={styles.uploadingOverlay}>
-            <Ionicons name="cloud-upload-outline" size={20} color="#fff" />
+            <Ionicons name="cloud-upload-outline" size={20} color={M.text} />
           </View>
         )}
       </Pressable>
@@ -334,7 +338,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   remainingText: {
-    color: '#fff',
+    color: M.text,
     fontSize: 28,
     fontWeight: '700',
   },

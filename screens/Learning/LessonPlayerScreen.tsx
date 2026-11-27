@@ -29,6 +29,10 @@ import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { useAuth } from '../../context/AuthContext';
 import { learningProgressService } from '../../services/learningProgressService';
 import { silent } from '../../utils/silentError';
+import StaticDesignTokens from '../../components/ui/DesignTokens';
+
+/** כרום מעל מדיה — טוקנים קבועים (פריט 44) */
+const M = StaticDesignTokens.colors.onMedia;
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -347,7 +351,7 @@ export const LessonPlayerScreen: React.FC = () => {
           </TouchableOpacity>
           {/* Fullscreen */}
           <TouchableOpacity onPress={toggleFullscreen} activeOpacity={0.8} style={styles.fullscreenBtn}>
-            <Ionicons name={isFullscreen ? 'contract' : 'expand'} size={18} color="#fff" />
+            <Ionicons name={isFullscreen ? 'contract' : 'expand'} size={18} color={M.text} />
           </TouchableOpacity>
         </View>
         {/* Speed picker popup */}
@@ -986,7 +990,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   speedBtnText: {
     fontSize: 12,
-    color: '#fff',
+    color: M.text,
     fontWeight: '600',
   },
   fullscreenBtn: {
@@ -1016,7 +1020,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: 'rgba(255,255,255,0.7)',
   },
   speedOptionTextActive: {
-    color: '#fff',
+    color: M.text,
     fontWeight: '700',
   },
 });
